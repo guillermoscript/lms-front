@@ -13,9 +13,11 @@ interface LimitReachedBannerProps {
   limit: number          // -1 = unlimited
   className?: string
   cutoffAt?: string | null
+  /** No upsell for comped / internal schools. */
+  hideUpgrade?: boolean
 }
 
-export function LimitReachedBanner({ resource, current, limit, className, cutoffAt }: LimitReachedBannerProps) {
+export function LimitReachedBanner({ resource, current, limit, className, cutoffAt, hideUpgrade = false }: LimitReachedBannerProps) {
   const t = useTranslations('components.limitBanner')
   const locale = useLocale()
   const [dismissed, setDismissed] = useState(false)
@@ -56,11 +58,13 @@ export function LimitReachedBanner({ resource, current, limit, className, cutoff
           </p>
         )}
       </div>
-      <Link href="/dashboard/admin/billing/upgrade">
-        <Button variant={isAtLimit ? 'destructive' : 'outline'} size="sm">
-          {t('upgrade')}
-        </Button>
-      </Link>
+      {!hideUpgrade && (
+        <Link href="/dashboard/admin/billing/upgrade">
+          <Button variant={isAtLimit ? 'destructive' : 'outline'} size="sm">
+            {t('upgrade')}
+          </Button>
+        </Link>
+      )}
       {!isAtLimit && (
         <button
           onClick={() => setDismissed(true)}

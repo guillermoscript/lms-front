@@ -12,6 +12,7 @@ import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getUiState } from '@/lib/supabase/ui-state'
+import { tenantOrigin } from '@/lib/tenant/origin'
 import { areToursEnabled } from '@/lib/ui-state-keys'
 
 // Shared settings entry point for the sidebar/user-nav links. Admins and
@@ -36,10 +37,7 @@ export default async function DashboardSettingsPage() {
   const uiState = await getUiState(userId)
 
   const tenant = await getCurrentTenant()
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
-  const connectorUrl = tenant?.slug
-    ? `https://${tenant.slug}.${platformDomain}/api/mcp`
-    : `https://${platformDomain}/api/mcp`
+  const connectorUrl = `${tenantOrigin(tenant)}/api/mcp`
 
   const schools = await getUserSchools(userId)
 

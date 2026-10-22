@@ -40,7 +40,13 @@ import {
   accessCutoffWarningTemplate,
   type AccessCutoffStage,
 } from '@/lib/email/templates/access-cutoff-warning'
-import { countTenantUsage, computePlanLimitViolations, type PlanLimitViolation } from '@/lib/billing/plan-limits'
+import {
+  countTenantUsage,
+  computePlanLimitViolations,
+  fetchPlanRowForMode,
+  type PlanLimitViolation,
+} from '@/lib/billing/plan-limits'
+import { accessCutoffApplies, normalizeBillingMode } from '@/lib/billing/billing-mode'
 import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
 
 export const ACCESS_CUTOFF_GRACE_DAYS = 14
@@ -265,18 +271,28 @@ export async function reconcileAccessCutoff(
 
   const { data: tenant } = await admin
     .from('tenants')
-    .select('name, plan, access_cutoff_at')
+    .select('name, plan, access_cutoff_at, billing_mode')
     .eq('id', tenantId)
     .maybeSingle()
 
   if (!tenant) return { action: 'none' }
 
-  const [{ data: plan }, usage] = await Promise.all([
-    admin
-      .from('platform_plans')
-      .select('name, limits')
-      .eq('slug', tenant.plan || 'free')
-      .maybeSingle(),
+  const billingMode = normalizeBillingMode((tenant as { billing_mode?: unknown }).billing_mode)
+
+  // `internal` schools are never cut off: lift any stale cutoff (e.g. set before
+  // the school was converted) and skip plan/usage/email work entirely.
+  if (!accessCutoffApplies(billingMode)) {
+    if (!tenant.access_cutoff_at) return { action: 'none' }
+    await admin
+      .from('tenants')
+      .update({ access_cutoff_at: null, updated_at: now.toISOString() })
+      .eq('id', tenantId)
+    return { action: 'clear' }
+  }
+
+  // comped: the plan stays the plan, a missing row falls back to `enterprise`.
+  const [plan, usage] = await Promise.all([
+    fetchPlanRowForMode(admin, tenant.plan || 'free', billingMode),
     countTenantUsage(admin, tenantId),
   ])
 

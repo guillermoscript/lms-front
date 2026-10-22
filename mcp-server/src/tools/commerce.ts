@@ -5,7 +5,7 @@ import { LmsSession } from "../session.js";
 import { errorResult } from "../format.js";
 import { getTenantPlanUsage } from "../plan-limits.js";
 import {
-  DEFAULT_SCHOOL_PERCENTAGE,
+  effectiveSchoolPercentage,
   FEE_LEDGER_PROVIDERS,
   LIVE_SUBSCRIPTION_STATUSES,
   OPEN_PAYMENT_REQUEST_STATUSES,
@@ -438,7 +438,6 @@ const feeBalanceOutput = z.object({
     state: z.string(),
     overdue_since: z.string().nullable(),
     blocked_at: z.string().nullable(),
-    enforcement_exempt: z.boolean(),
     last_evaluated_at: z.string().nullable(),
   }),
   converted_sales: z.array(
@@ -1012,8 +1011,9 @@ export function registerCommerceTools(server: LmsServer) {
         const supabase = session.getClient();
         const tenantId = session.getTenantId();
 
-        const [splitResult, txns, paid, recent] = await Promise.all([
+        const [splitResult, tenantResult, txns, paid, recent] = await Promise.all([
           supabase.from("revenue_splits").select("school_percentage").eq("tenant_id", tenantId).maybeSingle(),
+          supabase.from("tenants").select("billing_mode, fee_percent_override").eq("id", tenantId).maybeSingle(),
           fetchAllPages<{
             amount: number;
             refunded_amount: number | null;
@@ -1054,7 +1054,11 @@ export function registerCommerceTools(server: LmsServer) {
         if (recent.error) return errorResult(`Loading payouts: ${recent.error.message}`);
 
         // `??`, never `||`: a 0% school share is a real value.
-        const schoolPercentage = num(splitResult.data?.school_percentage) ?? DEFAULT_SCHOOL_PERCENTAGE;
+        const schoolPercentage = effectiveSchoolPercentage({
+          billingMode: (tenantResult.data as { billing_mode?: string | null } | null)?.billing_mode,
+          feePercentOverride: (tenantResult.data as { fee_percent_override?: number | string | null } | null)?.fee_percent_override,
+          paidSchoolPercentage: num(splitResult.data?.school_percentage),
+        });
         const currencies = computeSchoolRevenue(
           txns.map((t) => ({
             amount: Number(t.amount),
@@ -1121,8 +1125,9 @@ export function registerCommerceTools(server: LmsServer) {
         // statements and standing. platform_fee_config and platform_fee_ledger()
         // are not readable with this token, so the balance is derived here from
         // the same rows, by the arithmetic mirrored in commerce-math.ts.
-        const [splitResult, txns, payments, recentResult, standingResult, statementsResult] = await Promise.all([
+        const [splitResult, tenantResult, txns, payments, recentResult, standingResult, statementsResult] = await Promise.all([
           supabase.from("revenue_splits").select("school_percentage").eq("tenant_id", tenantId).maybeSingle(),
+          supabase.from("tenants").select("billing_mode, fee_percent_override").eq("id", tenantId).maybeSingle(),
           fetchAllPages<{
             payment_provider: string | null;
             amount: number | string;
@@ -1166,7 +1171,7 @@ export function registerCommerceTools(server: LmsServer) {
             .limit(10),
           supabase
             .from("tenant_fee_standing")
-            .select("state, overdue_since, blocked_at, enforcement_exempt, last_evaluated_at")
+            .select("state, overdue_since, blocked_at, last_evaluated_at")
             .eq("tenant_id", tenantId)
             .maybeSingle(),
           supabase
@@ -1183,7 +1188,11 @@ export function registerCommerceTools(server: LmsServer) {
         if (statementsResult.error) return errorResult(`Loading fee statements: ${statementsResult.error.message}`);
 
         // `??`, never `||`: a 0% school share is a real value.
-        const schoolPercentage = num(splitResult.data?.school_percentage) ?? DEFAULT_SCHOOL_PERCENTAGE;
+        const schoolPercentage = effectiveSchoolPercentage({
+          billingMode: (tenantResult.data as { billing_mode?: string | null } | null)?.billing_mode,
+          feePercentOverride: (tenantResult.data as { fee_percent_override?: number | string | null } | null)?.fee_percent_override,
+          paidSchoolPercentage: num(splitResult.data?.school_percentage),
+        });
         const opts = { fallbackSchoolPercentage: schoolPercentage };
         const ledger: FeeLedgerTxn[] = txns.map((t) => ({
           paymentProvider: t.payment_provider,
@@ -1236,7 +1245,6 @@ export function registerCommerceTools(server: LmsServer) {
           state: (standingRow?.state as string | undefined) ?? "ok",
           overdue_since: (standingRow?.overdue_since as string | null | undefined) ?? null,
           blocked_at: (standingRow?.blocked_at as string | null | undefined) ?? null,
-          enforcement_exempt: standingRow?.enforcement_exempt === true,
           last_evaluated_at: (standingRow?.last_evaluated_at as string | null | undefined) ?? null,
         };
 
@@ -1272,7 +1280,7 @@ export function registerCommerceTools(server: LmsServer) {
           "# Platform fees owed by the school",
           "Commission on sales the school collected itself (manual transfers, Binance personal). Per currency, never added together.",
           "",
-          `- Standing: **${standing.state}**${standing.overdue_since ? ` — overdue since ${day(standing.overdue_since)}` : ""}${standing.blocked_at ? ` — **new sales paused since ${day(standing.blocked_at)}** until the balance is paid` : ""}${standing.enforcement_exempt ? " (exempt from blocking)" : ""}`,
+          `- Standing: **${standing.state}**${standing.overdue_since ? ` — overdue since ${day(standing.overdue_since)}` : ""}${standing.blocked_at ? ` — **new sales paused since ${day(standing.blocked_at)}** until the balance is paid` : ""}`,
           "",
         ];
         for (const b of balances) {

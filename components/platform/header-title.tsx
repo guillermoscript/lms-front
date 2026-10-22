@@ -13,6 +13,7 @@ const SECTION_KEYS: Record<string, string> = {
   'billing-health': 'billingHealth',
   plans: 'plans',
   'bank-accounts': 'bankAccounts',
+  webhooks: 'webhooks',
 }
 
 /**

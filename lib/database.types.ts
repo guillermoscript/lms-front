@@ -5181,16 +5181,19 @@ export type Database = {
       }
       platform_bank_accounts: {
         Row: {
-          account_holder: string
-          account_number: string
+          account_holder: string | null
+          account_number: string | null
           account_type: string | null
-          bank_name: string
+          bank_name: string | null
           created_at: string
           created_by: string | null
           currency: string
+          document: string | null
+          email: string | null
           extra_instructions: string | null
           id: string
           is_active: boolean
+          kind: string
           label: string
           routing_number: string | null
           sort_order: number
@@ -5199,16 +5202,19 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
-          account_holder: string
-          account_number: string
+          account_holder: string | null
+          account_number: string | null
           account_type?: string | null
-          bank_name: string
+          bank_name?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
+          document?: string | null
+          email?: string | null
           extra_instructions?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
           label: string
           routing_number?: string | null
           sort_order?: number
@@ -5217,16 +5223,19 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
-          account_holder?: string
-          account_number?: string
+          account_holder?: string | null
+          account_number?: string | null
           account_type?: string | null
-          bank_name?: string
+          bank_name?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
+          document?: string | null
+          email?: string | null
           extra_instructions?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
           label?: string
           routing_number?: string | null
           sort_order?: number
@@ -5871,8 +5880,6 @@ export type Database = {
           interval: string
           payment_provider: string
           plan_id: string
-          plan_override_at: string | null
-          plan_override_by: string | null
           provider_customer_id: string | null
           provider_subscription_id: string | null
           renewal_reminder_sent_at: string | null
@@ -5891,8 +5898,6 @@ export type Database = {
           interval?: string
           payment_provider?: string
           plan_id: string
-          plan_override_at?: string | null
-          plan_override_by?: string | null
           provider_customer_id?: string | null
           provider_subscription_id?: string | null
           renewal_reminder_sent_at?: string | null
@@ -5911,8 +5916,6 @@ export type Database = {
           interval?: string
           payment_provider?: string
           plan_id?: string
-          plan_override_at?: string | null
-          plan_override_by?: string | null
           provider_customer_id?: string | null
           provider_subscription_id?: string | null
           renewal_reminder_sent_at?: string | null
@@ -7024,13 +7027,53 @@ export type Database = {
           },
         ]
       }
+      tenant_billing_mode_log: {
+        Row: {
+          changed_by: string | null
+          comped_until: string | null
+          created_at: string
+          fee_percent_override: number | null
+          id: number
+          new_mode: string
+          old_mode: string | null
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          comped_until?: string | null
+          created_at?: string
+          fee_percent_override?: number | null
+          id?: never
+          new_mode: string
+          old_mode?: string | null
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          comped_until?: string | null
+          created_at?: string
+          fee_percent_override?: number | null
+          id?: never
+          new_mode?: string
+          old_mode?: string | null
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_billing_mode_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_fee_standing: {
         Row: {
           blocked_at: string | null
-          enforcement_exempt: boolean
-          exempt_reason: string | null
-          exempt_set_at: string | null
-          exempt_set_by: string | null
           last_evaluated_at: string | null
           overdue_since: string | null
           state: string
@@ -7039,10 +7082,6 @@ export type Database = {
         }
         Insert: {
           blocked_at?: string | null
-          enforcement_exempt?: boolean
-          exempt_reason?: string | null
-          exempt_set_at?: string | null
-          exempt_set_by?: string | null
           last_evaluated_at?: string | null
           overdue_since?: string | null
           state?: string
@@ -7051,10 +7090,6 @@ export type Database = {
         }
         Update: {
           blocked_at?: string | null
-          enforcement_exempt?: boolean
-          exempt_reason?: string | null
-          exempt_set_at?: string | null
-          exempt_set_by?: string | null
           last_evaluated_at?: string | null
           overdue_since?: string | null
           state?: string
@@ -7275,11 +7310,18 @@ export type Database = {
         Row: {
           access_cutoff_at: string | null
           billing_email: string | null
+          billing_mode: string
           billing_period_end: string | null
           billing_status: string | null
+          comped_at: string | null
+          comped_by: string | null
+          comped_notice_sent: Json
+          comped_reason: string | null
+          comped_until: string | null
           country: string | null
           created_at: string | null
           domain: string | null
+          fee_percent_override: number | null
           id: string
           logo_url: string | null
           name: string
@@ -7295,11 +7337,18 @@ export type Database = {
         Insert: {
           access_cutoff_at?: string | null
           billing_email?: string | null
+          billing_mode?: string
           billing_period_end?: string | null
           billing_status?: string | null
+          comped_at?: string | null
+          comped_by?: string | null
+          comped_notice_sent?: Json
+          comped_reason?: string | null
+          comped_until?: string | null
           country?: string | null
           created_at?: string | null
           domain?: string | null
+          fee_percent_override?: number | null
           id?: string
           logo_url?: string | null
           name: string
@@ -7315,11 +7364,18 @@ export type Database = {
         Update: {
           access_cutoff_at?: string | null
           billing_email?: string | null
+          billing_mode?: string
           billing_period_end?: string | null
           billing_status?: string | null
+          comped_at?: string | null
+          comped_by?: string | null
+          comped_notice_sent?: Json
+          comped_reason?: string | null
+          comped_until?: string | null
           country?: string | null
           created_at?: string | null
           domain?: string | null
+          fee_percent_override?: number | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -8247,6 +8303,10 @@ export type Database = {
         }
         Returns: number
       }
+      effective_school_percentage: {
+        Args: { _tenant_id: string }
+        Returns: number
+      }
       elo_apply_match: {
         Args: {
           _course_id: number
@@ -8596,15 +8656,18 @@ export type Database = {
       }
       save_platform_bank_account: {
         Args: {
-          _account_holder: string
-          _account_number: string
+          _account_holder?: string
+          _account_number?: string
           _account_type?: string
           _actor: string
-          _bank_name: string
+          _bank_name?: string
           _currency: string
+          _document?: string
+          _email?: string
           _extra_instructions?: string
           _id: string
           _is_active?: boolean
+          _kind?: string
           _label: string
           _routing_number?: string
           _sort_order?: number
@@ -8635,15 +8698,6 @@ export type Database = {
       set_platform_bank_account_active: {
         Args: { _active: boolean; _actor: string; _id: string }
         Returns: boolean
-      }
-      set_tenant_fee_exemption: {
-        Args: {
-          _actor: string
-          _exempt: boolean
-          _reason: string
-          _tenant_id: string
-        }
-        Returns: undefined
       }
       settle_expired_checkout: {
         Args: { _transaction_id: number }

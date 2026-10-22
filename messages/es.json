@@ -1633,6 +1633,13 @@
         "titlePlaceholder": "ej. Introducción a las Variables",
         "descriptionLabel": "Resumen",
         "descriptionPlaceholder": "Descripción breve que se muestra en el plan de estudios.",
+        "imageLabel": "Imagen de portada",
+        "imageUpload": "Subir imagen",
+        "imageUploading": "Subiendo…",
+        "imageRemove": "Quitar imagen",
+        "imageUploadError": "Error al subir la imagen",
+        "imageUrlPlaceholder": "O pega la URL de una imagen",
+        "imageHint": "Se muestra en la parte superior de la lección (16:9 recomendado).",
         "videoUrlLabel": "URL del Video",
         "videoUrlPlaceholder": "https://youtube.com/..., loom.com/share/..., cap.so/s/...",
         "videoUrlHint": "Pega un enlace de YouTube, Vimeo, Loom o Cap, o el código embed (iframe) de cualquier otra plataforma.",
@@ -2784,6 +2791,7 @@
         "monetization": "Monetización",
         "appearance": "Apariencia",
         "website": "Sitio Web",
+        "webhooks": "Webhooks",
         "assets": "Archivos"
       },
       "appearance": {
@@ -3095,6 +3103,13 @@
           "cancel": "Cancelar",
           "intervalYearly": "anual",
           "intervalMonthly": "mensual"
+        },
+        "comped": {
+          "summaryUntil": "Plan cortesía: {plan} hasta {date} · fee {fee} %",
+          "summaryNoExpiry": "Plan cortesía: {plan}, sin vencimiento · fee {fee} %",
+          "expiredHint": "El periodo de cortesía terminó. Contrata un plan para conservar tus funciones.",
+          "cta": "Contratar plan",
+          "internalNote": "Escuela interna — sin facturación"
         },
         "pendingRequests": {
           "title": "Solicitudes de pago pendientes",
@@ -4876,6 +4891,7 @@
     "billing": "Facturación",
     "apiTokens": "Tokens de API",
     "aiSettings": "IA",
+    "aiUsage": "Uso de IA",
     "appearance": "Apariencia",
     "pages": "Páginas",
     "analytics": "Analíticas",
@@ -4895,6 +4911,7 @@
     "myBilling": "Facturación y Recibos",
     "community": "Comunidad",
     "flashcardReviews": "Repaso de Tarjetas",
+    "webhooks": "Webhooks",
     "assets": "Archivos"
   },
   "userNav": {
@@ -5832,7 +5849,9 @@
       "duration": "{h}h {m}m",
       "published": "Publicado el {date}",
       "language": "Español",
-      "createdBy": "Creado por {name}"
+      "createdBy": "Creado por {name}",
+      "readMore": "Leer más",
+      "tags": "Etiquetas"
     },
     "sections": {
       "whatYoullLearn": "Lo que aprenderás",
@@ -5843,7 +5862,23 @@
         "totalLength": "{h}h {m}m de duración total",
         "allLessons": "Todas las Lecciones",
         "noLessons": "No hay lecciones disponibles todavía.",
-        "previewBadge": "Vista previa"
+        "previewBadge": "Vista previa",
+        "stats": {
+          "videos": "{count, plural, one {video} other {videos}}",
+          "readings": "{count, plural, one {lectura} other {lecturas}}",
+          "exercises": "{count, plural, one {ejercicio} other {ejercicios}}",
+          "exams": "{count, plural, one {examen} other {exámenes}}",
+          "resources": "{count, plural, one {recurso} other {recursos}}"
+        },
+        "sequential": "Las lecciones se completan en orden: cada una desbloquea la siguiente.",
+        "kind": {
+          "video": "Video",
+          "reading": "Lectura",
+          "exam": "Examen"
+        },
+        "lessonExercises": "{count, plural, one {# ejercicio} other {# ejercicios}}",
+        "lessonResources": "{count, plural, one {# recurso} other {# recursos}}",
+        "examMinutes": "{count} min"
       },
       "instructor": {
         "title": "Instructor",
@@ -5871,7 +5906,10 @@
         "duration": "{h}h {m}m de contenido",
         "lifetime": "Acceso de por vida",
         "mobile": "Acceso en móvil y escritorio",
-        "certificate": "Certificado de finalización"
+        "certificate": "Certificado de finalización",
+        "exercises": "{count, plural, one {# ejercicio con feedback} other {# ejercicios con feedback}}",
+        "resources": "{count, plural, one {# recurso descargable} other {# recursos descargables}}",
+        "exams": "{count, plural, one {# examen final} other {# exámenes}}"
       }
     },
     "preview": {
@@ -6080,6 +6118,9 @@
       "binancePersonalCopyCode": "Copiar código de pago",
       "binancePersonalNote": "Incluye este código en la nota de la transferencia para poder identificar tu pago.",
       "binancePersonalWaiting": "Esperando la confirmación de tu transferencia…",
+      "binancePersonalPaid": "Ya pagué: verificar ahora",
+      "binancePersonalChecking": "Verificando en Binance…",
+      "binancePersonalNotFoundYet": "Aún no vemos tu transferencia. Puede tardar hasta un minuto en aparecer; seguimos verificando automáticamente.",
       "binancePersonalReview": "Otro pago coincidió con este monto, así que la escuela debe confirmar el tuyo manualmente. Puede tardar un poco más; mantén esta página abierta.",
       "binancePersonalContinue": "Continuar a las instrucciones de pago"
     },
@@ -6308,7 +6349,8 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Volver a mi escuela",
       "logout": "Cerrar sesión",
-      "bankAccounts": "Cuentas bancarias"
+      "bankAccounts": "Cuentas de pago",
+      "webhooks": "Webhooks"
     },
     "fees": {
       "title": "Comisiones de la plataforma",
@@ -6322,9 +6364,12 @@
       },
       "overdueSince": "Vencida desde",
       "blockedAt": "Bloqueada el",
-      "exempt": "Exenta del bloqueo",
-      "exemptYes": "Sí: {reason}",
-      "exemptNo": "No",
+      "billingMode": "Modo de facturación",
+      "mode": {
+        "paid": "De pago",
+        "comped": "Cortesía (solo avisos)",
+        "internal": "Interna"
+      },
       "lastEvaluated": "Última evaluación",
       "never": "Nunca",
       "balances": "Saldos",
@@ -6392,17 +6437,6 @@
         "submit": "Revertir pago",
         "success": "Pago revertido."
       },
-      "exemption": {
-        "set": "Eximir del bloqueo",
-        "clear": "Retirar exención",
-        "titleSet": "¿Eximir a esta escuela de la pausa de ventas?",
-        "titleClear": "¿Retirar la exención de esta escuela?",
-        "bodySet": "Los recordatorios se siguen enviando, pero las ventas nunca se pausan. Una pausa activa se levanta ahora.",
-        "bodyClear": "La escuela puede volver a pausarse en la próxima evaluación si está vencida.",
-        "reason": "Motivo",
-        "submit": "Guardar",
-        "success": "Exención actualizada."
-      },
       "cancel": "Cancelar",
       "saving": "Guardando…",
       "errors": {
@@ -6425,20 +6459,20 @@
       "noBankAccountLink": "Agregar una cuenta bancaria"
     },
     "bankAccounts": {
-      "title": "Cuentas bancarias",
-      "description": "Adónde transfieren las escuelas sus comisiones de plataforma. Cada escuela ve la cuenta activa en la moneda de su saldo, o la cuenta activa en USD si no hay una. Una cuenta activa por moneda. Cada cambio queda auditado.",
+      "title": "Cuentas de pago",
+      "description": "Adónde pagan las escuelas sus comisiones de plataforma: transferencia bancaria, Zelle, Binance, PayPal, Zinli, efectivo o Pago Móvil. Cada escuela ve las cuentas activas en la moneda de su saldo, o las activas en USD si no hay ninguna. Una cuenta activa por método y moneda. Cada cambio queda auditado.",
       "add": "Agregar cuenta",
       "edit": "Editar",
       "activate": "Activar",
       "deactivate": "Desactivar",
       "active": "Activa",
       "inactive": "Inactiva",
-      "empty": "Todavía no hay cuentas bancarias",
+      "empty": "Todavía no hay cuentas de pago",
       "emptyDesc": "Mientras no agregues una, a las escuelas que paguen por transferencia se les dice que recibirán los datos por correo.",
-      "loadError": "No pudimos cargar las cuentas bancarias. Actualiza para intentarlo de nuevo.",
-      "noActiveWarning": "No hay ninguna cuenta bancaria activa. Las escuelas que pagan por transferencia no ven datos bancarios.",
-      "createTitle": "Agregar cuenta bancaria",
-      "editTitle": "Editar cuenta bancaria",
+      "loadError": "No pudimos cargar las cuentas de pago. Actualiza para intentarlo de nuevo.",
+      "noActiveWarning": "No hay ninguna cuenta de pago activa. Las escuelas que pagan por transferencia no ven datos de pago.",
+      "createTitle": "Agregar cuenta de pago",
+      "editTitle": "Editar cuenta de pago",
       "formDescription": "Las escuelas ven todos los campos excepto el nombre interno y el orden.",
       "optional": "opcional",
       "hints": {
@@ -6458,7 +6492,10 @@
         "swiftCode": "SWIFT / BIC",
         "extraInstructions": "Instrucciones adicionales",
         "sortOrder": "Orden",
-        "isActive": "Activa"
+        "isActive": "Activa",
+        "kind": "Método",
+        "email": "Correo",
+        "document": "Cédula / RIF"
       },
       "headers": {
         "account": "Cuenta",
@@ -6466,14 +6503,16 @@
         "bank": "Banco",
         "number": "Número de cuenta",
         "status": "Estado",
-        "updated": "Actualizada"
+        "updated": "Actualizada",
+        "method": "Método",
+        "details": "Datos"
       },
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
-      "saved": "Cuenta bancaria guardada.",
-      "activated": "Cuenta bancaria activada.",
-      "deactivated": "Cuenta bancaria desactivada.",
+      "saved": "Cuenta de pago guardada.",
+      "activated": "Cuenta de pago activada.",
+      "deactivated": "Cuenta de pago desactivada.",
       "deactivateTitle": "¿Desactivar esta cuenta?",
       "deactivateBody": "Las escuelas dejan de verla de inmediato. Puedes volver a activarla más adelante.",
       "errors": {
@@ -6481,7 +6520,7 @@
         "invalid": "Revisa los campos marcados.",
         "invalid_id": "Esa cuenta no existe.",
         "not_found": "Esa cuenta ya no existe.",
-        "duplicate_currency": "Ya hay otra cuenta activa en esta moneda. Desactívala primero.",
+        "duplicate_currency": "Otra cuenta activa ya usa este método y moneda. Desactívala primero.",
         "internal": "Algo salió mal. Inténtalo de nuevo.",
         "generic": "Algo salió mal. Inténtalo de nuevo."
       },
@@ -6496,7 +6535,63 @@
         "swiftCode": "Usa 8 u 11 letras y dígitos.",
         "extraInstructions": "Hasta 1000 caracteres.",
         "sortOrder": "Usa un número entero.",
-        "isActive": "Valor no válido."
+        "isActive": "Valor no válido.",
+        "kind": "Elige un método.",
+        "email": "Ingresa un correo válido.",
+        "document": "Obligatorio, hasta 40 caracteres."
+      },
+      "kinds": {
+        "bank": {
+          "name": "Transferencia bancaria",
+          "description": "Una cuenta bancaria a la que las escuelas transfieren."
+        },
+        "zelle": {
+          "name": "Zelle",
+          "description": "Recibe pagos Zelle en un correo.",
+          "fields": {
+            "email": "Correo de Zelle",
+            "accountHolder": "Nombre en la cuenta"
+          }
+        },
+        "binance": {
+          "name": "Binance",
+          "description": "Binance Pay: las escuelas envían a tu Pay ID.",
+          "fields": {
+            "accountNumber": "Pay ID de Binance",
+            "email": "Correo de Binance"
+          }
+        },
+        "paypal": {
+          "name": "PayPal",
+          "description": "Recibe pagos de PayPal en un correo.",
+          "fields": {
+            "email": "Correo de PayPal"
+          }
+        },
+        "zinli": {
+          "name": "Zinli",
+          "description": "Recibe pagos en una billetera Zinli.",
+          "fields": {
+            "email": "Correo de Zinli",
+            "accountHolder": "Nombre en la cuenta"
+          }
+        },
+        "cash": {
+          "name": "Efectivo",
+          "description": "Pago en efectivo en persona. Indica dónde y cuándo en las instrucciones.",
+          "fields": {
+            "extraInstructions": "Instrucciones"
+          }
+        },
+        "pago_movil": {
+          "name": "Pago Móvil",
+          "description": "Pago Móvil se paga en bolívares, convertidos desde tu monto en USD.",
+          "fields": {
+            "bankName": "Banco",
+            "accountNumber": "Teléfono",
+            "accountHolder": "Titular de la cuenta"
+          }
+        }
       }
     }
   },
@@ -8556,226 +8651,76 @@
   },
   "home": {
     "hero": {
-      "badge": "Plataforma LMS de marca blanca",
-      "titleLead": "Lanza tu academia en línea en",
-      "titleHighlight": "minutos",
-      "subtitle": "La plataforma completa para crear, vender y escalar tus cursos en línea. Calificación con IA, gamificación, pagos que funcionan en Latinoamérica y una escuela aislada por subdominio, todo incluido.",
-      "ctaPrimary": "Crea tu escuela gratis",
-      "ctaSecondary": "Explorar cursos",
-      "trust": {
-        "noCard": "Sin tarjeta de crédito",
-        "freePlan": "Plan gratuito disponible",
-        "subdomain": "Tu propio subdominio",
-        "openSource": "Código abierto (MIT)"
-      }
+      "tag": "Código abierto",
+      "tagText": "Gratis para empezar, sin tarjeta",
+      "titleLead": "Enseña en línea.",
+      "titleHighlight": "Cobra desde donde sea.",
+      "subtitle": "Tu propia escuela, en tu propia dirección. Cursos, calificación con IA y los métodos de pago que tus estudiantes sí usan.",
+      "cta": "Crea tu escuela",
+      "secondary": "Cómo funciona"
     },
-    "audience": {
-      "badge": "Una plataforma, dos experiencias",
-      "title": "Hecha para escuelas y estudiantes",
-      "schools": {
-        "title": "Creadores de cursos y escuelas",
-        "description": "Lanza tu academia en línea con tu marca en minutos. Crea cursos, define precios, acepta pagos y sigue el progreso de tus estudiantes desde un solo panel.",
-        "items": {
-          "subdomain": "Tu propio subdominio (tuescuela.plataforma.com)",
-          "branding": "Marca personalizada: logo y colores",
-          "payments": "Stripe Connect, PayPal, transferencia bancaria o cripto: el dinero llega a ti",
-          "ai": "Calificación de exámenes y ejercicios con IA",
-          "analytics": "Analíticas y seguimiento del progreso de tus estudiantes"
-        },
-        "cta": "Crea tu escuela"
-      },
-      "learners": {
-        "title": "Estudiantes",
-        "description": "Aprende a tu ritmo con cursos estructurados, lecciones en video y ejercicios guiados por IA. Gana XP, sube en la tabla de posiciones y demuestra tus habilidades con certificados verificables.",
-        "items": {
-          "progress": "Seguimiento del progreso en todos tus cursos",
-          "tutor": "Un tutor de IA te acompaña en los ejercicios en tiempo real",
-          "gamification": "Gamificación: XP, niveles, rachas y logros",
-          "certificates": "Certificados descargables verificados con código QR",
-          "mdx": "Lecciones con bloques de código y demos interactivas"
-        },
-        "cta": "Explorar cursos"
-      }
-    },
-    "ai": {
-      "badge": "Enseñanza con IA",
-      "title": "Deja que la IA haga el trabajo pesado",
-      "subtitle": "Deja de pasar horas calificando. La IA califica exámenes, da retroalimentación personalizada y acompaña a los estudiantes en tiempo real.",
-      "grading": {
-        "title": "Calificación de exámenes con IA",
-        "description": "Las respuestas abiertas se califican automáticamente con retroalimentación por pregunta y una nota global. El profesor revisa, no califica.",
-        "note": "El profesor puede corregir cualquier nota"
-      },
-      "tutor": {
-        "title": "Tutor de IA interactivo",
-        "description": "Los estudiantes reciben una guía de IA personalizada durante los ejercicios: pistas, explicaciones y ánimo, sin revelar las respuestas.",
-        "note": "Pistas, nunca la solución"
-      },
-      "templates": {
-        "title": "Plantillas de prompts",
-        "description": "El profesor define exactamente cómo debe calificar la IA: rúbricas, tono, rigor. Control total sobre la calidad de la retroalimentación.",
-        "note": "Reutilizables en todos tus cursos"
-      }
-    },
-    "gamification": {
-      "badge": "Motivación estilo Duolingo",
-      "title": "Estudiantes que juegan, estudiantes que se quedan",
-      "subtitle": "Un motor de gamificación completo desde el primer día. Sin plugins ni integraciones: estudiantes motivados que vuelven.",
-      "perks": {
-        "xp": {
-          "title": "Sistema de XP",
-          "description": "Gana XP por lecciones, exámenes, ejercicios, comentarios y reseñas"
-        },
-        "levels": {
-          "title": "Niveles",
-          "description": "Hitos progresivos que premian la constancia"
-        },
-        "streaks": {
-          "title": "Rachas diarias",
-          "description": "Los bonos por racha fomentan el hábito de estudiar cada día"
-        },
-        "achievements": {
-          "title": "Logros",
-          "description": "Desbloquea insignias por hitos de aprendizaje, participación y rachas"
-        },
-        "coins": {
-          "title": "Tienda de monedas",
-          "description": "Gasta las monedas ganadas en personalizar tu perfil y contenido extra"
-        },
-        "leaderboard": {
-          "title": "Tabla de posiciones",
-          "description": "Rankings semanales que motivan una competencia sana entre estudiantes"
-        }
-      },
-      "preview": {
-        "title": "Tu progreso",
-        "level": "Nivel {level}",
-        "xpProgress": "Progreso de XP",
-        "xpValue": "{current} / {total} XP",
-        "streak": "Racha",
-        "streakValue": "{count} días",
-        "coins": "Monedas",
-        "rank": "Puesto",
-        "recent": "Logros recientes",
-        "badges": {
-          "firstExam": "Primer examen",
-          "streak7": "Racha de 7 días",
-          "lessons10": "10 lecciones",
-          "firstComment": "Primer comentario"
-        },
-        "leaders": "Líderes de la semana",
-        "you": "Tú",
-        "xp": "{count} XP"
-      }
+    "mock": {
+      "course": "Inglés para principiantes",
+      "published": "Publicado",
+      "lesson1": "Saludos y presentaciones",
+      "lesson2": "Números y precios",
+      "exercise": "Ejercicio",
+      "add": "Agregar lección",
+      "paid": "Pago recibido",
+      "paidVia": "Transferencia · confirmada",
+      "graded": "Calificado con IA",
+      "gradedNote": "Comentarios enviados al estudiante"
     },
     "features": {
-      "badge": "Todo incluido",
-      "title": "Todas las funciones que necesitas, ninguna que no",
-      "subtitle": "Sin plugins. Sin complementos de pago. Sin cobros escondidos. Todo viene incluido.",
-      "items": {
-        "mdx": {
-          "title": "Editor MDX enriquecido",
-          "description": "Editor de contenido por bloques con video, código resaltado, imágenes, embeds y componentes interactivos."
-        },
-        "exams": {
-          "title": "Constructor de exámenes",
-          "description": "Preguntas de opción múltiple, abiertas y de verdadero/falso. Exámenes con o sin tiempo límite y puntuación configurable."
-        },
-        "video": {
-          "title": "Lecciones en video",
-          "description": "Inserta YouTube o cualquier URL de video dentro de las lecciones. Los estudiantes ven y leen en la misma vista."
-        },
-        "exercises": {
-          "title": "Ejercicios con IA",
-          "description": "Ejercicios interactivos de programación y conceptos guiados por un tutor de IA. Prompts configurables por ejercicio."
-        },
-        "payments": {
-          "title": "Pagos que funcionan en LATAM",
-          "description": "Vende cursos individuales o por suscripción. Stripe, PayPal, transferencia bancaria, Binance Pay o Solana: tú eliges el medio."
-        },
-        "plans": {
-          "title": "Planes de suscripción",
-          "description": "Crea planes gratuitos, de pago y por niveles. Agrupa cursos por plan con control de acceso automático."
-        },
-        "certificates": {
-          "title": "Certificados",
-          "description": "Certificados PDF firmados que se emiten al completar el curso. Verificación por código QR en una URL pública."
-        },
-        "multiTenant": {
-          "title": "Multi-escuela",
-          "description": "Cada escuela tiene su propio subdominio, marca, estudiantes y datos, totalmente aislados a nivel de base de datos."
-        },
-        "rls": {
-          "title": "Seguridad a nivel de fila",
-          "description": "Todos los datos están delimitados por escuela mediante RLS de Postgres. Ninguna escuela puede ver los datos de otra, por diseño."
-        },
-        "notifications": {
-          "title": "Notificaciones",
-          "description": "Notificaciones en la plataforma con estado leído/no leído, correos con plantillas y actualizaciones en tiempo real."
-        },
-        "analytics": {
-          "title": "Analíticas para administradores",
-          "description": "Paneles de ingresos, inscripciones y participación para los administradores de la escuela. Métricas globales para el superadministrador."
-        },
-        "i18n": {
-          "title": "Inglés y español",
-          "description": "Internacionalización completa. Cada texto de la interfaz está traducido. Cambio de idioma desde la barra de navegación."
-        }
-      }
-    },
-    "howItWorks": {
-      "badge": "Cómo funciona",
-      "title": "De la idea a una escuela en línea en 3 pasos",
-      "steps": {
-        "create": {
-          "title": "Crea tu escuela",
-          "description": "Regístrate, elige un nombre y obtén tu propio subdominio. Toma 30 segundos."
-        },
-        "build": {
-          "title": "Construye tus cursos",
-          "description": "Usa el editor por bloques para agregar lecciones, exámenes y ejercicios. Publica cuando estés listo."
-        },
-        "enroll": {
-          "title": "Los estudiantes se inscriben y aprenden",
-          "description": "Comparte tu enlace, acepta pagos y sigue el progreso de tus estudiantes."
-        }
-      }
-    },
-    "multiTenant": {
-      "badge": "Verdadera arquitectura multi-escuela",
-      "title": "Cada escuela es un mundo completamente separado",
-      "description": "El aislamiento a nivel de base de datos garantiza que la Escuela A nunca vea los estudiantes, cursos o transacciones de la Escuela B, aunque compartan la misma plataforma. Las políticas RLS lo aplican en cada consulta, no en la capa de aplicación.",
-      "items": {
-        "subdomain": "Subdominio dedicado: tuescuela.plataforma.com",
-        "branding": "Marca independiente: logo, colores y nombre del sitio",
-        "students": "Base de estudiantes aislada: sin visibilidad entre escuelas",
-        "payments": "Cuentas de pago separadas por escuela",
-        "roles": "Acceso por rol: administrador, profesor y estudiante en cada escuela"
+      "title": "Todo para enseñar. Nada que vigilar.",
+      "ai": {
+        "title": "La IA califica. Tú enseñas.",
+        "body": "Exámenes y ejercicios se califican con comentarios apenas el estudiante envía. Usa tu propia clave de IA.",
+        "answerLabel": "Respuesta del estudiante",
+        "answer": "“It costs five dollars, it's very cheap.”",
+        "feedback": "Correcto. Prueba “it costs five dollars”."
       },
-      "cards": {
-        "a": {
-          "name": "Academia de Código",
-          "plan": "Pro"
-        },
-        "b": {
-          "name": "Escuela de Diseño",
-          "plan": "Starter"
-        },
-        "c": {
-          "name": "Laboratorio de Datos",
-          "plan": "Business"
-        },
-        "d": {
-          "name": "DevBoot",
-          "plan": "Gratis"
-        },
-        "students": "{count} estudiantes",
-        "courses": "{count} cursos"
+      "pay": {
+        "title": "Pagos que funcionan donde las tarjetas no.",
+        "cards": "Tarjetas",
+        "paypal": "PayPal",
+        "binance": "Binance",
+        "solana": "Solana",
+        "transfer": "Transferencia"
+      },
+      "brand": {
+        "title": "Tu escuela, tu dirección.",
+        "body": "Tu nombre, colores y logo en cada página que ven tus estudiantes.",
+        "url": "tuescuela.example.com"
+      },
+      "certs": {
+        "title": "Certificados que cualquiera puede verificar.",
+        "body": "Se emiten al completar el curso, con un enlace público para comprobarlos."
+      },
+      "oss": {
+        "title": "Código abierto. MIT.",
+        "body": "Alójalo tú, lee el código, sé dueño de tu escuela."
+      }
+    },
+    "how": {
+      "title": "En línea en tres pasos.",
+      "create": {
+        "title": "Nombra tu escuela",
+        "body": "Elige un nombre y una dirección. Como un minuto."
+      },
+      "build": {
+        "title": "Agrega tus cursos",
+        "body": "Escribe lecciones, añade ejercicios, fija un precio."
+      },
+      "share": {
+        "title": "Comparte tu enlace",
+        "body": "Tus estudiantes se inscriben, aprenden y obtienen certificados."
       }
     },
     "pricing": {
-      "title": "Empieza gratis. Crece sin límites.",
-      "subtitle": "El plan gratuito no tiene cuota mensual. Sube de plan cuando estés listo para escalar.",
+      "title": "Empieza gratis. Paga cuando crezcas.",
+      "subtitle": "El plan gratis no tiene cuota mensual.",
+      "perMonth": "/mes",
       "plans": {
         "free": {
           "name": "Gratis",
@@ -8786,14 +8731,14 @@
         },
         "starter": {
           "name": "Starter",
-          "price": "$9/mes",
+          "price": "$9",
           "f1": "15 cursos",
           "f2": "200 estudiantes",
           "f3": "Pagos con tarjeta"
         },
         "pro": {
           "name": "Pro",
-          "price": "$29/mes",
+          "price": "$29",
           "f1": "100 cursos",
           "f2": "1,000 estudiantes",
           "f3": "2% de comisión por transacción",
@@ -8801,20 +8746,19 @@
         },
         "business": {
           "name": "Business",
-          "price": "$79/mes",
+          "price": "$79",
           "f1": "Cursos ilimitados",
           "f2": "5,000 estudiantes",
           "f3": "0% de comisión por transacción",
           "f4": "Soporte prioritario"
         }
       },
-      "seeAll": "Ver todos los detalles de precios"
+      "seeAll": "Comparar todos los planes"
     },
     "cta": {
-      "title": "Tu academia está a un clic",
-      "subtitle": "Crea hoy tu propia escuela con tu marca. Empieza gratis, sin tarjeta de crédito.",
-      "primary": "Crea tu escuela gratis",
-      "secondary": "Conoce más"
+      "title": "Abre tu escuela hoy.",
+      "subtitle": "Plan gratis. Sin tarjeta de crédito.",
+      "primary": "Crea tu escuela"
     }
   },
   "themeKit": {
@@ -9137,6 +9081,53 @@
     "burst": "Estás enviando mensajes muy rápido. Espera un momento e inténtalo de nuevo.",
     "daily": "Has alcanzado el límite de práctica de hoy. Inténtalo de nuevo mañana.",
     "monthly": "El presupuesto mensual de IA de tu escuela se agotó este mes. Pide a un administrador que mejore el plan."
+  },
+  "aiUsage": {
+    "breadcrumb": "Uso de IA",
+    "title": "Uso y costo de IA",
+    "description": "Lo que tus estudiantes y profesores gastan con tu propia clave de IA. Son estimaciones: la factura de tu proveedor es la fuente de verdad.",
+    "range": {
+      "7": "Últimos 7 días",
+      "30": "Últimos 30 días",
+      "90": "Últimos 90 días"
+    },
+    "cards": {
+      "cost": "Costo estimado",
+      "calls": "Llamadas de IA",
+      "tokens": "Tokens",
+      "avgPerUser": "Costo prom. por usuario activo",
+      "activeUsers": "{count} usuarios activos"
+    },
+    "unpriced": "Algunos modelos no tienen precio conocido, así que el costo mostrado es un mínimo. Los tokens son exactos.",
+    "estimateNote": "Costo = tokens × precios de lista públicos. No incluye voz, voz a texto ni generación de imágenes.",
+    "daily": {
+      "title": "Actividad diaria",
+      "tokensLabel": "{tokens} tokens · {calls} llamadas"
+    },
+    "byFeature": {
+      "title": "Por función",
+      "description": "De dónde viene el gasto.",
+      "feature": "Función",
+      "calls": "Llamadas",
+      "tokens": "Tokens",
+      "cost": "Costo est."
+    },
+    "byUser": {
+      "title": "Por persona",
+      "description": "Quién usa más la IA. Los usuarios intensivos son tu mayor palanca de costo.",
+      "user": "Persona",
+      "calls": "Llamadas",
+      "tokens": "Tokens",
+      "cost": "Costo est.",
+      "share": "Parte",
+      "unknown": "Cuenta eliminada"
+    },
+    "empty": {
+      "title": "Aún no hay uso de IA",
+      "description": "El uso aparece aquí en cuanto estudiantes o profesores usen la IA con tu clave."
+    },
+    "noPrice": "n/d",
+    "loadError": "No se pudo cargar el uso de IA. Inténtalo de nuevo."
   },
   "aiSettings": {
     "title": "IA",
@@ -9621,7 +9612,6 @@
         "overdue": "Vencido",
         "blocked": "Ventas pausadas"
       },
-      "exempt": "Exenta de la pausa de ventas",
       "notifyOnly": "Solo recordatorios: todavía no se pausan las ventas por comisiones impagas.",
       "payNow": "Pagar ahora",
       "openRequest": "Transferencia de {amount} esperando nuestra confirmación (solicitada el {date}).",
@@ -9686,7 +9676,7 @@
       "redirecting": "Abriendo el pago…",
       "nothingToPay": "No hay nada que pagar en este momento.",
       "bank": {
-        "title": "Datos para la transferencia bancaria",
+        "title": "Datos de pago",
         "fallback": "Todavía no tenemos datos bancarios para mostrarte aquí. Al registrar la transferencia te los enviaremos por correo a tu contacto de facturación.",
         "reference": "Referencia de pago",
         "referenceHint": "Indícala en el concepto de la transferencia para que podamos identificarla.",
@@ -9701,12 +9691,26 @@
           "accountType": "Tipo de cuenta",
           "routingNumber": "Número de ruta",
           "swiftCode": "SWIFT / BIC",
-          "extraInstructions": "Instrucciones adicionales"
+          "extraInstructions": "Instrucciones adicionales",
+          "email": "Correo",
+          "document": "Cédula / RIF",
+          "payId": "Pay ID de Binance",
+          "phone": "Teléfono",
+          "vesAmount": "Monto a enviar"
         },
         "currencyNote": "Esta cuenta recibe {accountCurrency}. Transfiere el equivalente de tu saldo en {currency}.",
         "copyFailed": "No se pudo copiar",
         "copyManual": "Presiona Ctrl/Cmd+C para copiar",
-        "copyField": "Copiar {field}"
+        "copyField": "Copiar {field}",
+        "kinds": {
+          "zelle": "Zelle",
+          "binance": "Binance",
+          "paypal": "PayPal",
+          "zinli": "Zinli",
+          "cash": "Efectivo",
+          "pago_movil": "Pago Móvil"
+        },
+        "vesRate": "Tasa: {rate} Bs por USD · {source} · {date}"
       },
       "instructions": {
         "title": "Transferencia registrada",
@@ -9766,6 +9770,152 @@
       "print": "Imprimir",
       "back": "Volver a ingresos",
       "notFound": "Estado de cuenta no encontrado"
+    }
+  },
+  "memberNotices": {
+    "roleChanged": {
+      "title": "Tu rol cambió",
+      "content": "Un administrador actualizó los roles de tu cuenta."
+    },
+    "removed": {
+      "title": "Te quitaron de la escuela",
+      "content": "Un administrador quitó tu membresía de esta escuela."
+    },
+    "banned": {
+      "title": "Te quitaron de la escuela",
+      "content": "Te quitaron de esta escuela y ya no puedes volver a unirte."
+    },
+    "banLifted": {
+      "title": "Bloqueo levantado",
+      "content": "Se levantó el bloqueo de tu membresía en esta escuela. Puedes volver a unirte."
+    },
+    "deactivated": {
+      "title": "Cuenta desactivada",
+      "content": "Un administrador desactivó tu cuenta."
+    },
+    "deactivatedWithReason": {
+      "title": "Cuenta desactivada",
+      "content": "Tu cuenta fue desactivada: {reason}"
+    },
+    "reactivated": {
+      "title": "Cuenta reactivada",
+      "content": "Tu cuenta fue reactivada. Ya puedes acceder a la plataforma."
+    },
+    "courseApproved": {
+      "title": "Curso publicado",
+      "content": "Tu curso \"{course}\" fue aprobado y publicado."
+    },
+    "courseArchived": {
+      "title": "Curso archivado",
+      "content": "Tu curso \"{course}\" fue archivado."
+    },
+    "courseArchivedWithReason": {
+      "title": "Curso archivado",
+      "content": "Tu curso \"{course}\" fue archivado. Motivo: {reason}"
+    },
+    "courseRestored": {
+      "title": "Curso restaurado",
+      "content": "Tu curso \"{course}\" fue restaurado y ya está publicado."
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "breadcrumb": "Webhooks",
+    "description": {
+      "school": "Envía eventos de tu escuela a n8n, Zapier, Make o a tu propio servidor en cuanto ocurren.",
+      "platform": "Los endpoints de la plataforma reciben eventos de todas las escuelas, además de eventos del ciclo de vida de cada escuela."
+    },
+    "loadError": "No se pudieron cargar los webhooks",
+    "loadErrorDesc": "Inténtalo de nuevo en un momento.",
+    "cancel": "Cancelar",
+    "saved": "Webhook guardado",
+    "deleted": "Webhook eliminado",
+    "enabled": "Webhook activado",
+    "disabled": "Webhook en pausa",
+    "endpoints": {
+      "title": "Endpoints",
+      "add": "Agregar endpoint",
+      "empty": "Aún no hay endpoints de webhook",
+      "emptyDesc": {
+        "school": "Agrega un endpoint (por ejemplo la URL de un nodo Webhook de n8n) para recibir un POST firmado cuando un estudiante se inscriba, pague o complete una lección.",
+        "platform": "Agrega un endpoint para recibir la actividad de todas las escuelas, incluidas nuevas escuelas y cambios de plan."
+      },
+      "allEvents": "Todos los eventos",
+      "test": "Enviar prueba",
+      "edit": "Editar",
+      "rotate": "Rotar secreto",
+      "delete": "Eliminar",
+      "toggle": "Activar {name}",
+      "autoDisabledHint": "Pausado automáticamente tras fallos repetidos. Arregla el receptor y vuelve a activarlo."
+    },
+    "status": {
+      "active": "Activo",
+      "paused": "En pausa",
+      "autoDisabled": "En pausa (con fallos)"
+    },
+    "test": {
+      "ok": "Prueba entregada (HTTP {status})",
+      "failed": "La prueba falló: {reason}"
+    },
+    "form": {
+      "createTitle": "Agregar endpoint de webhook",
+      "editTitle": "Editar endpoint de webhook",
+      "description": "Enviamos un evento JSON firmado por POST a esta URL.",
+      "name": "Nombre",
+      "namePlaceholder": "n8n – nuevos estudiantes",
+      "url": "URL del endpoint",
+      "urlHint": "Debe ser una URL https pública. Se bloquean direcciones privadas e internas.",
+      "events": "Eventos",
+      "allEvents": "Todos los eventos (incluidos los futuros)",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "secret": {
+      "title": "Secreto de firma",
+      "description": "Cópialo ahora. Solo se muestra una vez. Úsalo para verificar el encabezado X-Webhook-Signature.",
+      "copy": "Copiar secreto",
+      "copied": "Secreto copiado",
+      "copyFailed": "No se pudo copiar. Selecciónalo y cópialo manualmente.",
+      "done": "Ya lo guardé"
+    },
+    "confirm": {
+      "deleteTitle": "¿Eliminar este endpoint?",
+      "deleteDesc": "Las entregas pendientes se descartan y el endpoint deja de recibir eventos.",
+      "rotateTitle": "¿Rotar el secreto de firma?",
+      "rotateDesc": "El secreto anterior deja de funcionar al instante. Actualiza tu receptor con el nuevo."
+    },
+    "deliveries": {
+      "title": "Entregas recientes",
+      "empty": "Aún no hay entregas. Envía una prueba para ver una aquí.",
+      "event": "Evento",
+      "endpoint": "Endpoint",
+      "status": "Estado",
+      "attempts": "Intentos",
+      "when": "Cuándo",
+      "actions": "Acciones",
+      "retry": "Reintentar",
+      "requeued": "En cola para reintento",
+      "statuses": {
+        "pending": "Pendiente",
+        "success": "Entregado",
+        "failed": "Fallido"
+      }
+    },
+    "help": {
+      "title": "Conectar con n8n",
+      "step1": "En n8n agrega un nodo Webhook (método POST) y copia su Production URL.",
+      "step2": "Pégala aquí como un nuevo endpoint y pulsa Enviar prueba.",
+      "step3": "Elige los eventos que quieres y construye tu flujo después del nodo Webhook.",
+      "verify": "Cada solicitud incluye X-Webhook-Id, X-Webhook-Event, X-Webhook-Timestamp y X-Webhook-Signature (v1=HMAC-SHA256 de \"timestamp.body\" con tu secreto). Las entregas fallidas se reintentan durante unos 2 días. Ver docs/WEBHOOKS.md."
+    },
+    "errors": {
+      "forbidden": "No tienes permiso para gestionar webhooks.",
+      "invalid": "Revisa el nombre, la URL y los eventos.",
+      "insecure_url": "Usa una URL https://.",
+      "blocked_host": "Esa dirección no está permitida. Usa una URL pública.",
+      "not_found": "Endpoint no encontrado.",
+      "limit_reached": "Límite de endpoints alcanzado. Elimina uno primero.",
+      "internal": "Algo salió mal. Inténtalo de nuevo."
     }
   },
   "assets": {

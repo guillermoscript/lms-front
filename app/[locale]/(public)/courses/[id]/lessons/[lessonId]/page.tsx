@@ -42,7 +42,7 @@ const getPreviewLesson = cache(async (courseId: number, lessonId: number, tenant
             .single(),
         admin
             .from('lessons')
-            .select('id, title, sequence, description, content, video_url, embed_code')
+            .select('id, title, sequence, description, image, content, video_url, embed_code')
             .eq('id', lessonId)
             .eq('course_id', courseId)
             .eq('tenant_id', tenantId)
@@ -157,6 +157,11 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
                         <p className="mt-2 text-muted-foreground leading-relaxed">{lesson.description}</p>
                     )}
                 </header>
+
+                {lesson.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={lesson.image} alt="" className="aspect-video w-full rounded-xl object-cover" />
+                )}
 
                 <LessonContent
                     mdx={await serializeLessonMdx(lesson.content)}

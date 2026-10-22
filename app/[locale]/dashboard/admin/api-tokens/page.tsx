@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { listMcpTokens } from '@/app/actions/mcp-tokens'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getUserSchools } from '@/lib/mcp/user-schools'
+import { tenantOrigin } from '@/lib/tenant/origin'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
 
 export default async function AdminApiTokensPage() {
@@ -18,10 +19,7 @@ export default async function AdminApiTokensPage() {
   const userId = await getCurrentUserId()
   const schools = userId ? await getUserSchools(userId) : []
   const tenant = await getCurrentTenant()
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
-  const mcpUrl = tenant?.slug
-    ? `https://${tenant.slug}.${platformDomain}/api/mcp/cli`
-    : `https://${platformDomain}/api/mcp/cli`
+  const mcpUrl = `${tenantOrigin(tenant)}/api/mcp/cli`
 
   return (
     <div className="min-h-screen bg-background" data-testid="api-tokens-page">

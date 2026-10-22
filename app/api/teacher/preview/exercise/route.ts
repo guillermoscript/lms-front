@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
+import { reportStreamError, streamErrorText } from '@/lib/ai/errors'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createPreviewExerciseTools } from '@/lib/ai/tools'
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 'ai'
@@ -94,11 +95,16 @@ export async function POST(req: Request) {
           messages: modelMessages,
           tools: createPreviewExerciseTools(),
           experimental_telemetry: { functionId: 'preview-exercise' },
+          onError: ({ error }) =>
+            reportStreamError(error, { feature: 'exercise_coach', tenantId, userId: user.id, providerId: coach.providerId }),
           stopWhen: stepCountIs(AI_CONFIG.maxSteps),
         }),
       )
 
-      return result.toUIMessageStreamResponse()
+      return result.toUIMessageStreamResponse({
+        onError: (error) =>
+          streamErrorText(error, { feature: 'exercise_coach', providerId: coach.providerId, canConfigure: membership.role === 'admin' }),
+      })
     },
   )
 }

@@ -23,6 +23,8 @@
 
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
+import { BILLING_MODE_FALLBACK_PLAN_SLUG } from '@/lib/billing/plan-limits'
 import { FEATURE_REQUIRED_PLAN, type PlanFeatures } from '@/lib/plans/features'
 
 export type PlanFeatureKey = keyof PlanFeatures
@@ -42,18 +44,36 @@ const FREE: TenantPlan = { slug: 'free', name: null, features: {} }
 
 /**
  * The tenant's current plan and feature JSON. One read per request.
+ *
+ * Missing `platform_plans` row: a `paid` school fails closed (no features); a
+ * `comped` / `internal` school resolves to the `enterprise` plan instead, since
+ * a partner's access must not hinge on a plan row somebody renamed.
  */
 export const getTenantPlan = cache(async (tenantId: string): Promise<TenantPlan> => {
   const admin = createAdminClient()
 
-  const { data: tenant } = await admin.from('tenants').select('plan').eq('id', tenantId).maybeSingle()
+  const { data: tenant } = await admin
+    .from('tenants')
+    .select('plan, billing_mode')
+    .eq('id', tenantId)
+    .maybeSingle()
   const slug = (tenant?.plan as string | null) || 'free'
+  const billingMode = normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode)
 
-  const { data: plan } = await admin
+  let { data: plan } = await admin
     .from('platform_plans')
     .select('name, features')
     .eq('slug', slug)
     .maybeSingle()
+
+  if (!plan && billingMode !== 'paid') {
+    const fallback = await admin
+      .from('platform_plans')
+      .select('name, features')
+      .eq('slug', BILLING_MODE_FALLBACK_PLAN_SLUG)
+      .maybeSingle()
+    plan = fallback.data
+  }
 
   if (!plan) return { ...FREE, slug }
 

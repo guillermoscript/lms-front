@@ -1,5 +1,6 @@
 'use server'
 
+import { effectiveSchoolPercentage } from '@/lib/billing/effective-fee'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
@@ -33,7 +34,7 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
   // primary-key `.order()` on each of the four.
   const [tenants, splits, txns, paid] = await Promise.all([
     fetchAllRows('tenants', (from, to) =>
-      admin.from('tenants').select('id, name', { count: 'exact' }).order('id').range(from, to)
+      admin.from('tenants').select('id, name, billing_mode, fee_percent_override', { count: 'exact' }).order('id').range(from, to)
     ),
     fetchAllRows('revenue_splits', (from, to) =>
       admin
@@ -73,7 +74,13 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     tenants.map((t) => ({
       tenantId: t.id,
       tenantName: t.name,
-      schoolPercentage: schoolPercentageByTenant.get(t.id) ?? DEFAULT_SCHOOL_PERCENTAGE,
+      schoolPercentage: effectiveSchoolPercentage({
+        billingMode: (t as { billing_mode?: string | null }).billing_mode,
+        feePercentOverride: (t as { fee_percent_override?: number | null }).fee_percent_override,
+        paidPlatformPercent: schoolPercentageByTenant.has(t.id)
+          ? 100 - (schoolPercentageByTenant.get(t.id) as number)
+          : 100 - DEFAULT_SCHOOL_PERCENTAGE,
+      }),
     })),
     txns
       .filter((t) => t.tenant_id && t.payment_provider && t.amount != null)

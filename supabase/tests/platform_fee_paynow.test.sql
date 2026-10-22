@@ -7,7 +7,7 @@
 -- credited; refunds/chargebacks reverse the row (append-only); the manual
 -- confirm is super-admin only, transactional and replay-safe; closing a fee
 -- request cancels its payment; offline/waiver need a reason and are audited;
--- the exemption lifts the gate.
+-- a comped billing_mode lifts the gate.
 BEGIN;
 SELECT plan(38);
 
@@ -140,15 +140,13 @@ SELECT ok((SELECT provider = 'waiver' AND status = 'succeeded' AND notes = 'good
 SELECT is((SELECT count(*)::int FROM public.platform_fee_audit_log WHERE tenant_id = '92900000-0000-0000-0000-0000000000c1' AND action IN ('waived', 'payment_reversed')),
   2, 'the waiver and the refund reversal are audited');
 
--- ── 7. exemption ──
+-- ── 7. billing_mode (comped = notify only) ──
 UPDATE public.tenant_fee_standing SET state = 'blocked', blocked_at = now(), overdue_since = now() - interval '20 days'
 WHERE tenant_id = '92900000-0000-0000-0000-0000000000c1';
 SELECT ok(public.is_tenant_sales_blocked('92900000-0000-0000-0000-0000000000c1'), 'fixture: blocked again');
-SELECT public.set_tenant_fee_exemption('92900000-0000-0000-0000-0000000000c1', true, (SELECT user_id FROM public.super_admins LIMIT 1), 'strategic partner');
-SELECT ok((SELECT enforcement_exempt AND blocked_at IS NULL AND state = 'overdue' FROM public.tenant_fee_standing
-           WHERE tenant_id = '92900000-0000-0000-0000-0000000000c1')
-          AND NOT public.is_tenant_sales_blocked('92900000-0000-0000-0000-0000000000c1'),
-  'exempting a blocked tenant lifts the block');
+UPDATE public.tenants SET billing_mode = 'comped' WHERE id = '92900000-0000-0000-0000-0000000000c1';
+SELECT ok(NOT public.is_tenant_sales_blocked('92900000-0000-0000-0000-0000000000c1'),
+  'a comped tenant is never sales-blocked, even with a blocked standing row');
 
 SELECT * FROM finish();
 ROLLBACK;

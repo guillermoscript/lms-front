@@ -53,7 +53,8 @@ export const BASE_ANNOTATIONS: AiAnnotations = {
 
   // ── Marketing / LMS sections (the AI mostly uses these) ──
   HeroBlock: {
-    instructions: 'Hero: headline, subtitle, up to two CTAs. Opens most pages.',
+    instructions:
+      'Hero: headline, subtitle, up to two CTAs. Opens most pages. surface=theme+pattern=grid: tech look; cardLines: chat card.',
     fields: { title: { required: true } },
   },
   FeaturesGrid: {

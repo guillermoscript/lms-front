@@ -1,5 +1,6 @@
 'use server'
 
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -18,6 +19,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { confirmFeeRequest } from '@/lib/billing/platform-fee-admin'
+import { effectivePlatformFeePercent } from '@/lib/billing/effective-fee'
 import {
   SwitchAlreadyPendingError,
   beginPlatformSubscriptionSwitch,
@@ -61,7 +63,7 @@ export async function getSubscriptionStatus() {
   const [tenantResult, subscriptionResult, billingCustomerResult, usage] = await Promise.all([
     adminClient
       .from('tenants')
-      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at')
+      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at, billing_mode, comped_until, fee_percent_override')
       .eq('id', tenantId)
       .single(),
     adminClient
@@ -120,6 +122,14 @@ export async function getSubscriptionStatus() {
     billingEmail: tenant?.billing_email,
     canUseCustomerPortal,
     accessCutoffAt: tenant?.access_cutoff_at ?? null,
+    billingMode: normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode),
+    compedUntil: ((tenant as { comped_until?: string | null } | null)?.comped_until ?? null) as string | null,
+    // Effective fee through the shared helper (comped -> override ?? 0, internal -> 0).
+    feePercent: effectivePlatformFeePercent({
+      billingMode: (tenant as { billing_mode?: unknown } | null)?.billing_mode as string | null | undefined,
+      feePercentOverride: (tenant as { fee_percent_override?: number | string | null } | null)?.fee_percent_override,
+      paidPlatformPercent: planDetails?.transaction_fee_percent ?? null,
+    }),
     subscription: subscription ? {
       status: subscription.status,
       // Named for the column it carries (#602). While this was `paymentMethod`
@@ -448,6 +458,23 @@ export async function confirmManualPayment(requestId: string) {
 }
 
 /**
+ * UI-facing wrapper around `confirmManualPayment`. Next.js masks the message of
+ * anything a server action throws in production ("An error occurred in the
+ * Server Components render"), so an expected refusal (expired / rejected
+ * request, over-limit downgrade) never reached the toast. Return it instead.
+ */
+export async function confirmManualPaymentForUi(
+  requestId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await confirmManualPayment(requestId)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to confirm payment' }
+  }
+}
+
+/**
  * Load the pieces needed to modify an active platform subscription: the
  * provider it is billed through, its capabilities, and the target plan's price
  * on THAT provider. Throws a friendly Error for every non-actionable state (no
@@ -713,11 +740,6 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
       interval,
       cancel_at_period_end: false,
       canceled_at: null,
-      // An admin-initiated, Stripe-backed change supersedes a super-admin comp
-      // (#546 §3): Stripe and the DB now agree again, so the reconciler should
-      // resume applying portal changes for this tenant.
-      plan_override_by: null,
-      plan_override_at: null,
       updated_at: now,
     })
     .eq('tenant_id', tenantId)
@@ -725,6 +747,22 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
     .from('tenants')
     .update({ plan: ctx.plan.slug, updated_at: now })
     .eq('id', tenantId)
+  // An admin-initiated, provider-backed change supersedes a comp (#546 §3):
+  // the provider and the DB agree again, so the school is `paid` and portal
+  // changes reconcile normally. `internal` is untouched.
+  await adminClient
+    .from('tenants')
+    .update({
+      billing_mode: 'paid',
+      comped_until: null,
+      comped_reason: null,
+      comped_by: null,
+      comped_at: null,
+      fee_percent_override: null,
+      updated_at: now,
+    })
+    .eq('id', tenantId)
+    .eq('billing_mode', 'comped')
   await adminClient
     .from('revenue_splits')
     .upsert(

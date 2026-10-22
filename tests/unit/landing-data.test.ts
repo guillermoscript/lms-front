@@ -237,7 +237,7 @@ describe('getLandingData', () => {
     expect(d.objectives).toEqual(['Build a form', 'Ship it'])
     // lessons: published + schedule passed, own tenant only, titles only (D3)
     expect(d.lessons.map((l) => l.title)).toEqual(['Intro', 'Forms'])
-    expect(d.lessons[0]).toEqual({ id: '1001', title: 'Intro', sequence: 1, isPreview: true })
+    expect(d.lessons[0]).toEqual({ id: '1001', title: 'Intro', sequence: 1, isPreview: true, image: null })
     expect(JSON.stringify(d)).not.toContain('SECRET')
     expect(d.lessonCount).toBe(2)
     expect(d.previewEnabled).toBe(true)

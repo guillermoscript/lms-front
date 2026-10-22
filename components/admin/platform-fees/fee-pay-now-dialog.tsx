@@ -21,6 +21,7 @@ import { formatMoney } from '@/lib/payments/format-money'
 import { feeErrorKey, parsePayNowAmount, payNowNavigation, type FeeRail, type PayNowBucket } from '@/lib/billing/platform-fee-view'
 import { withRequestSuffix } from '@/lib/billing/platform-fee-reference'
 import type { PlatformBankAccountView } from '@/lib/billing/platform-bank-accounts'
+import type { VesRate } from '@/lib/billing/ves-rate-convert'
 import { selectBankAccountsFor } from '@/lib/billing/platform-bank-account-select'
 import { BankTransferDetails, TransferReference } from './bank-transfer-details'
 import { OpenRequestNotice, type OpenFeeRequest } from './open-request-notice'
@@ -53,11 +54,13 @@ interface RegisteredTransfer {
 function TransferRegistered({
   transfer,
   accounts,
+  vesRate,
   tenantReference,
   onDone,
 }: {
   transfer: RegisteredTransfer
   accounts: readonly PlatformBankAccountView[]
+  vesRate: VesRate | null
   tenantReference: string
   onDone: () => void
 }) {
@@ -77,7 +80,7 @@ function TransferRegistered({
         <dt className="text-muted-foreground">{t('instructions.reference')}</dt>
         <dd className="break-all font-mono text-xs">{transfer.requestId}</dd>
       </dl>
-      <BankTransferDetails accounts={accounts} currency={transfer.currency}>
+      <BankTransferDetails accounts={accounts} currency={transfer.currency} amount={transfer.amount} vesRate={vesRate}>
         <TransferReference value={withRequestSuffix(tenantReference, transfer.requestId)} />
       </BankTransferDetails>
       {transfer.expiresAt ? (
@@ -110,6 +113,7 @@ function OpenRequestHint({ request }: { request: OpenFeeRequest }) {
 function PayNowForm({
   buckets,
   bankAccounts,
+  vesRate,
   tenantReference,
   openRequest,
   onRegistered,
@@ -117,6 +121,7 @@ function PayNowForm({
 }: {
   buckets: PayNowBucket[]
   bankAccounts: readonly PlatformBankAccountView[]
+  vesRate: VesRate | null
   tenantReference: string
   openRequest: OpenFeeRequest | null
   onRegistered: (transfer: RegisteredTransfer) => void
@@ -278,7 +283,7 @@ function PayNowForm({
 
         {pendingTransfer ? (
           <OpenRequestNotice request={pendingTransfer} reference={tenantReference ? withRequestSuffix(tenantReference, pendingTransfer.id) : ''}>
-            <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, pendingTransfer.currency)} currency={pendingTransfer.currency} />
+            <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, pendingTransfer.currency)} currency={pendingTransfer.currency} amount={pendingTransfer.amount} vesRate={vesRate} />
           </OpenRequestNotice>
         ) : (
           <>
@@ -303,7 +308,12 @@ function PayNowForm({
 
             {rail === 'manual' ? (
               <>
-                <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, bucket.currency)} currency={bucket.currency}>
+                <BankTransferDetails
+                  accounts={selectBankAccountsFor(bankAccounts, bucket.currency)}
+                  currency={bucket.currency}
+                  amount={parsePayNowAmount(amount, bucket.netOwed, 'manual').ok ? Number(amount.trim().replace(',', '.')) : undefined}
+                  vesRate={vesRate}
+                >
                   {tenantReference ? <TransferReference value={tenantReference} /> : null}
                 </BankTransferDetails>
                 <div className="space-y-1.5">
@@ -369,12 +379,15 @@ function PayNowForm({
 export function FeePayNowDialog({
   buckets,
   bankAccounts,
+  vesRate = null,
   tenantReference,
   openRequest,
 }: {
   buckets: PayNowBucket[]
   /** Active platform accounts relevant to the payable currencies, server-selected. */
   bankAccounts: readonly PlatformBankAccountView[]
+  /** USD→VES rate for Pago Móvil accounts; null when none is available. */
+  vesRate?: VesRate | null
   /** `FEES-<SLUG>` (empty when unknown): the reference to quote on the transfer. */
   tenantReference: string
   /** A transfer already waiting for confirmation. */
@@ -407,6 +420,7 @@ export function FeePayNowDialog({
             <TransferRegistered
               transfer={registered}
               accounts={selectBankAccountsFor(bankAccounts, registered.currency)}
+              vesRate={vesRate}
               tenantReference={tenantReference}
               onDone={() => handleOpenChange(false)}
             />
@@ -414,6 +428,7 @@ export function FeePayNowDialog({
             <PayNowForm
               buckets={buckets}
               bankAccounts={bankAccounts}
+              vesRate={vesRate}
               tenantReference={tenantReference}
               openRequest={openRequest}
               onRegistered={setRegistered}

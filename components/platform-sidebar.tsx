@@ -15,6 +15,7 @@ import {
   IconSchool,
   IconShieldCheck,
   IconWallet,
+  IconWebhook,
 } from "@tabler/icons-react"
 import {
   Sidebar,
@@ -98,6 +99,7 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
       items: [
         { titleKey: 'plans', href: '/platform/plans', icon: IconBuildingStore },
         { titleKey: 'bankAccounts', href: '/platform/bank-accounts', icon: IconBuildingBank },
+        { titleKey: 'webhooks', href: '/platform/webhooks', icon: IconWebhook },
       ],
     },
   ]

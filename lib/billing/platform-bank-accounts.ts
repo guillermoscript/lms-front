@@ -1,5 +1,6 @@
 /**
- * Platform bank accounts (#929): where schools wire platform-fee transfers.
+ * Platform payment accounts (#929): where schools pay platform fees (bank
+ * transfer, Zelle, Binance, PayPal, Zinli, cash, Pago Móvil).
  * Managed by super admins in /platform/bank-accounts (table
  * `platform_bank_accounts`, migration 20261009140000).
  *
@@ -14,18 +15,24 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { selectBankAccountsFor } from '@/lib/billing/platform-bank-account-select'
 import { isRequestOpen, OPEN_REQUEST_STATUSES } from '@/lib/billing/payment-request-ttl'
+import { isPlatformAccountKind, type PlatformAccountKind } from '@/lib/billing/platform-bank-account-input'
 
 /** One receiving account, as the pay-now dialog renders it. */
 export type PlatformBankAccountView = {
   id: string
+  kind: PlatformAccountKind
   currency: string
   label: string
-  bankName: string
-  accountHolder: string
-  accountNumber: string
+  bankName: string | null
+  accountHolder: string | null
+  /** Bank account number; Binance Pay ID; Pago Móvil phone. */
+  accountNumber: string | null
   accountType: string | null
   routingNumber: string | null
   swiftCode: string | null
+  email: string | null
+  /** Cédula / RIF (Pago Móvil). */
+  document: string | null
   extraInstructions: string | null
 }
 
@@ -34,14 +41,17 @@ export { selectBankAccountsFor, selectBankAccountsForAll } from '@/lib/billing/p
 /** Super-admin row: every column the management page shows or edits. */
 export interface PlatformBankAccount {
   id: string
+  kind: PlatformAccountKind
   currency: string
   label: string
-  bankName: string
-  accountHolder: string
-  accountNumber: string
+  bankName: string | null
+  accountHolder: string | null
+  accountNumber: string | null
   accountType: string | null
   routingNumber: string | null
   swiftCode: string | null
+  email: string | null
+  document: string | null
   extraInstructions: string | null
   isActive: boolean
   sortOrder: number
@@ -52,7 +62,7 @@ export interface PlatformBankAccount {
 export type OpenFeeRequestView = { id: string; amount: number; currency: string; requestedAt: string }
 
 const COLUMNS =
-  'id, currency, label, bank_name, account_holder, account_number, account_type, routing_number, swift_code, extra_instructions, is_active, sort_order, updated_at'
+  'id, kind, currency, label, bank_name, account_holder, account_number, account_type, routing_number, swift_code, email, document, extra_instructions, is_active, sort_order, updated_at'
 
 type Row = Record<string, unknown>
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null)
@@ -60,14 +70,17 @@ const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null)
 function toAccount(r: Row): PlatformBankAccount {
   return {
     id: String(r.id),
+    kind: isPlatformAccountKind(r.kind) ? r.kind : 'bank',
     currency: String(r.currency),
     label: String(r.label),
-    bankName: String(r.bank_name),
-    accountHolder: String(r.account_holder),
-    accountNumber: String(r.account_number),
+    bankName: str(r.bank_name),
+    accountHolder: str(r.account_holder),
+    accountNumber: str(r.account_number),
     accountType: str(r.account_type),
     routingNumber: str(r.routing_number),
     swiftCode: str(r.swift_code),
+    email: str(r.email),
+    document: str(r.document),
     extraInstructions: str(r.extra_instructions),
     isActive: r.is_active === true,
     sortOrder: Number(r.sort_order ?? 0),
@@ -79,6 +92,7 @@ function toAccount(r: Row): PlatformBankAccount {
 export function toBankAccountView(a: PlatformBankAccount): PlatformBankAccountView {
   return {
     id: a.id,
+    kind: a.kind,
     currency: a.currency,
     label: a.label,
     bankName: a.bankName,
@@ -87,6 +101,8 @@ export function toBankAccountView(a: PlatformBankAccount): PlatformBankAccountVi
     accountType: a.accountType,
     routingNumber: a.routingNumber || null,
     swiftCode: a.swiftCode || null,
+    email: a.email,
+    document: a.document,
     extraInstructions: a.extraInstructions,
   }
 }

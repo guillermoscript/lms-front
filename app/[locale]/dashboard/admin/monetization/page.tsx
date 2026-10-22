@@ -22,6 +22,7 @@ import {
   IconArrowRight,
   IconCoin,
 } from '@tabler/icons-react'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 export default async function MonetizationPage() {
   const role = await getUserRole()
@@ -37,14 +38,14 @@ export default async function MonetizationPage() {
   // Parallelize all 6 independent queries
   const [
     { data: tenant },
-    { data: split },
+    split,
     revenue,
     { count: productCount },
     { count: planCount },
     { count: subscriptionCount },
   ] = await Promise.all([
     supabase.from('tenants').select('stripe_account_id').eq('id', tenantId).single(),
-    supabase.from('revenue_splits').select('platform_percentage, school_percentage').eq('tenant_id', tenantId).single(),
+    getEffectiveRevenueSplit(supabase, tenantId),
     getRevenueOverview(),
     supabase.from('products').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('plans').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).is('deleted_at', null),
@@ -52,8 +53,8 @@ export default async function MonetizationPage() {
   ])
 
   const isStripeConnected = !!tenant?.stripe_account_id
-  const platformPercentage = split?.platform_percentage ?? 20
-  const schoolPercentage = split?.school_percentage ?? 80
+  const platformPercentage = split.platformPercentage
+  const schoolPercentage = split.schoolPercentage
 
   const quickStats = [
     {

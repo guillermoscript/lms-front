@@ -1247,6 +1247,78 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
               "value": "100vh"
             }
           ]
+        },
+        "surface": {
+          "type": "select",
+          "label": "Surface",
+          "options": [
+            {
+              "label": "Brand color",
+              "value": "brand"
+            },
+            {
+              "label": "Theme surface",
+              "value": "theme"
+            },
+            {
+              "label": "Inverse",
+              "value": "inverse"
+            }
+          ]
+        },
+        "pattern": {
+          "type": "select",
+          "label": "Background Pattern",
+          "options": [
+            {
+              "label": "None",
+              "value": "none"
+            },
+            {
+              "label": "Grid",
+              "value": "grid"
+            },
+            {
+              "label": "Dots",
+              "value": "dots"
+            }
+          ]
+        },
+        "cardTitle": {
+          "type": "text",
+          "label": "Card Title (terminal/chat)"
+        },
+        "cardLines": {
+          "type": "array",
+          "label": "Card Lines",
+          "arrayFields": {
+            "kind": {
+              "type": "select",
+              "label": "Kind",
+              "options": [
+                {
+                  "label": "Prompt / input",
+                  "value": "prompt"
+                },
+                {
+                  "label": "Reply / result",
+                  "value": "reply"
+                },
+                {
+                  "label": "Note",
+                  "value": "note"
+                }
+              ]
+            },
+            "text": {
+              "type": "textarea",
+              "label": "Text"
+            }
+          },
+          "defaultItemProps": {
+            "kind": "prompt",
+            "text": ""
+          }
         }
       },
       "defaultProps": {
@@ -1260,10 +1332,14 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
         "backgroundColor": "",
         "alignment": "center",
         "overlayOpacity": 50,
-        "minHeight": "500px"
+        "minHeight": "500px",
+        "surface": "brand",
+        "pattern": "none",
+        "cardTitle": "",
+        "cardLines": []
       },
       "ai": {
-        "instructions": "Hero: headline, subtitle, up to two CTAs. Opens most pages.",
+        "instructions": "Hero: headline, subtitle, up to two CTAs. Opens most pages. surface=theme+pattern=grid: tech look; cardLines: chat card.",
         "fields": {
           "title": {
             "required": true

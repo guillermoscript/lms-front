@@ -27,7 +27,7 @@ const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000001'
 
 interface Mem {
   config: FeeConfig
-  tenants: { id: string; name: string; slug: string }[]
+  tenants: { id: string; name: string; slug: string; billingMode?: 'paid' | 'comped' | 'internal' }[]
   txns: Record<string, FeeTxnRow[]>
   payments: Record<string, FeePayment[]>
   standing: Record<string, FeeStanding>
@@ -273,13 +273,42 @@ describe('phase 3 — block', () => {
     expect(Object.values(mem.standing).filter((s) => s.blockedAt)).toHaveLength(2)
   })
 
-  it('never blocks the default (platform) school', async () => {
+  it('paid (explicit) is blocked as before', async () => {
     reset('enforce')
-    mem.tenants = [{ id: DEFAULT_TENANT, name: 'Default', slug: 'default' }]
+    mem.tenants = [{ id: T1, name: 'S', slug: 's', billingMode: 'paid' }]
+    setStanding(T1, 'overdue', '2026-10-01T06:00:00Z')
+    const r = await run('2026-10-20T06:00:00Z')
+    expect(r.blocked).toBe(1)
+    expect(mem.standing[T1].blockedAt).not.toBeNull()
+  })
+
+  it('comped is never blocked (notify-only) but still gets statements and overdue notices', async () => {
+    reset('enforce')
+    mem.tenants = [{ id: T1, name: 'S', slug: 's', billingMode: 'comped' }]
+    const first = await run('2026-10-20T06:00:00Z')
+    expect(first.statementsClosed).toBe(1)
+    expect(first.overdue).toBe(1)
+    expect(sent.length).toBeGreaterThan(0)
+    const second = await run('2026-10-29T06:00:00Z') // past the grace period
+    expect(second.blocked).toBe(0)
+    expect(second.wouldBlock).toBe(1)
+    expect(mem.standing[T1].blockedAt).toBeNull()
+    expect(mem.standing[T1].state).toBe('overdue')
+  })
+
+  it('internal is skipped entirely: no statements, emails or standing changes', async () => {
+    reset('enforce')
+    mem.tenants = [{ id: DEFAULT_TENANT, name: 'Default', slug: 'default', billingMode: 'internal' }]
     mem.txns[DEFAULT_TENANT] = [sale('2026-09-10T10:00:00Z')]
     setStanding(DEFAULT_TENANT, 'overdue', '2026-10-01T06:00:00Z')
     const r = await run('2026-10-20T06:00:00Z')
+    expect(r.tenantsScanned).toBe(0)
     expect(r.blocked).toBe(0)
+    expect(r.wouldBlock).toBe(0)
+    expect(mem.writes).toBe(0)
+    expect(mem.statements).toHaveLength(0)
+    expect(sent).toHaveLength(0)
+    expect(mem.standing[DEFAULT_TENANT].state).toBe('overdue')
   })
 })
 

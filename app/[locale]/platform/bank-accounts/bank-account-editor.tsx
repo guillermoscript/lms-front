@@ -22,13 +22,20 @@ import {
   setPlatformBankAccountActiveAction,
   type BankAccountActionError,
 } from '@/app/actions/platform/bank-accounts'
-import { parseBankAccountInput, type BankAccountField } from '@/lib/billing/platform-bank-account-input'
+import {
+  PLATFORM_ACCOUNT_KINDS,
+  PLATFORM_KIND_FIELDS,
+  parseBankAccountInput,
+  type BankAccountField,
+  type PlatformAccountKind,
+} from '@/lib/billing/platform-bank-account-input'
 import type { PlatformBankAccount } from '@/lib/billing/platform-bank-accounts'
 
 const ERRORS: readonly BankAccountActionError[] = ['forbidden', 'invalid', 'invalid_id', 'not_found', 'duplicate_currency', 'internal']
 const errorKey = (code: unknown) => (ERRORS as readonly unknown[]).includes(code) ? (code as string) : 'generic'
 
 type FormState = {
+  kind: PlatformAccountKind
   currency: string
   label: string
   bankName: string
@@ -37,13 +44,21 @@ type FormState = {
   accountType: string
   routingNumber: string
   swiftCode: string
+  email: string
+  document: string
   extraInstructions: string
   sortOrder: string
   isActive: boolean
 }
 
+/** Pago Móvil receives bolívares; everything else is a USD account. */
+function defaultCurrency(kind: PlatformAccountKind): string {
+  return kind === 'pago_movil' ? 'VES' : 'USD'
+}
+
 function initialState(a: PlatformBankAccount | null): FormState {
   return {
+    kind: a?.kind ?? 'bank',
     currency: a?.currency ?? 'USD',
     label: a?.label ?? '',
     bankName: a?.bankName ?? '',
@@ -52,25 +67,48 @@ function initialState(a: PlatformBankAccount | null): FormState {
     accountType: a?.accountType ?? '',
     routingNumber: a?.routingNumber ?? '',
     swiftCode: a?.swiftCode ?? '',
+    email: a?.email ?? '',
+    document: a?.document ?? '',
     extraInstructions: a?.extraInstructions ?? '',
     sortOrder: String(a?.sortOrder ?? 0),
     isActive: a?.isActive ?? true,
   }
 }
 
-type TextField = Exclude<BankAccountField, 'isActive'>
-const TEXT_FIELDS: { key: TextField; required: boolean; maxLength: number; className?: string; hint?: boolean; multiline?: boolean; mono?: boolean }[] = [
-  { key: 'label', required: true, maxLength: 80, hint: true },
-  { key: 'currency', required: true, maxLength: 3, hint: true, mono: true },
-  { key: 'bankName', required: true, maxLength: 120 },
-  { key: 'accountHolder', required: true, maxLength: 120 },
-  { key: 'accountNumber', required: true, maxLength: 64, mono: true },
-  { key: 'accountType', required: false, maxLength: 40 },
-  { key: 'routingNumber', required: false, maxLength: 40, mono: true },
-  { key: 'swiftCode', required: false, maxLength: 14, hint: true, mono: true },
-  { key: 'extraInstructions', required: false, maxLength: 1000, multiline: true, className: 'sm:col-span-2' },
-  { key: 'sortOrder', required: false, maxLength: 5 },
-]
+type TextField = Exclude<BankAccountField, 'isActive' | 'kind'>
+type FieldMeta = { maxLength: number; className?: string; hint?: boolean; multiline?: boolean; mono?: boolean; type?: string }
+const FIELD_META: Record<TextField, FieldMeta> = {
+  label: { maxLength: 80, hint: true },
+  currency: { maxLength: 3, hint: true, mono: true },
+  bankName: { maxLength: 120 },
+  accountHolder: { maxLength: 120 },
+  accountNumber: { maxLength: 64, mono: true },
+  accountType: { maxLength: 40 },
+  routingNumber: { maxLength: 40, mono: true },
+  swiftCode: { maxLength: 14, hint: true, mono: true },
+  email: { maxLength: 254, type: 'email' },
+  document: { maxLength: 40, mono: true },
+  extraInstructions: { maxLength: 1000, multiline: true, className: 'sm:col-span-2' },
+  sortOrder: { maxLength: 5 },
+}
+
+/** Fields shown for a method, in order: the common pair, the method's own, then sort order. */
+function fieldsFor(kind: PlatformAccountKind): { key: TextField; required: boolean }[] {
+  return [
+    { key: 'label', required: true },
+    { key: 'currency', required: true },
+    ...PLATFORM_KIND_FIELDS[kind],
+    { key: 'sortOrder', required: false },
+  ]
+}
+
+type Translate = ReturnType<typeof useTranslations>
+
+/** A method may rename a shared column ("Pay ID", "Phone"); otherwise the generic label. */
+function fieldLabel(t: Translate, kind: PlatformAccountKind, key: TextField): string {
+  const override = `kinds.${kind}.fields.${key}`
+  return t.has(override) ? t(override) : t(`fields.${key}`)
+}
 
 /**
  * The account form. Mounted only while its dialog is open, so every open
@@ -129,7 +167,37 @@ function BankAccountForm({
         void save()
       }}
     >
-      {TEXT_FIELDS.map((f) => {
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor={`${idPrefix}-kind`}>{t('fields.kind')}</Label>
+        <select
+          id={`${idPrefix}-kind`}
+          name="kind"
+          value={form.kind}
+          onChange={(e) => {
+            const kind = e.target.value as PlatformAccountKind
+            // Pago Móvil is paid in VES, every other method in USD: follow the method unless the currency was customised.
+            setForm((p) => ({
+              ...p,
+              kind,
+              currency: p.currency === defaultCurrency(p.kind) ? defaultCurrency(kind) : p.currency,
+            }))
+          }}
+          aria-describedby={`${idPrefix}-kind-hint`}
+          data-testid="bank-account-kind"
+          className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {PLATFORM_ACCOUNT_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {t(`kinds.${k}.name`)}
+            </option>
+          ))}
+        </select>
+        <p id={`${idPrefix}-kind-hint`} className="text-xs text-muted-foreground">
+          {t(`kinds.${form.kind}.description`)}
+        </p>
+      </div>
+      {fieldsFor(form.kind).map((spec) => {
+        const f = { ...FIELD_META[spec.key], key: spec.key, required: spec.required }
         const id = `${idPrefix}-${f.key}`
         const isInvalid = invalid.has(f.key)
         const describedBy = [f.hint && !isInvalid ? `${id}-hint` : null, isInvalid ? `${id}-error` : null].filter(Boolean).join(' ') || undefined
@@ -151,7 +219,7 @@ function BankAccountForm({
         return (
           <div key={f.key} className={`space-y-1.5 ${f.className ?? ''}`}>
             <Label htmlFor={id}>
-              {t(`fields.${f.key}`)}
+              {fieldLabel(t, form.kind, f.key)}
               {f.required ? null : <span className="font-normal text-muted-foreground"> ({t('optional')})</span>}
             </Label>
             {f.multiline ? (
@@ -159,6 +227,7 @@ function BankAccountForm({
             ) : (
               <Input
                 {...common}
+                type={f.type}
                 inputMode={f.key === 'sortOrder' ? 'numeric' : undefined}
                 autoComplete="off"
                 className={f.mono ? 'font-mono' : undefined}

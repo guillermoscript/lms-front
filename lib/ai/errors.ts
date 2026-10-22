@@ -345,6 +345,21 @@ export async function reportStreamError(
   }
 }
 
+/**
+ * The text a streaming route puts in the UI stream's error part
+ * (`toUIMessageStreamResponse({ onError })`). Headers are already sent, so a mid-stream
+ * failure cannot change the HTTP status; it travels as the same JSON body the pre-stream
+ * errors use, which `parseAiChatError` turns back into the right copy. Without this the
+ * SDK masks it as "An error occurred." Never the raw provider message (can echo a key).
+ */
+export function streamErrorText(
+  error: unknown,
+  o: { feature: AiFeature; providerId: ProviderId; canConfigure: boolean; locale?: string },
+): string {
+  const err = classifyProviderError(error, { feature: o.feature, providerId: o.providerId })
+  return JSON.stringify(aiErrorBody(err, { feature: o.feature, canConfigure: o.canConfigure, locale: o.locale }))
+}
+
 /** Flips an active credential to `invalid` once, with an audit row. Best effort: never throws. */
 export async function markCredentialInvalid(
   tenantId: string,

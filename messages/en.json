@@ -1633,6 +1633,13 @@
         "titlePlaceholder": "e.g. Introduction to Variables",
         "descriptionLabel": "Summary",
         "descriptionPlaceholder": "One-line overview shown in the course curriculum.",
+        "imageLabel": "Cover image",
+        "imageUpload": "Upload image",
+        "imageUploading": "Uploading…",
+        "imageRemove": "Remove image",
+        "imageUploadError": "Failed to upload image",
+        "imageUrlPlaceholder": "Or paste an image URL",
+        "imageHint": "Shown at the top of the lesson (16:9 recommended).",
         "videoUrlLabel": "Video URL",
         "videoUrlPlaceholder": "https://youtube.com/..., loom.com/share/..., cap.so/s/...",
         "videoUrlHint": "Paste a link from YouTube, Vimeo, Loom or Cap, or the iframe embed code from any other platform.",
@@ -2784,6 +2791,7 @@
         "monetization": "Monetization",
         "appearance": "Appearance",
         "website": "Website",
+        "webhooks": "Webhooks",
         "assets": "Assets"
       },
       "appearance": {
@@ -3095,6 +3103,13 @@
           "cancel": "Cancel",
           "intervalYearly": "yearly",
           "intervalMonthly": "monthly"
+        },
+        "comped": {
+          "summaryUntil": "Complimentary plan: {plan} until {date} · fee {fee}%",
+          "summaryNoExpiry": "Complimentary plan: {plan}, no expiry · fee {fee}%",
+          "expiredHint": "The complimentary period has ended. Get a plan to keep your features.",
+          "cta": "Get a plan",
+          "internalNote": "Internal school — no billing"
         },
         "pendingRequests": {
           "title": "Pending payment requests",
@@ -4994,6 +5009,7 @@
     "billing": "Billing",
     "apiTokens": "API Tokens",
     "aiSettings": "AI",
+    "aiUsage": "AI usage",
     "appearance": "Appearance",
     "pages": "Pages",
     "analytics": "Analytics",
@@ -5014,6 +5030,7 @@
     "community": "Community",
     "profile": "Profile",
     "flashcardReviews": "Flashcard Review",
+    "webhooks": "Webhooks",
     "assets": "Assets"
   },
   "userNav": {
@@ -5832,7 +5849,9 @@
       "duration": "{h}h {m}m",
       "published": "Published {date}",
       "language": "English",
-      "createdBy": "Created by {name}"
+      "createdBy": "Created by {name}",
+      "readMore": "Read more",
+      "tags": "Tags"
     },
     "sections": {
       "whatYoullLearn": "What you'll learn",
@@ -5843,7 +5862,23 @@
         "totalLength": "{h}h {m}m total length",
         "allLessons": "All Lessons",
         "noLessons": "No lessons available yet.",
-        "previewBadge": "Preview"
+        "previewBadge": "Preview",
+        "stats": {
+          "videos": "{count, plural, one {video} other {videos}}",
+          "readings": "{count, plural, one {reading} other {readings}}",
+          "exercises": "{count, plural, one {exercise} other {exercises}}",
+          "exams": "{count, plural, one {exam} other {exams}}",
+          "resources": "{count, plural, one {resource} other {resources}}"
+        },
+        "sequential": "Lessons are completed in order: each one unlocks the next.",
+        "kind": {
+          "video": "Video",
+          "reading": "Reading",
+          "exam": "Exam"
+        },
+        "lessonExercises": "{count, plural, one {# exercise} other {# exercises}}",
+        "lessonResources": "{count, plural, one {# resource} other {# resources}}",
+        "examMinutes": "{count} min"
       },
       "instructor": {
         "title": "Instructor",
@@ -5871,7 +5906,10 @@
         "duration": "{h}h {m}m of content",
         "lifetime": "Full lifetime access",
         "mobile": "Access on mobile and desktop",
-        "certificate": "Certificate of completion"
+        "certificate": "Certificate of completion",
+        "exercises": "{count, plural, one {# exercise with feedback} other {# exercises with feedback}}",
+        "resources": "{count, plural, one {# downloadable resource} other {# downloadable resources}}",
+        "exams": "{count, plural, one {# final exam} other {# exams}}"
       }
     },
     "preview": {
@@ -6080,6 +6118,9 @@
       "binancePersonalCopyCode": "Copy payment code",
       "binancePersonalNote": "Include this code in the transfer note so we can match your payment.",
       "binancePersonalWaiting": "Waiting for your transfer to be confirmed…",
+      "binancePersonalPaid": "I've paid — check now",
+      "binancePersonalChecking": "Checking Binance…",
+      "binancePersonalNotFoundYet": "We haven't seen your transfer yet. It can take up to a minute to appear — we keep checking automatically.",
       "binancePersonalReview": "Another payment matched this amount, so the school needs to confirm yours manually. This can take a little longer — keep this page open.",
       "binancePersonalContinue": "Continue to payment instructions"
     },
@@ -6308,7 +6349,8 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Back to my school",
       "logout": "Log out",
-      "bankAccounts": "Bank accounts"
+      "bankAccounts": "Payment accounts",
+      "webhooks": "Webhooks"
     },
     "fees": {
       "title": "Platform fees",
@@ -6322,9 +6364,12 @@
       },
       "overdueSince": "Overdue since",
       "blockedAt": "Blocked at",
-      "exempt": "Exempt from block",
-      "exemptYes": "Yes: {reason}",
-      "exemptNo": "No",
+      "billingMode": "Billing mode",
+      "mode": {
+        "paid": "Paid",
+        "comped": "Comped (notify only)",
+        "internal": "Internal"
+      },
       "lastEvaluated": "Last evaluated",
       "never": "Never",
       "balances": "Balances",
@@ -6392,17 +6437,6 @@
         "submit": "Reverse payment",
         "success": "Payment reversed."
       },
-      "exemption": {
-        "set": "Exempt from block",
-        "clear": "End exemption",
-        "titleSet": "Exempt this school from the sales pause?",
-        "titleClear": "End this school's exemption?",
-        "bodySet": "Reminders still go out, but sales are never paused. An active pause is lifted now.",
-        "bodyClear": "The school can be paused again at the next evaluation if it is overdue.",
-        "reason": "Reason",
-        "submit": "Save",
-        "success": "Exemption updated."
-      },
       "cancel": "Cancel",
       "saving": "Saving…",
       "errors": {
@@ -6425,20 +6459,20 @@
       "noBankAccountLink": "Add a bank account"
     },
     "bankAccounts": {
-      "title": "Bank accounts",
-      "description": "Where schools wire platform fee transfers. Schools see the active account in their balance currency, or the active USD account when there is none. One active account per currency. Every change is audited.",
+      "title": "Payment accounts",
+      "description": "Where schools pay platform fees: bank transfer, Zelle, Binance, PayPal, Zinli, cash or Pago Móvil. Schools see the active accounts in their balance currency, or the active USD ones when there are none. One active account per method and currency. Every change is audited.",
       "add": "Add account",
       "edit": "Edit",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "active": "Active",
       "inactive": "Inactive",
-      "empty": "No bank accounts yet",
-      "emptyDesc": "Until you add one, schools paying by bank transfer are told the details will be emailed to them.",
-      "loadError": "Couldn't load the bank accounts. Refresh to try again.",
-      "noActiveWarning": "No active bank account. Schools paying by transfer see no bank details.",
-      "createTitle": "Add bank account",
-      "editTitle": "Edit bank account",
+      "empty": "No payment accounts yet",
+      "emptyDesc": "Until you add one, schools paying by transfer are told the details will be emailed to them.",
+      "loadError": "Couldn't load the payment accounts. Refresh to try again.",
+      "noActiveWarning": "No active payment account. Schools paying by transfer see no payment details.",
+      "createTitle": "Add payment account",
+      "editTitle": "Edit payment account",
       "formDescription": "Schools see every field except the internal name and sort order.",
       "optional": "optional",
       "hints": {
@@ -6458,7 +6492,10 @@
         "swiftCode": "SWIFT / BIC",
         "extraInstructions": "Additional instructions",
         "sortOrder": "Sort order",
-        "isActive": "Active"
+        "isActive": "Active",
+        "kind": "Method",
+        "email": "Email",
+        "document": "ID number (cédula / RIF)"
       },
       "headers": {
         "account": "Account",
@@ -6466,14 +6503,16 @@
         "bank": "Bank",
         "number": "Account number",
         "status": "Status",
-        "updated": "Updated"
+        "updated": "Updated",
+        "method": "Method",
+        "details": "Details"
       },
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "saved": "Bank account saved.",
-      "activated": "Bank account activated.",
-      "deactivated": "Bank account deactivated.",
+      "saved": "Payment account saved.",
+      "activated": "Payment account activated.",
+      "deactivated": "Payment account deactivated.",
       "deactivateTitle": "Deactivate this account?",
       "deactivateBody": "Schools stop seeing it right away. You can activate it again later.",
       "errors": {
@@ -6481,7 +6520,7 @@
         "invalid": "Check the highlighted fields.",
         "invalid_id": "That account doesn't exist.",
         "not_found": "That account doesn't exist anymore.",
-        "duplicate_currency": "Another active account already uses this currency. Deactivate it first.",
+        "duplicate_currency": "Another active account already uses this method and currency. Deactivate it first.",
         "internal": "Something went wrong. Try again.",
         "generic": "Something went wrong. Try again."
       },
@@ -6496,7 +6535,63 @@
         "swiftCode": "Use 8 or 11 letters and digits.",
         "extraInstructions": "Up to 1000 characters.",
         "sortOrder": "Use a whole number.",
-        "isActive": "Invalid value."
+        "isActive": "Invalid value.",
+        "kind": "Choose a method.",
+        "email": "Enter a valid email address.",
+        "document": "Required, up to 40 characters."
+      },
+      "kinds": {
+        "bank": {
+          "name": "Bank transfer",
+          "description": "A bank account schools wire money to."
+        },
+        "zelle": {
+          "name": "Zelle",
+          "description": "Receive Zelle payments to an email.",
+          "fields": {
+            "email": "Zelle email",
+            "accountHolder": "Name on the account"
+          }
+        },
+        "binance": {
+          "name": "Binance",
+          "description": "Binance Pay: schools send to your Pay ID.",
+          "fields": {
+            "accountNumber": "Binance Pay ID",
+            "email": "Binance email"
+          }
+        },
+        "paypal": {
+          "name": "PayPal",
+          "description": "Receive PayPal payments to an email.",
+          "fields": {
+            "email": "PayPal email"
+          }
+        },
+        "zinli": {
+          "name": "Zinli",
+          "description": "Receive payments to a Zinli wallet.",
+          "fields": {
+            "email": "Zinli email",
+            "accountHolder": "Name on the account"
+          }
+        },
+        "cash": {
+          "name": "Cash",
+          "description": "Cash in person. Say where and when in the instructions.",
+          "fields": {
+            "extraInstructions": "Instructions"
+          }
+        },
+        "pago_movil": {
+          "name": "Pago Móvil",
+          "description": "Pago Móvil is paid in bolívares, converted from your USD amount.",
+          "fields": {
+            "bankName": "Bank",
+            "accountNumber": "Phone number",
+            "accountHolder": "Account holder"
+          }
+        }
       }
     }
   },
@@ -8556,226 +8651,76 @@
   },
   "home": {
     "hero": {
-      "badge": "White-label LMS platform",
-      "titleLead": "Launch your online academy in",
-      "titleHighlight": "minutes",
-      "subtitle": "The complete platform to create, sell, and scale your online courses. AI grading, gamification, payments that work in Latin America, and one isolated school per subdomain — all out of the box.",
-      "ctaPrimary": "Start your school free",
-      "ctaSecondary": "Browse courses",
-      "trust": {
-        "noCard": "No credit card required",
-        "freePlan": "Free plan available",
-        "subdomain": "Your own subdomain",
-        "openSource": "Open source (MIT)"
-      }
+      "tag": "Open source",
+      "tagText": "Free to start, no card",
+      "titleLead": "Teach online.",
+      "titleHighlight": "Get paid anywhere.",
+      "subtitle": "Your own school, on your own address. Courses, AI grading and the payment methods your students actually use.",
+      "cta": "Create your school",
+      "secondary": "See how it works"
     },
-    "audience": {
-      "badge": "One platform, two experiences",
-      "title": "Built for schools and students",
-      "schools": {
-        "title": "Course creators & schools",
-        "description": "Launch your branded online academy in minutes. Create courses, set pricing, accept payments, and follow your students' progress — all from one dashboard.",
-        "items": {
-          "subdomain": "Your own subdomain (yourschool.platform.com)",
-          "branding": "Custom branding, logo & colors",
-          "payments": "Stripe Connect, PayPal, bank transfer or crypto — payments go to you",
-          "ai": "AI-powered exam grading & exercises",
-          "analytics": "Student analytics & progress tracking"
-        },
-        "cta": "Create your school"
-      },
-      "learners": {
-        "title": "Learners",
-        "description": "Learn at your pace with structured courses, video lessons, and AI-guided exercises. Earn XP, climb the leaderboard, and prove your skills with verifiable certificates.",
-        "items": {
-          "progress": "Progress tracking across all enrolled courses",
-          "tutor": "AI tutor helps you through exercises in real time",
-          "gamification": "Gamification: XP, levels, streaks & achievements",
-          "certificates": "Downloadable certificates verified via QR code",
-          "mdx": "Rich lessons with code blocks & interactive demos"
-        },
-        "cta": "Browse courses"
-      }
-    },
-    "ai": {
-      "badge": "AI-powered teaching",
-      "title": "Let AI do the heavy lifting",
-      "subtitle": "Stop spending hours grading. The AI grades exams, gives personalized feedback, and tutors students in real time.",
-      "grading": {
-        "title": "AI exam grading",
-        "description": "Open-ended answers graded automatically with per-question feedback and an overall score. Teachers review, not grade.",
-        "note": "Every grade can be overridden by the teacher"
-      },
-      "tutor": {
-        "title": "Interactive AI tutor",
-        "description": "Students get a personalized AI guide during exercises — hints, explanations, and encouragement without giving away answers.",
-        "note": "Hints, never the solution"
-      },
-      "templates": {
-        "title": "Prompt templates",
-        "description": "Teachers define exactly how the AI should grade — rubrics, tone, strictness. Full control over feedback quality.",
-        "note": "Reusable across all courses"
-      }
-    },
-    "gamification": {
-      "badge": "Duolingo-style engagement",
-      "title": "Students who play, students who stay",
-      "subtitle": "A full gamification engine built in from day one. No plugins, no integrations — just engaged students who keep coming back.",
-      "perks": {
-        "xp": {
-          "title": "XP system",
-          "description": "Earn XP for lessons, exams, exercises, comments & reviews"
-        },
-        "levels": {
-          "title": "Levels",
-          "description": "Progressive level-up milestones that reward consistent learners"
-        },
-        "streaks": {
-          "title": "Daily streaks",
-          "description": "Streak bonuses encourage daily habits"
-        },
-        "achievements": {
-          "title": "Achievements",
-          "description": "Unlock badges for learning milestones, social engagement & streaks"
-        },
-        "coins": {
-          "title": "Coin store",
-          "description": "Spend earned coins on profile customizations and bonus content"
-        },
-        "leaderboard": {
-          "title": "Leaderboard",
-          "description": "Weekly rankings motivate healthy competition between students"
-        }
-      },
-      "preview": {
-        "title": "Your progress",
-        "level": "Level {level}",
-        "xpProgress": "XP progress",
-        "xpValue": "{current} / {total} XP",
-        "streak": "Streak",
-        "streakValue": "{count} days",
-        "coins": "Coins",
-        "rank": "Rank",
-        "recent": "Recent achievements",
-        "badges": {
-          "firstExam": "First exam",
-          "streak7": "7-day streak",
-          "lessons10": "10 lessons",
-          "firstComment": "First comment"
-        },
-        "leaders": "This week's leaders",
-        "you": "You",
-        "xp": "{count} XP"
-      }
+    "mock": {
+      "course": "Spanish for Beginners",
+      "published": "Published",
+      "lesson1": "Greetings and introductions",
+      "lesson2": "Numbers and prices",
+      "exercise": "Exercise",
+      "add": "Add lesson",
+      "paid": "Payment received",
+      "paidVia": "Bank transfer · confirmed",
+      "graded": "AI graded",
+      "gradedNote": "Feedback sent to student"
     },
     "features": {
-      "badge": "Everything included",
-      "title": "Every feature you need, nothing you don't",
-      "subtitle": "No plugins. No paid add-ons. No nickel-and-diming. Everything ships in the box.",
-      "items": {
-        "mdx": {
-          "title": "Rich MDX editor",
-          "description": "Block-based content editor with video, code highlights, images, embeds, and interactive components."
-        },
-        "exams": {
-          "title": "Exam builder",
-          "description": "Multiple choice, open-ended, and true/false questions. Build timed or untimed exams with configurable scoring."
-        },
-        "video": {
-          "title": "Video lessons",
-          "description": "Embed YouTube or any video URL inside lessons. Students watch and read in the same view."
-        },
-        "exercises": {
-          "title": "AI exercises",
-          "description": "Interactive coding and concept exercises guided by an AI tutor. Configurable prompts per exercise."
-        },
-        "payments": {
-          "title": "Payments that work in LATAM",
-          "description": "Sell courses individually or via subscription plans. Stripe, PayPal, bank transfer, Binance Pay or Solana — you choose the rails."
-        },
-        "plans": {
-          "title": "Subscription plans",
-          "description": "Create free, paid, and tiered plans. Bundle courses per plan with automatic access control."
-        },
-        "certificates": {
-          "title": "Certificates",
-          "description": "Auto-issue signed PDF certificates on course completion. QR-code verification on a public URL."
-        },
-        "multiTenant": {
-          "title": "Multi-tenant",
-          "description": "Every school gets its own subdomain, branding, students, and data — fully isolated at the database level."
-        },
-        "rls": {
-          "title": "Row-level security",
-          "description": "All data scoped by tenant via Postgres RLS. No cross-tenant data leakage possible by design."
-        },
-        "notifications": {
-          "title": "Notifications",
-          "description": "Platform notifications with read/unread states, templated emails, and real-time updates."
-        },
-        "analytics": {
-          "title": "Admin analytics",
-          "description": "Revenue, enrollment, and engagement dashboards for school admins. Platform-wide metrics for super admins."
-        },
-        "i18n": {
-          "title": "English & Spanish",
-          "description": "Full internationalization. Every UI string translated. Locale switching in the navbar."
-        }
-      }
-    },
-    "howItWorks": {
-      "badge": "How it works",
-      "title": "From idea to live school in 3 steps",
-      "steps": {
-        "create": {
-          "title": "Create your school",
-          "description": "Sign up, pick a name, get your own subdomain. Takes 30 seconds."
-        },
-        "build": {
-          "title": "Build your courses",
-          "description": "Use the block editor to add lessons, exams, and exercises. Publish when ready."
-        },
-        "enroll": {
-          "title": "Students enroll & learn",
-          "description": "Share your link, accept payments, and watch your students progress."
-        }
-      }
-    },
-    "multiTenant": {
-      "badge": "True multi-tenancy",
-      "title": "Every school is a completely separate world",
-      "description": "Database-level isolation means School A can never see School B's students, courses, or transactions — even if they share the same platform. RLS policies enforce this at the query level, not the application layer.",
-      "items": {
-        "subdomain": "Dedicated subdomain: yourschool.platform.com",
-        "branding": "Independent branding — logo, colors, site name",
-        "students": "Isolated student base — no cross-school visibility",
-        "payments": "Separate payment accounts per school",
-        "roles": "Role-based access: admin, teacher, student per school"
+      "title": "Everything to teach. Nothing to babysit.",
+      "ai": {
+        "title": "AI grades. You teach.",
+        "body": "Exams and exercises are marked with feedback the moment a student submits. Bring your own AI key.",
+        "answerLabel": "Student answer",
+        "answer": "“Cuesta cinco dólares, es muy barato.”",
+        "feedback": "Correct. Try “cuesta cinco dólares”."
       },
-      "cards": {
-        "a": {
-          "name": "Code Academy",
-          "plan": "Pro"
-        },
-        "b": {
-          "name": "Design School",
-          "plan": "Starter"
-        },
-        "c": {
-          "name": "Data Labs",
-          "plan": "Business"
-        },
-        "d": {
-          "name": "DevBoot",
-          "plan": "Free"
-        },
-        "students": "{count} students",
-        "courses": "{count} courses"
+      "pay": {
+        "title": "Payments that work where cards don’t.",
+        "cards": "Cards",
+        "paypal": "PayPal",
+        "binance": "Binance",
+        "solana": "Solana",
+        "transfer": "Bank transfer"
+      },
+      "brand": {
+        "title": "Your school, your address.",
+        "body": "Your name, colors and logo on every page your students see.",
+        "url": "yourschool.example.com"
+      },
+      "certs": {
+        "title": "Certificates anyone can verify.",
+        "body": "Issued on completion, with a public link to check them."
+      },
+      "oss": {
+        "title": "Open source. MIT.",
+        "body": "Host it yourself, read the code, own your school."
+      }
+    },
+    "how": {
+      "title": "Live in three steps.",
+      "create": {
+        "title": "Name your school",
+        "body": "Pick a name and an address. About a minute."
+      },
+      "build": {
+        "title": "Add your courses",
+        "body": "Write lessons, add exercises, set a price."
+      },
+      "share": {
+        "title": "Share your link",
+        "body": "Students enroll, learn and earn certificates."
       }
     },
     "pricing": {
-      "title": "Start free. Grow without limits.",
-      "subtitle": "The free plan has no monthly fee. Upgrade when you're ready to scale.",
+      "title": "Start free. Pay when you grow.",
+      "subtitle": "No monthly fee on the free plan.",
+      "perMonth": "/mo",
       "plans": {
         "free": {
           "name": "Free",
@@ -8786,14 +8731,14 @@
         },
         "starter": {
           "name": "Starter",
-          "price": "$9/mo",
+          "price": "$9",
           "f1": "15 courses",
           "f2": "200 students",
           "f3": "Card payments"
         },
         "pro": {
           "name": "Pro",
-          "price": "$29/mo",
+          "price": "$29",
           "f1": "100 courses",
           "f2": "1,000 students",
           "f3": "2% transaction fee",
@@ -8801,20 +8746,19 @@
         },
         "business": {
           "name": "Business",
-          "price": "$79/mo",
+          "price": "$79",
           "f1": "Unlimited courses",
           "f2": "5,000 students",
           "f3": "0% transaction fee",
           "f4": "Priority support"
         }
       },
-      "seeAll": "See full pricing details"
+      "seeAll": "Compare all plans"
     },
     "cta": {
-      "title": "Your academy is one click away",
-      "subtitle": "Create your own branded school today. Free to start, no credit card required.",
-      "primary": "Create your free school",
-      "secondary": "Learn more"
+      "title": "Open your school today.",
+      "subtitle": "Free plan. No credit card.",
+      "primary": "Create your school"
     }
   },
   "themeKit": {
@@ -9137,6 +9081,53 @@
     "burst": "You're sending messages a bit fast. Wait a moment and try again.",
     "daily": "You've reached today's practice limit. Try again tomorrow.",
     "monthly": "Your school's monthly AI budget is spent for this month. Ask an admin to upgrade the plan."
+  },
+  "aiUsage": {
+    "breadcrumb": "AI usage",
+    "title": "AI usage & cost",
+    "description": "What your students and teachers are spending on your own AI key. Estimates only: your provider's invoice is the source of truth.",
+    "range": {
+      "7": "Last 7 days",
+      "30": "Last 30 days",
+      "90": "Last 90 days"
+    },
+    "cards": {
+      "cost": "Estimated cost",
+      "calls": "AI calls",
+      "tokens": "Tokens",
+      "avgPerUser": "Avg. cost per active user",
+      "activeUsers": "{count} active users"
+    },
+    "unpriced": "Some models have no known price, so the cost shown is a minimum. Token counts are exact.",
+    "estimateNote": "Cost = tokens × public list prices. Voice, speech-to-text and image generation are not included.",
+    "daily": {
+      "title": "Daily activity",
+      "tokensLabel": "{tokens} tokens · {calls} calls"
+    },
+    "byFeature": {
+      "title": "By feature",
+      "description": "Where the spend comes from.",
+      "feature": "Feature",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Est. cost"
+    },
+    "byUser": {
+      "title": "By person",
+      "description": "Who is using AI the most. Heavy users are your biggest cost lever.",
+      "user": "Person",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "share": "Share",
+      "unknown": "Removed account"
+    },
+    "empty": {
+      "title": "No AI usage yet",
+      "description": "Usage appears here as soon as students or teachers use AI on your key."
+    },
+    "noPrice": "n/a",
+    "loadError": "Could not load AI usage. Try again."
   },
   "aiSettings": {
     "title": "AI",
@@ -9621,7 +9612,6 @@
         "overdue": "Overdue",
         "blocked": "Sales paused"
       },
-      "exempt": "Exempt from the sales pause",
       "notifyOnly": "Reminders only: sales are not paused for unpaid fees yet.",
       "payNow": "Pay now",
       "openRequest": "Transfer of {amount} waiting for our confirmation (requested {date}).",
@@ -9686,7 +9676,7 @@
       "redirecting": "Opening checkout…",
       "nothingToPay": "There's nothing to pay right now.",
       "bank": {
-        "title": "Bank transfer details",
+        "title": "Payment details",
         "fallback": "We don't have bank details to show here yet. Once you register the transfer, we'll email them to your billing contact.",
         "reference": "Payment reference",
         "referenceHint": "Include it in the transfer description so we can match it.",
@@ -9701,12 +9691,26 @@
           "accountType": "Account type",
           "routingNumber": "Routing number",
           "swiftCode": "SWIFT / BIC",
-          "extraInstructions": "Additional instructions"
+          "extraInstructions": "Additional instructions",
+          "email": "Email",
+          "document": "ID number",
+          "payId": "Binance Pay ID",
+          "phone": "Phone number",
+          "vesAmount": "Amount to send"
         },
         "currencyNote": "This account receives {accountCurrency}. Transfer the equivalent of your {currency} balance.",
         "copyFailed": "Couldn't copy",
         "copyManual": "Press Ctrl/Cmd+C to copy",
-        "copyField": "Copy {field}"
+        "copyField": "Copy {field}",
+        "kinds": {
+          "zelle": "Zelle",
+          "binance": "Binance",
+          "paypal": "PayPal",
+          "zinli": "Zinli",
+          "cash": "Cash",
+          "pago_movil": "Pago Móvil"
+        },
+        "vesRate": "Rate: {rate} Bs per USD · {source} · {date}"
       },
       "instructions": {
         "title": "Transfer registered",
@@ -9766,6 +9770,152 @@
       "print": "Print",
       "back": "Back to earnings",
       "notFound": "Statement not found"
+    }
+  },
+  "memberNotices": {
+    "roleChanged": {
+      "title": "Your role changed",
+      "content": "Your account roles have been updated by an administrator."
+    },
+    "removed": {
+      "title": "Removed from the school",
+      "content": "Your membership of this school has been removed by an administrator."
+    },
+    "banned": {
+      "title": "Removed from the school",
+      "content": "You have been removed from this school and can no longer rejoin it."
+    },
+    "banLifted": {
+      "title": "Ban lifted",
+      "content": "The ban on your membership of this school was lifted. You can rejoin it."
+    },
+    "deactivated": {
+      "title": "Account deactivated",
+      "content": "Your account has been deactivated by an administrator."
+    },
+    "deactivatedWithReason": {
+      "title": "Account deactivated",
+      "content": "Your account has been deactivated: {reason}"
+    },
+    "reactivated": {
+      "title": "Account reactivated",
+      "content": "Your account has been reactivated. You can now access the platform."
+    },
+    "courseApproved": {
+      "title": "Course published",
+      "content": "Your course \"{course}\" has been approved and published."
+    },
+    "courseArchived": {
+      "title": "Course archived",
+      "content": "Your course \"{course}\" has been archived."
+    },
+    "courseArchivedWithReason": {
+      "title": "Course archived",
+      "content": "Your course \"{course}\" has been archived. Reason: {reason}"
+    },
+    "courseRestored": {
+      "title": "Course restored",
+      "content": "Your course \"{course}\" has been restored and is now published."
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "breadcrumb": "Webhooks",
+    "description": {
+      "school": "Send events from your school to n8n, Zapier, Make or your own server as they happen.",
+      "platform": "Platform-wide endpoints receive events from every school, plus school lifecycle events."
+    },
+    "loadError": "Couldn't load webhooks",
+    "loadErrorDesc": "Try again in a moment.",
+    "cancel": "Cancel",
+    "saved": "Webhook saved",
+    "deleted": "Webhook deleted",
+    "enabled": "Webhook enabled",
+    "disabled": "Webhook paused",
+    "endpoints": {
+      "title": "Endpoints",
+      "add": "Add endpoint",
+      "empty": "No webhook endpoints yet",
+      "emptyDesc": {
+        "school": "Add an endpoint (for example an n8n Webhook node URL) to get a signed POST whenever a student enrolls, pays or completes a lesson.",
+        "platform": "Add an endpoint to be notified about activity across all schools, including new schools and plan changes."
+      },
+      "allEvents": "All events",
+      "test": "Send test",
+      "edit": "Edit",
+      "rotate": "Rotate secret",
+      "delete": "Delete",
+      "toggle": "Enable {name}",
+      "autoDisabledHint": "Paused automatically after repeated failures. Fix the receiver, then switch it back on."
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "autoDisabled": "Paused (failing)"
+    },
+    "test": {
+      "ok": "Test delivered (HTTP {status})",
+      "failed": "Test failed: {reason}"
+    },
+    "form": {
+      "createTitle": "Add webhook endpoint",
+      "editTitle": "Edit webhook endpoint",
+      "description": "We POST a signed JSON event to this URL.",
+      "name": "Name",
+      "namePlaceholder": "n8n – new students",
+      "url": "Endpoint URL",
+      "urlHint": "Must be a public https URL. Private and internal addresses are blocked.",
+      "events": "Events",
+      "allEvents": "All events (including future ones)",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "secret": {
+      "title": "Signing secret",
+      "description": "Copy this now. It is shown only once. Use it to verify the X-Webhook-Signature header.",
+      "copy": "Copy secret",
+      "copied": "Secret copied",
+      "copyFailed": "Couldn't copy. Select and copy it manually.",
+      "done": "I've saved it"
+    },
+    "confirm": {
+      "deleteTitle": "Delete this endpoint?",
+      "deleteDesc": "Pending deliveries are dropped and the endpoint stops receiving events.",
+      "rotateTitle": "Rotate the signing secret?",
+      "rotateDesc": "The old secret stops working immediately. Update your receiver with the new one."
+    },
+    "deliveries": {
+      "title": "Recent deliveries",
+      "empty": "No deliveries yet. Send a test to see one here.",
+      "event": "Event",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "attempts": "Attempts",
+      "when": "When",
+      "actions": "Actions",
+      "retry": "Retry",
+      "requeued": "Queued for retry",
+      "statuses": {
+        "pending": "Pending",
+        "success": "Delivered",
+        "failed": "Failed"
+      }
+    },
+    "help": {
+      "title": "Connect to n8n",
+      "step1": "In n8n add a Webhook node (method POST) and copy its Production URL.",
+      "step2": "Paste it here as a new endpoint and press Send test.",
+      "step3": "Choose the events you want, then build your workflow after the Webhook node.",
+      "verify": "Every request carries X-Webhook-Id, X-Webhook-Event, X-Webhook-Timestamp and X-Webhook-Signature (v1=HMAC-SHA256 of \"timestamp.body\" with your secret). Failed deliveries retry for about 2 days. See docs/WEBHOOKS.md."
+    },
+    "errors": {
+      "forbidden": "You don't have permission to manage webhooks.",
+      "invalid": "Check the name, URL and events.",
+      "insecure_url": "Use an https:// URL.",
+      "blocked_host": "That address isn't allowed. Use a public URL.",
+      "not_found": "Endpoint not found.",
+      "limit_reached": "Endpoint limit reached. Delete one first.",
+      "internal": "Something went wrong. Try again."
     }
   },
   "assets": {

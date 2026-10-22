@@ -14,6 +14,7 @@ import {
 } from '@/lib/billing/plan-prices'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { failPlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -380,159 +381,40 @@ export async function sendPaymentInstructions(requestId: string) {
 }
 
 /**
- * Super admin: force a tenant onto a plan without any payment.
- *
- * This never calls Stripe, so a tenant with a live Stripe subscription keeps
- * paying for the plan it actually bought while enjoying the comped one. The
- * override is stamped on the subscription row (#546 §3) so
- * `applyPortalPlanChange` can recognise the deliberate divergence and leave the
- * Stripe subscription alone — without the stamp the next
- * `customer.subscription.updated` read Stripe's real (unchanged) price as a
- * downgrade, found the tenant over the real plan's limits (the reason it was
- * comped) and "reverted" Stripe onto the comped plan's price, billing the
- * school for its own comp.
- *
- * Exits: `confirmManualPayment`, `changePlan`, or `clearTenantPlanOverride`.
+ * Super admin: convert a comped school back to `paid` (billing_mode design).
+ * The school keeps its current plan; the comp metadata and fee override are
+ * cleared so the normal subscription lifecycle, dunning and plan fee apply
+ * again. `internal` schools are refused (a separate, explicit conversion).
  */
-export async function forceTenantPlanChange(tenantId: string, planSlug: string) {
-  const superAdminId = await verifySuperAdmin()
-  const adminClient = createAdminClient()
-
-  const { data: plan } = await adminClient
-    .from('platform_plans')
-    .select('plan_id, slug, transaction_fee_percent')
-    .eq('slug', planSlug)
-    .single()
-
-  if (!plan) throw new Error('Plan not found')
-
-  const nowIso = new Date().toISOString()
-
-  await adminClient
-    .from('tenants')
-    .update({ plan: planSlug, updated_at: nowIso })
-    .eq('id', tenantId)
-
-  // Update revenue split
-  await adminClient
-    .from('revenue_splits')
-    .upsert({
-      tenant_id: tenantId,
-      platform_percentage: plan.transaction_fee_percent,
-      school_percentage: 100 - plan.transaction_fee_percent,
-      updated_at: nowIso,
-    }, { onConflict: 'tenant_id' })
-
-  // Keep platform_subscriptions in sync with the forced plan (issue #468).
-  // Previously this action changed tenants.plan + the split but left the
-  // subscription row pointing at the old plan, so the two disagreed after an
-  // override.
-  const { data: existingSub } = await adminClient
-    .from('platform_subscriptions')
-    .select('subscription_id, status, current_period_end')
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
-
-  if (planSlug === 'free') {
-    // Free needs no active subscription — cancel any existing row so the
-    // subscription and the tenant's plan agree.
-    if (existingSub) {
-      await adminClient
-        .from('platform_subscriptions')
-        .update({
-          plan_id: plan.plan_id,
-          status: 'canceled',
-          canceled_at: nowIso,
-          plan_override_by: superAdminId,
-          plan_override_at: nowIso,
-          updated_at: nowIso,
-        })
-        .eq('tenant_id', tenantId)
-    }
-  } else if (existingSub) {
-    // Point the existing subscription at the forced plan. Preserve the billing
-    // period only when the sub is on a live paid cycle (active with a future
-    // period end); otherwise — canceled/expired row, or a lapsed period —
-    // reactivating with the stale current_period_end would hand the row
-    // straight to the expire-platform-subscriptions cron (past_due, then
-    // auto-downgrade after grace), silently undoing the override. Clear the
-    // period instead so the override is indefinite, like the insert below.
-    const liveCycle =
-      existingSub.status === 'active' &&
-      existingSub.current_period_end != null &&
-      new Date(existingSub.current_period_end) > new Date()
-    await adminClient
-      .from('platform_subscriptions')
-      .update({
-        plan_id: plan.plan_id,
-        status: 'active',
-        plan_override_by: superAdminId,
-        plan_override_at: nowIso,
-        updated_at: nowIso,
-        ...(liveCycle
-          ? {}
-          : {
-              current_period_end: null,
-              grace_period_end: null,
-              cancel_at_period_end: false,
-              canceled_at: null,
-            }),
-      })
-      .eq('tenant_id', tenantId)
-  } else {
-    // No subscription yet (e.g. tenant was on free): create a manual override
-    // row so the paid plan is backed by an active subscription.
-    //
-    // current_period_end stays NULL on purpose: a super-admin override is
-    // indefinite, not a one-month grant. The expire-platform-subscriptions
-    // cron filters every phase on `.not('current_period_end', 'is', null)`,
-    // so a NULL period end is never reminded, never lapses to past_due, and
-    // never auto-downgrades — the override holds until a super admin changes
-    // it again or the school starts paying (confirmManualPayment then upserts
-    // a real dated cycle over this row).
-    await adminClient
-      .from('platform_subscriptions')
-      .insert({
-        tenant_id: tenantId,
-        plan_id: plan.plan_id,
-        status: 'active',
-        payment_provider: 'manual',
-        interval: 'monthly',
-        current_period_start: nowIso,
-        current_period_end: null,
-        plan_override_by: superAdminId,
-        plan_override_at: nowIso,
-      })
-  }
-
-  revalidatePath('/platform/tenants')
-  return { success: true }
-}
-
-/**
- * Super admin: end a plan override so portal-driven Stripe changes sync again
- * (#546 §3). The marker's explicit exit — without one, a comped tenant would be
- * frozen out of `applyPortalPlanChange` forever, which is the failure mode the
- * issue flags as the risk of adding the marker at all.
- *
- * The tenant keeps whatever plan it is on; only the "ignore portal changes"
- * behaviour is lifted, so the next `customer.subscription.updated` reconciles
- * the DB back onto whatever Stripe is actually charging.
- */
-export async function clearTenantPlanOverride(tenantId: string) {
+export async function convertCompedTenantToPaid(tenantId: string) {
   await verifySuperAdmin()
   const adminClient = createAdminClient()
 
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('billing_mode')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (!tenant) throw new Error('Tenant not found')
+  const mode = normalizeBillingMode((tenant as { billing_mode?: unknown }).billing_mode)
+  if (mode === 'internal') throw new Error('Internal schools cannot be converted to paid here')
+  if (mode === 'paid') return { success: true }
+
   const { error } = await adminClient
-    .from('platform_subscriptions')
+    .from('tenants')
     .update({
-      plan_override_by: null,
-      plan_override_at: null,
+      billing_mode: 'paid',
+      comped_until: null,
+      comped_reason: null,
+      comped_by: null,
+      comped_at: null,
+      fee_percent_override: null,
+      comped_notice_sent: {},
       updated_at: new Date().toISOString(),
     })
-    .eq('tenant_id', tenantId)
+    .eq('id', tenantId)
 
-  if (error) throw new Error(`Failed to clear plan override: ${error.message}`)
+  if (error) throw new Error(`Failed to convert school to paid: ${error.message}`)
   revalidatePath('/platform/tenants')
   return { success: true }
 }

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getSubscriptionState } from './solana-subscriptions'
 import { pullSplitForSubscription } from './solana-subscription-pull'
 import { computeSplit } from './solana-split'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 import { decidePullAction } from './solana-pull-decision'
 
 export interface SolanaRenewalRow {
@@ -86,11 +87,11 @@ export async function renewSolanaSubscription(
     if (error) throw error
     return { status: 'insufficient_funds', amount: price, balance: balance.value.uiAmountString ?? '0' }
   }
-  const [{ data: wallet, error: walletError }, { data: split, error: splitError }] = await Promise.all([
+  const [{ data: wallet, error: walletError }, effSplit] = await Promise.all([
     admin.from('tenant_payment_wallets').select('wallet_address').eq('tenant_id', sub.tenant_id).eq('provider', 'solana_subs').maybeSingle(),
-    admin.from('revenue_splits').select('platform_percentage').eq('tenant_id', sub.tenant_id).maybeSingle(),
+    getEffectiveRevenueSplit(admin, sub.tenant_id),
   ])
-  if (walletError || splitError) throw walletError ?? splitError
+  if (walletError) throw walletError
   if (!wallet?.wallet_address) throw new Error('School receiving wallet missing')
   // Persist uncertainty before submitting. If this write fails, do not debit.
   const { data: attemptAllowed, error: attemptError } = await admin.rpc('begin_solana_renewal', {
@@ -105,7 +106,7 @@ export async function renewSolanaSubscription(
   const signatures = await pullSplitForSubscription({
     rpcUrl, pullerSecretKeyBase58: pullerSecret, ...meta, planId: BigInt(meta.planId),
     schoolWallet: wallet.wallet_address, platformWallet, priceMajor: price,
-    platformPercent: Number(split?.platform_percentage ?? 20),
+    platformPercent: effSplit.platformPercentage,
   })
   // Only confirmed atomic transfers reach this point. A timeout/network error
   // propagates without manufacturing a failed or successful receipt.
@@ -142,13 +143,13 @@ async function reconcileConfirmedRenewal(
     .eq('provider_metadata->>kind', 'renewal').order('transaction_date', { ascending: false }).limit(1)
   if (receiptError) throw receiptError
   if (receipts?.some((r) => Date.parse(r.provider_metadata?.period_start ?? '') / 1000 === periodStart && r.provider_metadata?.confirmed_at)) return null
-  const [{ data: wallet, error: walletError }, { data: split, error: splitError }] = await Promise.all([
+  const [{ data: wallet, error: walletError }, effSplit] = await Promise.all([
     admin.from('tenant_payment_wallets').select('wallet_address').eq('tenant_id', sub.tenant_id).eq('provider', 'solana_subs').maybeSingle(),
-    admin.from('revenue_splits').select('platform_percentage').eq('tenant_id', sub.tenant_id).maybeSingle(),
+    getEffectiveRevenueSplit(admin, sub.tenant_id),
   ])
-  if (walletError || splitError) throw walletError ?? splitError
+  if (walletError) throw walletError
   if (!wallet?.wallet_address || !sub.provider_subscription_id || !process.env.SOLANA_PLATFORM_WALLET) throw new Error('Receipt reconciliation configuration unavailable')
-  const expected = computeSplit(price, Number(split?.platform_percentage ?? 20), 6)
+  const expected = computeSplit(price, effSplit.platformPercentage, 6)
   const conn = new Connection(rpcUrl, 'confirmed')
   const periodEnd = periodStart + Number(state.periodHours) * 3600
   const candidates = (await conn.getSignaturesForAddress(new PublicKey(sub.provider_subscription_id), { limit: 40 }))

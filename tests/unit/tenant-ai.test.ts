@@ -103,6 +103,8 @@ vi.mock('@/lib/ai/providers', async (importOriginal) => {
 
 const transcribeMock = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/ai/transcription', () => ({ transcribeWithProvider: transcribeMock }))
+// The fake models here are plain objects, not spec-compliant models; usage tracking has its own test.
+vi.mock('@/lib/ai/usage-recorder', () => ({ withUsageTracking: (model: unknown) => model }))
 
 import { encryptKey } from '@/lib/ai/byok/crypto'
 import {

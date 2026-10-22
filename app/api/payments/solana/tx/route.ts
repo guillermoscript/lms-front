@@ -18,6 +18,7 @@ import { Connection, PublicKey } from '@solana/web3.js'
 import { buildSplitTransaction } from '@/lib/payments/solana-split'
 import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
 import { APP_NAME } from '@/lib/app-name'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 export const runtime = 'nodejs'
 
@@ -103,12 +104,7 @@ export async function POST(req: NextRequest) {
     if (tx.school_percentage_snapshot != null) {
       platformPercent = 100 - Number(tx.school_percentage_snapshot)
     } else {
-      const { data: split } = await admin
-        .from('revenue_splits')
-        .select('platform_percentage')
-        .eq('tenant_id', tx.tenant_id)
-        .maybeSingle()
-      platformPercent = Number(split?.platform_percentage ?? 20)
+      platformPercent = (await getEffectiveRevenueSplit(admin, tx.tenant_id)).platformPercentage
     }
 
     const rpcUrl = process.env.SOLANA_RPC_URL

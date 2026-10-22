@@ -1,6 +1,6 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG } from '@/lib/ai/config'
-import { reportStreamError } from '@/lib/ai/errors'
+import { reportStreamError, streamErrorText } from '@/lib/ai/errors'
 import { canConfigureAi } from '@/lib/exercises/ai-failure'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { PROMPTS } from '@/lib/ai/prompts'
@@ -201,6 +201,11 @@ export async function POST(req: Request) {
         }),
     )
 
-        return result.toUIMessageStreamResponse()
+        // Mid-stream provider failures reach the client as the typed body, not "An error occurred."
+        const canConfigureNow = await canConfigure().catch(() => false)
+        return result.toUIMessageStreamResponse({
+            onError: (error) =>
+                streamErrorText(error, { feature: 'lesson_tutor', providerId: tutor.providerId, canConfigure: canConfigureNow }),
+        })
     })
 }

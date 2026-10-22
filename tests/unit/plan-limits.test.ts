@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computePlanLimitViolations,
   checkPlanLimits,
+  getTenantPlanLimits,
   formatPlanLimitError,
   type PlanLimitCheckResult,
 } from '@/lib/billing/plan-limits'
@@ -208,5 +209,47 @@ describe('formatPlanLimitError', () => {
     expect(formatPlanLimitError(result)).toBe(
       'You have 50 active courses but the target plan allows 15. Archive 35 course(s) before downgrading.'
     )
+  })
+})
+
+describe('getTenantPlanLimits: billing_mode', () => {
+  function fakeAdmin(tenant: Record<string, unknown>, plans: Record<string, unknown>[]) {
+    return {
+      from: (table: string) => {
+        let slug: unknown
+        const b: Record<string, unknown> = {
+          select: () => b,
+          eq: (_c: string, v: unknown) => {
+            slug = v
+            return b
+          },
+          maybeSingle: () =>
+            Promise.resolve({ data: table === 'tenants' ? tenant : plans.find((p) => p.slug === slug) ?? null, error: null }),
+        }
+        return b
+      },
+    } as never
+  }
+  const free = { slug: 'free', name: 'Free', limits: { max_courses: 5, max_students: 50 } }
+  const enterprise = { slug: 'enterprise', name: 'Enterprise', limits: { max_courses: -1, max_students: -1 } }
+
+  it('internal: unlimited regardless of plan row', async () => {
+    const r = await getTenantPlanLimits(fakeAdmin({ plan: 'free', billing_mode: 'internal' }, [free]), 't')
+    expect(r.limits).toBeNull()
+    expect(r.limitsKnown).toBe(true)
+  })
+  it('comped keeps its own plan limits', async () => {
+    const r = await getTenantPlanLimits(fakeAdmin({ plan: 'free', billing_mode: 'comped' }, [free, enterprise]), 't')
+    expect(r.limits).toEqual(free.limits)
+  })
+  it('comped + missing row falls back to enterprise', async () => {
+    const r = await getTenantPlanLimits(fakeAdmin({ plan: 'ghost', billing_mode: 'comped' }, [enterprise]), 't')
+    expect(r.limits).toEqual(enterprise.limits)
+    expect(r.limitsKnown).toBe(true)
+  })
+  it('paid + missing row: limits null but limitsKnown=false (never cut off on unknown data)', async () => {
+    const r = await getTenantPlanLimits(fakeAdmin({ plan: 'ghost', billing_mode: 'paid' }, [enterprise]), 't')
+    expect(r.limits).toBeNull()
+    expect(r.limitsKnown).toBe(false)
   })
 })

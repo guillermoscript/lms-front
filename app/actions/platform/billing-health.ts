@@ -28,7 +28,7 @@ async function verifySuperAdmin() {
   return userId
 }
 
-const TENANT_SELECT = 'id, name, plan, access_cutoff_at'
+const TENANT_SELECT = 'id, name, plan, access_cutoff_at, billing_mode'
 const SUBSCRIPTION_SELECT =
   'tenant_id, status, payment_provider, current_period_end, grace_period_end, updated_at'
 
@@ -41,12 +41,14 @@ function toTenantRow(row: {
   name: string
   plan: string | null
   access_cutoff_at: string | null
+  billing_mode?: string | null
 }): AtRiskTenantRow {
   return {
     tenantId: row.id,
     tenantName: row.name,
     plan: row.plan,
     accessCutoffAt: row.access_cutoff_at,
+    billingMode: row.billing_mode ?? null,
   }
 }
 

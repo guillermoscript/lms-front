@@ -93,17 +93,21 @@ gh workflow enable cron.yml
 | `solana-reconcile` | `*/10` | Student paid on chain, closed the tab: money taken, no entitlement, and the `pending` row blocks a retry checkout |
 | `binance-personal-reconcile` | `*/10` | Same failure for personal Binance Pay (#482) |
 | `redeliver-webhook-events` | `*/10` | An event whose worker died mid-lease is never processed by anyone — paid, never enrolled (#625) |
+| `deliver-webhooks` | `* * * * *` | Outbound webhooks (n8n etc.) queue up undelivered and retries never fire; see docs/WEBHOOKS.md |
 | `reconcile-solana-platform-activations` | `*/10` | School paid the platform on chain, activation crashed, plan never applied (#622) |
 | `daily-digest` | hourly | No digests, no streak nudges. Must be **hourly** — each tenant sends at its own local hour |
 | `expire-stale-checkouts` | hourly | Two phases, see §2.2. **Student checkouts:** an abandoned PayPal/Lemon Squeezy/Binance redirect leaves a `pending` transaction inside both purchase-uniqueness indexes, and the buyer can never retry that item again (#624). Reconciles PayPal orders before expiring, so an approved-but-uncaptured payment is taken rather than thrown away. **Platform fee pay-now:** a hosted fee checkout the school walked away from leaves its `platform_fee_payments` row `pending` forever (#951) |
 | `expire-subscriptions` | `0 0` | Lapsed self-managed subscriptions (Solana, manual) keep their entitlements forever |
 | `expire-payment-requests` | `0 0` | A student-facing manual/offline `payment_requests` row (#802) never closes: an unpaid request blocks that student from ever requesting the same item again (one-open-per-item unique index), and one who paid gets no "your request is about to expire" nudge before it lapses |
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
+| `comped-expiry` | `0 2` (runs before `expire-platform-subscriptions`) | Comped schools get no 30/14/3-day expiry notices and, past `comped_until`, never flip to `paid`: they keep the top plan for free indefinitely and the normal 7-day grace + downgrade never starts. Supports `?dryRun=1`. Notices are claimed in `tenants.comped_notice_sent` before sending (released if nothing was delivered); expiry also stamps the school's subscription `past_due` + 7-day grace so `expire-platform-subscriptions` downgrades it (#983) |
 | `expire-platform-subscriptions` | `0 2` | No renewal reminders, no grace period, no downgrade to free: a school that stopped paying keeps its paid plan |
 | `enforce-plan-limits` | `0 3` | pg_cron is primary (#660); this is the fallback. If neither runs: a tenant that grows past its plan limits with no plan-change event is never cut off, a pending cutoff never completes, and no reminder email is ever sent |
 | `enforce-platform-fees` | `0 6` | pg_cron is primary (`0 5`, #929); this is the fallback. If neither runs: no monthly fee statement is issued, no reminder/overdue notice is sent and, in `enforce` mode, an overdue school is never paused (nor resumed — paying also resumes it synchronously once pay-now ships). See §2.1 |
 | `send-pushes` | every minute (pg_cron only) | No push notification reaches the mobile app. Pending rows older than a day are then marked sent without a push, so a long outage drops those pushes rather than flooding devices when it recovers |
 | `solana-pull` | `*/10` | Native subscription renewal and missing-receipt reconciliation; see §5 |
+
+**Billing mode (#982).** `expire-platform-subscriptions` skips every tenant whose `billing_mode` is not `paid`. `enforce-plan-limits` clears (never schedules) the access cutoff of `internal` schools. `enforce-platform-fees` skips `internal` schools and never blocks `comped` ones (notify only). See docs/INTERNAL_COMPED_SCHOOLS.md.
 
 Every route is idempotent, so a late or repeated run is safe. `league-rollover`
 in particular resolves the previous week from the data and finalizes every

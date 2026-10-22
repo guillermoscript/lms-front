@@ -69,6 +69,7 @@ export async function savePlatformBankAccountAction(
     const { data, error } = await createAdminClient().rpc('save_platform_bank_account', {
       _actor: actorId,
       _id: id,
+      _kind: v.kind,
       _currency: v.currency,
       _label: v.label,
       _bank_name: v.bankName,
@@ -77,6 +78,8 @@ export async function savePlatformBankAccountAction(
       _account_type: v.accountType,
       _routing_number: v.routingNumber,
       _swift_code: v.swiftCode,
+      _email: v.email,
+      _document: v.document,
       _extra_instructions: v.extraInstructions,
       _sort_order: v.sortOrder,
       _is_active: v.isActive,

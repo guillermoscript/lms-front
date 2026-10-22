@@ -1,5 +1,6 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
+import { normalizeBillingMode, subscriptionLifecycleApplies } from '@/lib/billing/billing-mode'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -14,12 +15,23 @@ type AdminClient = ReturnType<typeof createAdminClient>
  * RPC wrapper below so a delayed superseded event cannot race a replacement.
  *
  * Requires a service-role client — `revenue_splits` is super-admin-only under RLS.
- * Returns the platform fee percent that was applied.
+ * Returns the platform fee percent that was applied, or `0` without touching
+ * anything when the school is not `paid` (comped / internal never lose their plan
+ * to the subscription lifecycle; callers also guard, this is defence in depth).
  */
 export async function downgradeTenantToFree(
   adminClient: AdminClient,
   tenantId: string
 ): Promise<number> {
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('billing_mode')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (!subscriptionLifecycleApplies(normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode))) {
+    return 0
+  }
+
   const now = new Date().toISOString()
 
   // Read the free plan's fee so the split isn't hardcoded (falls back to 10%).

@@ -21,7 +21,6 @@ import {
   FeeLedgerActionError,
   recordFeePayment,
   reverseFeePayment,
-  setFeeExemption,
 } from '@/lib/billing/platform-fee-admin'
 import {
   isUuid,
@@ -110,27 +109,6 @@ export async function reversePlatformFeePaymentAction(paymentId: string, reason:
     const outcome = await reverseFeePayment(createAdminClient(), paymentId, r.value, actorId)
     if (outcome === 'not_found') return { ok: false, error: 'not_found' }
     if (outcome === 'not_settled') return { ok: false, error: 'not_settled' }
-    revalidateTenant()
-    return { ok: true }
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-/** Exempt a school from the sales pause (lifts an active block) or end the exemption. */
-export async function setPlatformFeeExemptionAction(
-  tenantId: string,
-  exempt: boolean,
-  reason: string,
-): Promise<FeeActionResult> {
-  const actorId = await verifySuperAdmin()
-  if (!actorId) return { ok: false, error: 'forbidden' }
-  if (!isUuid(tenantId)) return { ok: false, error: 'invalid_id' }
-  if (typeof exempt !== 'boolean') return { ok: false, error: 'invalid_kind' }
-  const r = parseFeeReason(reason)
-  if (!r.ok) return r
-  try {
-    await setFeeExemption(createAdminClient(), tenantId, exempt, r.value, actorId)
     revalidateTenant()
     return { ok: true }
   } catch (err) {

@@ -7,6 +7,7 @@ import { owedBuckets } from '@/lib/billing/platform-fee-view'
 import { formatMoney } from '@/lib/payments/format-money'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { loadVesRate } from '@/lib/billing/ves-rate'
 import {
   loadActiveBankAccounts,
   loadOpenFeeRequest,
@@ -86,6 +87,8 @@ export async function FeeBalanceCard({
     payable.length > 0 && bankRes.status === 'fulfilled'
       ? selectBankAccountsForAll(bankRes.value, openRequest ? [...payable, openRequest.currency] : payable)
       : []
+  // Pago Móvil is paid in VES against a USD balance: show the converted amount.
+  const vesRate = bankAccounts.some((a) => a.kind === 'pago_movil') ? await loadVesRate() : null
   const tenantSlug = tenantRes.status === 'fulfilled' ? tenantRes.value.data?.slug ?? '' : ''
   // '' = unknown: the dialog then quotes the request id alone.
   const tenantReference = tenantSlug ? feeTransferReference(tenantSlug) : ''
@@ -106,6 +109,7 @@ export async function FeeBalanceCard({
             <FeePayNowDialog
               buckets={account.payNow}
               bankAccounts={bankAccounts}
+              vesRate={vesRate}
               tenantReference={tenantReference}
               openRequest={openRequest}
             />
@@ -204,7 +208,7 @@ async function FeeBalanceBody({
         </div>
       )}
 
-      {(account.openRequest || account.underReview > 0 || account.standing.enforcementExempt || (hasDebt && account.enforcementMode !== 'enforce')) && (
+      {(account.openRequest || account.underReview > 0 || (hasDebt && (account.enforcementMode !== 'enforce' || account.billingMode !== 'paid'))) && (
         <ul className="space-y-1.5 text-sm text-muted-foreground">
           {account.openRequest && (
             <li className="flex gap-2" data-testid="fee-open-request">
@@ -221,13 +225,7 @@ async function FeeBalanceBody({
               {t('underReview', { count: account.underReview })}
             </li>
           )}
-          {account.standing.enforcementExempt && (
-            <li className="flex gap-2">
-              <IconInfoCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              {t('exempt')}
-            </li>
-          )}
-          {hasDebt && account.enforcementMode !== 'enforce' && !account.standing.enforcementExempt && (
+          {hasDebt && (account.enforcementMode !== 'enforce' || account.billingMode !== 'paid') && (
             <li className="flex gap-2">
               <IconInfoCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               {t('notifyOnly')}

@@ -9,6 +9,11 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 const PLANS = ['free', 'starter', 'pro', 'business', 'enterprise']
+const MODES = [
+  { value: 'paid', label: 'Paid' },
+  { value: 'comped', label: 'Comped' },
+  { value: 'internal', label: 'Internal' },
+]
 const STATUSES = [
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
@@ -33,7 +38,7 @@ export function ClearFiltersLink({ className, children, ...props }: Omit<React.C
   )
 }
 
-export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; status?: string }) {
+export function TenantFilters({ q, plan, status, mode }: { q?: string; plan?: string; status?: string; mode?: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const formRef = useRef<HTMLFormElement>(null)
@@ -57,12 +62,14 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
     if (q && omit !== 'q') p.set('q', q)
     if (plan && omit !== 'plan') p.set('plan', plan)
     if (status && omit !== 'status') p.set('status', status)
+    if (mode && omit !== 'mode') p.set('mode', mode)
     const s = p.toString()
     return s ? `${pathname}?${s}` : pathname
   }
   if (q) active.push({ key: 'q', label: `“${q}”`, href: params('q') })
   if (plan) active.push({ key: 'plan', label: `Plan: ${plan}`, href: params('plan'), capitalize: true })
   if (status) active.push({ key: 'status', label: `Status: ${status}`, href: params('status'), capitalize: true })
+  if (mode) active.push({ key: 'mode', label: `Billing mode: ${mode}`, href: params('mode'), capitalize: true })
 
   return (
     <div className="mb-4 space-y-2">
@@ -70,7 +77,7 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
           navigations, so without this a chip-cleared filter would linger in the
           uncontrolled select and be re-applied on the next auto-submit. */}
       <form
-        key={`${q ?? ''}|${plan ?? ''}|${status ?? ''}`}
+        key={`${q ?? ''}|${plan ?? ''}|${status ?? ''}|${mode ?? ''}`}
         ref={formRef}
         onSubmit={onSubmit}
         className="flex flex-wrap items-center gap-2"
@@ -116,6 +123,20 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
           <option value="">All statuses</option>
           {STATUSES.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+        <label className="sr-only" htmlFor="tenants-mode-filter">Billing mode</label>
+        <select
+          id="tenants-mode-filter"
+          name="mode"
+          defaultValue={mode || ''}
+          onChange={submit}
+          className={cn(selectClass, 'normal-case')}
+          data-testid="tenants-mode-filter"
+        >
+          <option value="">All billing modes</option>
+          {MODES.map((m) => (
+            <option key={m.value} value={m.value}>{m.label}</option>
           ))}
         </select>
         <Button type="submit" size="sm" variant="outline" data-testid="tenants-filter-submit">

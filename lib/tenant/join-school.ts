@@ -12,7 +12,7 @@ import { track } from '@/lib/analytics/server'
 export const BANNED_MESSAGE = 'You were removed from this school and cannot rejoin. Contact the school if you think this is a mistake.'
 
 export type JoinSchoolOutcome =
-  | { ok: true; role: 'student' | 'teacher'; emailSent: boolean }
+  | { ok: true; role: 'student' | 'teacher' | 'admin'; emailSent: boolean }
   | {
       ok: false
       code: 'already_member' | 'student_limit' | 'failed' | 'metadata_failed' | 'banned'
@@ -87,7 +87,7 @@ export async function joinSchool({
   // the role they held unless a fresh invitation reassigns it.
   const userEmail = user.email?.toLowerCase()
   let viaInvite = false
-  let assignedRole: 'student' | 'teacher' =
+  let assignedRole: 'student' | 'teacher' | 'admin' =
     (existingMembership?.role as 'student' | 'teacher' | undefined) === 'teacher'
       ? 'teacher'
       : 'student'
@@ -103,7 +103,7 @@ export async function joinSchool({
 
     if (invitation) {
       viaInvite = true
-      assignedRole = invitation.role as 'student' | 'teacher'
+      assignedRole = invitation.role as 'student' | 'teacher' | 'admin'
       // Mark invitation as accepted
       const { error: invitationError } = await admin
         .from('tenant_invitations')
@@ -119,7 +119,9 @@ export async function joinSchool({
   // A reinstatement updates the surviving row instead, which is why the unique
   // (tenant_id, user_id) constraint is never in play on either path. Note that a
   // removed *admin* comes back as a student or teacher, never an admin: rejoining
-  // a school is not a way to restore privilege you were stripped of.
+  // a school is not a way to restore privilege you were stripped of. The one way
+  // back to admin is an explicit pending admin invitation (#984, a super admin
+  // handing a school to its owner), which sets `assignedRole` above.
   const { error } = isReinstatement
     ? await admin
         .from('tenant_users')

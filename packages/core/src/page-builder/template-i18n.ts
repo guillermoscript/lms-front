@@ -29,7 +29,7 @@ const DICTIONARIES: Record<TemplateLocale, Readonly<Record<string, string>> | nu
  * tokens, and every select/radio field of the manifest (a unit test keeps that list honest).
  */
 const NON_COPY_KEY =
-  /(^id$|Id$|Ids$|href|Href|url|Url|image|Image|logo$|^icon|Icon$|color|Color|^anchor|embed|^src$|avatar|Avatar|video|Video|email|phone|^type$|^style$|^tone$|^align|^variant|^layout|^columns$|^hideOn$|^level$|^size$|font|Font|^min|^max|^overlay|^spacing|padding|Padding|margin|Margin|^objectFit$|^borderRadius$|^aspectRatio$|^thickness$|^theme$|^columnCount$|^gap$|^verticalAlign$|^stackOnMobile$|^shadow$|^curatedOnly$|^show|^highlighted$|^source$|^useLiveStats$|^reverse$|^pauseOnHover$|^sticky$|^transparent$|^separator$|^height$|^width$)/
+  /(^id$|Id$|Ids$|href|Href|url|Url|image|Image|logo$|^icon|Icon$|color|Color|^anchor|embed|^src$|avatar|Avatar|video|Video|email|phone|^type$|^style$|^tone$|^align|^variant|^surface$|^pattern$|^kind$|^layout|^columns$|^hideOn$|^level$|^size$|font|Font|^min|^max|^overlay|^spacing|padding|Padding|margin|Margin|^objectFit$|^borderRadius$|^aspectRatio$|^thickness$|^theme$|^columnCount$|^gap$|^verticalAlign$|^stackOnMobile$|^shadow$|^curatedOnly$|^show|^highlighted$|^source$|^useLiveStats$|^reverse$|^pauseOnHover$|^sticky$|^transparent$|^separator$|^height$|^width$)/
 
 /** Alt text is copy even though its key names an image. */
 const COPY_KEY = /(^alt$|Alt$)/

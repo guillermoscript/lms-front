@@ -23,6 +23,7 @@ export interface LessonEditorProps {
     description: string | null
     content: string | null
     video_url: string | null
+    image?: string | null
     sequence: number
     status: 'draft' | 'published' | 'archived'
     publish_at: string | null
@@ -41,6 +42,7 @@ export interface LessonFormData {
   description: string
   content: string
   video_url: string
+  image: string
   sequence: number
   publish_at: string
   ai_task_description: string
@@ -131,6 +133,7 @@ export function LessonEditorProvider({
     // not a message: next-intl would reject its <Callout> tag (#687).
     content: initialData?.content ?? (initialData ? '' : getLessonStarterTemplate(locale)),
     video_url: initialData?.video_url || '',
+    image: initialData?.image || '',
     sequence: initialData?.sequence || initialSequence,
     publish_at: initialData?.publish_at || '',
     ai_task_description: initialData?.ai_task_description || '',
@@ -190,6 +193,7 @@ export function LessonEditorProvider({
         description: formData.description,
         content,
         video_url: formData.video_url,
+        image: formData.image,
         sequence: formData.sequence,
         publish,
         publish_at: formData.publish_at,

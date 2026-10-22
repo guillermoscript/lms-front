@@ -360,6 +360,24 @@ describe('mergeAtRiskTenants', () => {
     expect(merged.map((t) => t.tenantId).sort()).toEqual(['a', 'c', 'd', 'shared'])
   })
 
+  it('drops past-due reasons for comped / internal schools but keeps a scheduled cutoff', () => {
+    const non = (tenantId: string, billingMode: string, accessCutoffAt: string | null = null): AtRiskTenantRow => ({
+      ...row(tenantId, accessCutoffAt),
+      billingMode,
+    })
+    const merged = mergeAtRiskTenants({
+      pastDueTenants: [non('comped-pd', 'comped'), non('both', 'comped')],
+      cutoffTenants: [non('both', 'comped', '2026-08-01T00:00:00.000Z'), row('paid-c', '2026-08-02T00:00:00.000Z')],
+      subscriptionPastDueTenantIds: ['internal-sub', 'both'],
+      extraTenants: [non('internal-sub', 'internal')],
+    })
+    const byId = new Map(merged.map((t) => [t.tenantId, t.reasons]))
+    expect(byId.has('comped-pd')).toBe(false)
+    expect(byId.has('internal-sub')).toBe(false)
+    expect(byId.get('both')).toEqual(['access_cutoff_scheduled'])
+    expect(byId.get('paid-c')).toEqual(['access_cutoff_scheduled'])
+  })
+
   it('accumulates every reason a tenant qualified under, in canonical order', () => {
     const [tenant] = mergeAtRiskTenants({
       pastDueTenants: [row('x')],

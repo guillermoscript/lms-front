@@ -27,6 +27,9 @@ interface PlatformStats {
   tenants_by_plan: Record<string, number>
   pending_payment_requests: number
   mrr_cents: number
+  mrr_waived?: number
+  paying_tenants?: number
+  tenants_by_billing_mode?: Record<string, number>
   total_students: number
 }
 
@@ -191,21 +194,31 @@ export default async function PlatformOverviewPage() {
   }
 
   // ── Numbers ───────────────────────────────────────────────────────────────
+  const byMode = stats.tenants_by_billing_mode ?? {}
+  const schoolMix = [
+    `${stats.paying_tenants ?? byMode.paid ?? 0} paying`,
+    byMode.comped ? `${byMode.comped} comped` : null,
+    byMode.internal ? `${byMode.internal} internal` : null,
+  ].filter(Boolean)
+  const schoolMixDetail =
+    `${schoolMix.join(' · ')}` +
+    ((stats.new_tenants_30d ?? 0) > 0 ? ` · +${stats.new_tenants_30d} in 30 days` : '')
+
   const metrics: StatItem[] = [
     {
       label: 'Monthly recurring revenue',
       value: usd(mrr),
-      detail: 'Active school subscriptions, normalised to monthly',
+      detail:
+        (stats.mrr_waived ?? 0) > 0
+          ? `Paying schools only · ${usd(stats.mrr_waived ?? 0)}/mo given free to comped & internal`
+          : 'Paying schools only, normalised to monthly',
       href: '/platform/revenue',
       testId: 'metric-monthly-recurring-revenue',
     },
     {
       label: 'Active schools',
       value: totalTenants,
-      detail:
-        (stats.new_tenants_30d ?? 0) > 0
-          ? `+${stats.new_tenants_30d} in the last 30 days`
-          : 'No new schools in the last 30 days',
+      detail: schoolMixDetail,
       href: '/platform/tenants',
       testId: 'metric-active-tenants',
     },
@@ -383,7 +396,7 @@ export default async function PlatformOverviewPage() {
         {/* ── Plan mix ─────────────────────────────────────────────────── */}
         <PlatformSection
           title="Plan mix"
-          description={`${totalTenants} active ${totalTenants === 1 ? 'school' : 'schools'}`}
+          description={`Paying schools only (${stats.paying_tenants ?? totalTenants} of ${totalTenants}); comped and internal are counted above`}
           data-testid="plan-distribution"
         >
           <PlatformPanel className="px-5 py-4">

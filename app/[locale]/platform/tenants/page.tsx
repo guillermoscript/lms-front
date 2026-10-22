@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { IconExternalLink, IconSchool } from '@tabler/icons-react'
+import { Button } from '@/components/ui/button'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
 import { PlatformPageHeader } from '@/components/platform/page-header'
@@ -9,6 +10,8 @@ import { RelativeTime } from '@/components/platform/relative-time'
 import { PlanBadge, StatusDot, billingStatusTone, tenantStatusTone } from '@/components/platform/badges'
 import { TenantActionsMenu } from './tenant-actions-menu'
 import { ClearFiltersLink, TenantFilters } from './tenant-filters'
+import { isBillingMode, normalizeBillingMode } from '@/lib/billing/billing-mode'
+import { BillingModeBadge } from '@/components/platform/billing-mode-badge'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 100
@@ -16,19 +19,20 @@ const PAGE_SIZE = 100
 export default async function TenantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; plan?: string; status?: string }>
+  searchParams: Promise<{ q?: string; plan?: string; status?: string; mode?: string }>
 }) {
-  const { q, plan, status } = await searchParams
+  const { q, plan, status, mode } = await searchParams
   const adminClient = createAdminClient()
 
   let query = adminClient
     .from('tenants')
-    .select('id, name, slug, plan, status, billing_status, created_at', { count: 'exact' })
+    .select('id, name, slug, plan, status, billing_status, billing_mode, comped_until, fee_percent_override, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .limit(PAGE_SIZE)
 
   if (plan) query = query.eq('plan', plan)
   if (status) query = query.eq('status', status)
+  if (mode && isBillingMode(mode)) query = query.eq('billing_mode', mode)
   if (q) query = query.ilike('name', `%${q}%`)
 
   const { data: tenants, count } = await query
@@ -68,7 +72,7 @@ export default async function TenantsPage({
     })),
   )
 
-  const hasFilters = Boolean(q || plan || status)
+  const hasFilters = Boolean(q || plan || status || mode)
   const countCopy =
     total > rows.length
       ? `Showing the newest ${rows.length} of ${total} schools`
@@ -78,10 +82,15 @@ export default async function TenantsPage({
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-tenants-page">
       <PlatformPageHeader
         title="Schools"
+        actions={
+          <Button nativeButton={false} render={<Link href="./tenants/new" />} data-testid="create-school-link">
+            Create school
+          </Button>
+        }
         description={<span data-testid="tenants-count">{countCopy}</span>}
       />
 
-      <TenantFilters q={q} plan={plan} status={status} />
+      <TenantFilters q={q} plan={plan} status={status} mode={mode} />
 
       <PlatformPanel>
         <div className="overflow-x-auto">
@@ -92,6 +101,7 @@ export default async function TenantsPage({
                 <th className={TH}>Plan</th>
                 <th className={TH}>Status</th>
                 <th className={TH}>Billing</th>
+                <th className={TH}>Mode</th>
                 <th className={TH_RIGHT}>Students</th>
                 <th className={TH_RIGHT}>Courses</th>
                 <th className={TH_RIGHT}>Joined</th>
@@ -142,6 +152,9 @@ export default async function TenantsPage({
                       label={(tenant.billing_status ?? 'active').replace(/_/g, ' ')}
                     />
                   </td>
+                  <td className={TD} data-testid="tenant-billing-mode" data-mode={normalizeBillingMode(tenant.billing_mode)}>
+                    <BillingModeBadge mode={tenant.billing_mode} />
+                  </td>
                   <td className={cn(TD, 'text-right tabular-nums')}>{tenant.students}</td>
                   <td className={cn(TD, 'text-right tabular-nums')}>{tenant.courses}</td>
                   <td className={cn(TD, 'text-right text-xs text-muted-foreground')}>
@@ -153,13 +166,16 @@ export default async function TenantsPage({
                       tenantName={tenant.name}
                       currentPlan={tenant.plan ?? 'free'}
                       isActive={tenant.status === 'active'}
+                      billingMode={tenant.billing_mode}
+                      compedUntil={tenant.comped_until}
+                      feePercentOverride={tenant.fee_percent_override}
                     />
                   </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-0">
+                  <td colSpan={9} className="p-0">
                     <PlatformEmptyState
                       icon={IconSchool}
                       title={hasFilters ? 'No schools match these filters' : 'No schools yet'}

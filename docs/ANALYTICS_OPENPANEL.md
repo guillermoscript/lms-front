@@ -251,7 +251,7 @@ Organised by the five loops that actually determine whether this business works.
 | `landing_viewed` | auto screen view, `app/[locale]/(public)/page.tsx` | `referrer`, `utm_*` |
 | `pricing_viewed` | auto, `/pricing`, `/platform-pricing` | `plan_highlighted` |
 | `school_signup_started` | `/create-school` client | `source` |
-| `school_created` | **server** — `app/actions/onboarding.ts:19 createSchoolForUser` | `plan`, `referral_code`, `time_to_create_ms` |
+| `school_created` | **not emitted** — `createSchoolForUser` (its only emitter) was dead code and was removed in #984; self-serve creation goes through the `create_school` RPC and super-admin creation (`createSchoolOnBehalf`) is deliberately not counted in the funnel | `plan`, `referral_code`, `time_to_create_ms` |
 | `onboarding_step_completed` | `/onboarding` client | `step`, `step_index` |
 | `onboarding_completed` | **server** — `app/actions/onboarding.ts:76 completeOnboarding` | `duration_ms`, `steps_skipped` |
 | `join_school_requested` | **server** — `app/actions/join-school.ts:14` | `via_invite` |

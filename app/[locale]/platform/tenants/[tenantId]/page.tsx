@@ -14,6 +14,9 @@ import { RelativeTime } from '@/components/platform/relative-time'
 import { PlanBadge, StatusDot, billingStatusTone, tenantStatusTone } from '@/components/platform/badges'
 import { TenantActionsMenu } from '../tenant-actions-menu'
 import { TenantFeePanel } from '@/components/platform/fees/tenant-fee-panel'
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
+import { BillingModeBadge } from '@/components/platform/billing-mode-badge'
+import { ConvertToPaidButton } from '@/components/platform/convert-to-paid-button'
 import { cn } from '@/lib/utils'
 
 const TX_TONE: Record<string, 'ok' | 'warn' | 'bad' | 'muted'> = {
@@ -48,6 +51,7 @@ export default async function TenantDetailPage({
     { data: recentTransactions },
     { data: adminUsers },
     { data: subscription },
+    { data: modeLog },
     siteUrl,
   ] = await Promise.all([
     adminClient
@@ -77,6 +81,12 @@ export default async function TenantDetailPage({
       .select('*, platform_plans(name, slug)')
       .eq('tenant_id', tenantId)
       .maybeSingle(),
+    adminClient
+      .from('tenant_billing_mode_log')
+      .select('id, old_mode, new_mode, fee_percent_override, comped_until, reason, changed_by, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(20),
     getTenantSiteUrl(tenant.slug),
   ])
 
@@ -90,12 +100,19 @@ export default async function TenantDetailPage({
   )
 
   // Fetch profiles for admin users separately (more reliable than FK embedding)
-  const adminUserIds = (adminUsers || []).map(u => u.user_id)
+  const adminUserIds = Array.from(
+    new Set([
+      ...(adminUsers || []).map(u => u.user_id),
+      ...(modeLog || []).map(l => l.changed_by).filter((id): id is string => !!id),
+      ...(tenant.comped_by ? [tenant.comped_by as string] : []),
+    ]),
+  )
   const { data: adminProfiles } = adminUserIds.length > 0
     ? await adminClient.from('profiles').select('id, full_name').in('id', adminUserIds)
     : { data: [] }
   const profileMap = (adminProfiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p.full_name }), {} as Record<string, string>)
 
+  const billingMode = normalizeBillingMode(tenant.billing_mode)
   const billingStatus = tenant.billing_status ?? 'active'
   const isActive = tenant.status === 'active'
   const subscriptionPlan = (subscription?.platform_plans as { name: string; slug: string } | null) ?? null
@@ -160,6 +177,9 @@ export default async function TenantDetailPage({
             tenantName={tenant.name}
             currentPlan={tenant.plan ?? 'free'}
             isActive={isActive}
+            billingMode={tenant.billing_mode}
+            compedUntil={tenant.comped_until}
+            feePercentOverride={tenant.fee_percent_override}
           />
         }
       />
@@ -242,10 +262,52 @@ export default async function TenantDetailPage({
               </dl>
             ) : (
               <p className="text-sm text-muted-foreground">
-                On the free plan — no platform subscription. Use <span className="font-medium text-foreground">Change plan</span> in the
+                On the free plan — no platform subscription. Use <span className="font-medium text-foreground">Billing mode</span> in the
                 actions menu to move them manually.
               </p>
             )}
+          </PlatformPanel>
+        </PlatformSection>
+
+        {/* Billing mode (docs/INTERNAL_COMPED_SCHOOLS.md) */}
+        <PlatformSection
+          title="Billing mode"
+          description="Whether the platform billing machinery applies to this school."
+          action={billingMode === 'comped' ? <ConvertToPaidButton tenantId={tenantId} tenantName={tenant.name} /> : undefined}
+          data-testid="tenant-billing-mode-panel"
+        >
+          <PlatformPanel className="px-5 py-4">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Mode</dt>
+              <dd data-testid="billing-mode-current"><BillingModeBadge mode={billingMode} /></dd>
+              <dt className="text-muted-foreground">Plan</dt>
+              <dd className="capitalize">{tenant.plan ?? 'free'}</dd>
+              {billingMode === 'comped' && (
+                <>
+                  <dt className="text-muted-foreground">Expires</dt>
+                  <dd>
+                    {tenant.comped_until
+                      ? format(new Date(tenant.comped_until), 'MMM d, yyyy')
+                      : 'No expiry'}
+                  </dd>
+                  <dt className="text-muted-foreground">Fee on sales</dt>
+                  <dd className="tabular-nums">{Number(tenant.fee_percent_override ?? 0)}%</dd>
+                </>
+              )}
+              {billingMode !== 'paid' && (
+                <>
+                  <dt className="text-muted-foreground">Reason</dt>
+                  <dd>{tenant.comped_reason ?? '—'}</dd>
+                  <dt className="text-muted-foreground">Set by</dt>
+                  <dd>
+                    {(tenant.comped_by && profileMap[tenant.comped_by as string]) || '—'}
+                    {tenant.comped_at && (
+                      <span className="text-muted-foreground"> · <RelativeTime value={tenant.comped_at} /></span>
+                    )}
+                  </dd>
+                </>
+              )}
+            </dl>
           </PlatformPanel>
         </PlatformSection>
 
@@ -280,6 +342,55 @@ export default async function TenantDetailPage({
 
         {/* Platform fee ledger (#929): standing, balances, confirm / record / waive / reverse / exempt, audit */}
         <TenantFeePanel tenantId={tenantId} locale={locale} />
+
+        {/* Billing mode history */}
+        <PlatformSection
+          title="Billing mode history"
+          description="Newest 20 changes."
+          className="lg:col-span-2"
+          data-testid="billing-mode-history"
+        >
+          <PlatformPanel>
+            {(!modeLog || modeLog.length === 0) ? (
+              <p className="px-5 py-6 text-sm text-muted-foreground">No billing mode changes recorded.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-border">
+                    <tr>
+                      <th className={TH}>When</th>
+                      <th className={TH}>Change</th>
+                      <th className={TH_RIGHT}>Fee</th>
+                      <th className={TH}>Expires</th>
+                      <th className={TH}>By</th>
+                      <th className={TH}>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {modeLog.map((l) => (
+                      <tr key={l.id} data-testid="billing-mode-history-row">
+                        <td className={cn(TD, 'text-xs text-muted-foreground whitespace-nowrap')}>
+                          {format(new Date(l.created_at), 'MMM d, yyyy HH:mm')}
+                        </td>
+                        <td className={cn(TD, 'capitalize whitespace-nowrap')}>
+                          {l.old_mode ?? '—'} → {l.new_mode}
+                        </td>
+                        <td className={cn(TD, 'text-right tabular-nums')}>
+                          {l.fee_percent_override != null ? `${Number(l.fee_percent_override)}%` : '—'}
+                        </td>
+                        <td className={cn(TD, 'text-xs whitespace-nowrap')}>
+                          {l.comped_until ? format(new Date(l.comped_until), 'MMM d, yyyy') : '—'}
+                        </td>
+                        <td className={TD}>{(l.changed_by && profileMap[l.changed_by]) || '—'}</td>
+                        <td className={cn(TD, 'text-muted-foreground')}>{l.reason ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PlatformPanel>
+        </PlatformSection>
 
         {/* Recent Transactions */}
         <PlatformSection

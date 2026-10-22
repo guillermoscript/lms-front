@@ -5,6 +5,7 @@
  * banner decision. No DB, no server-only imports: the Pay-now dialog (client)
  * imports this module. Loaders live in `platform-fee-account.ts`.
  */
+import { feeBlockingApplies, feeNoticesApply, normalizeBillingMode, type BillingMode } from '@/lib/billing/billing-mode'
 import { MONEY_EPSILON, roundMoney } from '@/lib/payments/payouts-owed'
 import { feeForTxn, FEE_LEDGER_USD, type FeeBalance, type FeeLedgerOptions, type FeeLedgerTxn } from '@/lib/payments/platform-fee-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
@@ -37,7 +38,6 @@ export interface FeeStandingSnapshot {
   state: FeeStandingState
   overdueSince: string | null
   blockedAt: string | null
-  enforcementExempt: boolean
 }
 
 // ─── pure helpers ───────────────────────────────────────────────────────────
@@ -177,7 +177,7 @@ export interface FeeBannerNotice {
   owed: Record<string, number>
   /** Due date of the latest statement (reminded). */
   dueAt: string | null
-  /** When new sales pause, if they will (overdue, enforce mode, not exempt). */
+  /** When new sales pause, if they will (overdue, enforce mode, paid billing mode). */
   blockOn: string | null
 }
 
@@ -192,17 +192,21 @@ export function describeFeeBanner(input: {
   enforcementMode: FeeEnforcementMode
   graceDays: number
   latestDueAt: string | null
+  /** tenants.billing_mode; absent = paid. internal: no banner; comped: notice but never a block date. */
+  billingMode?: BillingMode
 }): FeeBannerNotice | null {
   const { standing } = input
+  const billingMode = normalizeBillingMode(input.billingMode)
+  if (!feeNoticesApply(billingMode)) return null
   if (!standing || standing.state === 'ok') return null
   const owed = owedByCurrency(input.balances)
   if (Object.keys(owed).length === 0) return null
 
-  if (standing.blockedAt) return { variant: 'blocked', owed, dueAt: input.latestDueAt, blockOn: null }
+  if (standing.blockedAt && feeBlockingApplies(billingMode)) return { variant: 'blocked', owed, dueAt: input.latestDueAt, blockOn: null }
 
   if (standing.state === 'overdue' || standing.state === 'blocked') {
     let blockOn: string | null = null
-    if (input.enforcementMode === 'enforce' && !standing.enforcementExempt && standing.overdueSince) {
+    if (input.enforcementMode === 'enforce' && feeBlockingApplies(billingMode) && standing.overdueSince) {
       const since = Date.parse(standing.overdueSince)
       if (!Number.isNaN(since)) blockOn = new Date(since + input.graceDays * DAY_MS).toISOString()
     }

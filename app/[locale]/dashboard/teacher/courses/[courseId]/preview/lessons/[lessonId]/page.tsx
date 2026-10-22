@@ -136,6 +136,10 @@ export default async function LessonPreviewPage({ params }: PageProps) {
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
+              {lesson.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={lesson.image} alt="" className="aspect-video w-full rounded-xl object-cover" />
+              )}
               <LessonContent
                 mdx={await serializeLessonMdx(lesson.content)}
                 videoUrl={lesson.video_url}
