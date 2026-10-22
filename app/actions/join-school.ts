@@ -7,9 +7,11 @@ import { revalidatePath } from 'next/cache'
 import { joinSchool } from '@/lib/tenant/join-school'
 
 /**
- * Join the current tenant as a student
+ * Join the current tenant — as a student, or with the invited role when
+ * `inviteToken` (from `/join-school?invite=<token>`) matches an invitation
+ * addressed to the signed-in account's email.
  */
-export async function joinCurrentSchool() {
+export async function joinCurrentSchool(inviteToken?: string | null) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -18,7 +20,13 @@ export async function joinCurrentSchool() {
   }
 
   const tenantId = await getCurrentTenantId()
-  const outcome = await joinSchool({ admin: createAdminClient(), user, tenantId })
+  const outcome = await joinSchool({
+    admin: createAdminClient(),
+    user,
+    tenantId,
+    // Untrusted: joinSchool validates the shape and matches it in SQL.
+    inviteToken: typeof inviteToken === 'string' ? inviteToken : null,
+  })
   if (!outcome.ok) {
     return { success: false, error: outcome.error }
   }

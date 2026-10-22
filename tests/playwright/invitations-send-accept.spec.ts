@@ -148,7 +148,7 @@ function expectTenantJoinUrl(url: string) {
 async function pendingInvitation(admin: SupabaseClient, email: string) {
   const { data, error } = await admin
     .from('tenant_invitations')
-    .select('id, role, status, accepted_at')
+    .select('id, role, status, accepted_at, token')
     .eq('tenant_id', CODE_ACADEMY_TENANT)
     .eq('email', email.toLowerCase())
     .order('created_at', { ascending: false })
@@ -186,13 +186,17 @@ async function acceptInvitation(
     // than from the page itself, which named it `next`. The login form reads
     // either, and the sign-up link it builds still carries `next` (asserted
     // below), so what matters here is only that the destination survives.
+    // The invitation token (`?invite=`) must ride along: it is the only thing
+    // that consumes the invitation after the login / sign-up detour.
+    const expectedReturn = `/join-school${new URL(joinUrl).search}`
+    expect(expectedReturn).toMatch(/\?invite=[0-9a-f]{32,}$/)
     const loginParams = new URL(page.url()).searchParams
-    expect(loginParams.get('next') ?? loginParams.get('redirectTo')).toBe('/join-school')
+    expect(loginParams.get('next') ?? loginParams.get('redirectTo')).toBe(expectedReturn)
     const signupLink = page.getByTestId('login-signup-link')
     await expect(signupLink).toBeVisible({ timeout: 30_000 })
     await signupLink.click()
     await page.waitForURL(/\/auth\/sign-up\?/, { timeout: 30_000 })
-    expect(new URL(page.url()).searchParams.get('next')).toBe('/join-school')
+    expect(new URL(page.url()).searchParams.get('next')).toBe(expectedReturn)
   })
 
   await test.step('sign-up reaches the school through the join page, which joins on its own', async () => {
@@ -255,14 +259,16 @@ test.describe('Invitations — admin invites, invitee joins with the invited rol
           type: 'note',
           description: `Mailgun configured — dialog reported emailSent=${emailSent}`,
         })
+        // An emailed link is not visible to the test; rebuild it from the row.
         joinUrls.student = emailSent
-          ? `${BASE}/join-school`
+          ? `${BASE}/join-school?invite=${(await pendingInvitation(admin, invitee.email))?.token}`
           : await page.getByTestId('invite-join-link').inputValue()
       }
       expectTenantJoinUrl(joinUrls.student)
 
       const row = await pendingInvitation(admin, invitee.email)
       expect(row).toMatchObject({ role: 'student', status: 'pending' })
+      expect(new URL(joinUrls.student).searchParams.get('invite'), 'link carries the invitation token').toBe(row?.token)
     })
 
     const { context, page: inviteePage } = await acceptInvitation(browser, joinUrls.student!, invitee)
@@ -319,6 +325,7 @@ test.describe('Invitations — admin invites, invitee joins with the invited rol
 
       const row = await pendingInvitation(admin, invitee.email)
       expect(row).toMatchObject({ role: 'teacher', status: 'pending' })
+      expect(new URL(joinUrls.teacher).searchParams.get('invite'), 'link carries the invitation token').toBe(row?.token)
     })
 
     const { context, page: inviteePage } = await acceptInvitation(browser, joinUrls.teacher!, invitee)

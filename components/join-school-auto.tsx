@@ -11,6 +11,8 @@ interface AutoJoinSchoolProps {
   schoolName: string
   /** Same-origin path to land on once the membership exists. */
   destination: string
+  /** Secret from the invitation link, passed through to the join. */
+  inviteToken?: string | null
   /**
    * The manual join page. Rendered only when the automatic join could not
    * happen — a full seat count, a failed metadata write — so the visitor still
@@ -32,7 +34,7 @@ interface AutoJoinSchoolProps {
  * this is a membership write (and a seat against the school's plan), which
  * must not be triggered by a GET a crawler or a prefetch could make.
  */
-export function AutoJoinSchool({ schoolName, destination, children }: AutoJoinSchoolProps) {
+export function AutoJoinSchool({ schoolName, destination, inviteToken, children }: AutoJoinSchoolProps) {
   const t = useTranslations('joinSchool')
   const [error, setError] = useState<string | null>(null)
   // Survives StrictMode's double-invoked effect, which would otherwise fire a
@@ -49,7 +51,7 @@ export function AutoJoinSchool({ schoolName, destination, children }: AutoJoinSc
     // no second call replaces it — the refusal would never reach the screen
     // and the spinner would spin forever. Setting state on an unmounted
     // component is a no-op in React 18+; a lost error is not.
-    joinCurrentSchool()
+    joinCurrentSchool(inviteToken)
       .then((result) => {
         if (result.success) {
           // Hard navigation, matching JoinSchoolForm: the membership and the
@@ -64,7 +66,7 @@ export function AutoJoinSchool({ schoolName, destination, children }: AutoJoinSc
         console.error('Auto-join failed:', err)
         setError(t('unexpectedError'))
       })
-  }, [destination, t])
+  }, [destination, inviteToken, t])
 
   if (!error) {
     return (
