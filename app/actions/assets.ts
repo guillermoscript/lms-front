@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { errorMessage } from '@/lib/supabase/error-message'
 
 export type AssetKind = 'image' | 'video' | 'document' | 'other'
 export type AssetSource =
@@ -234,7 +235,8 @@ export async function listTenantAssets(opts: {
 
     return { success: true, assets, total, pageSize: PAGE_SIZE, usedBytes }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to list assets' }
+    console.error('[assets] listTenantAssets failed:', err)
+    return { success: false, error: errorMessage(err, 'Failed to list assets') }
   }
 }
 
@@ -248,12 +250,13 @@ export async function deleteTenantAsset(assetId: string): Promise<Result<object>
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { data: asset } = await supabase
+    const { data: asset, error: lookupError } = await supabase
       .from('tenant_assets')
       .select('asset_id, bucket, path, uploaded_by')
       .eq('asset_id', assetId)
       .eq('tenant_id', tenantId)
       .maybeSingle()
+    if (lookupError) throw lookupError
     if (!asset) return { success: false, error: 'Asset not found' }
     if (role !== 'admin' && asset.uploaded_by !== user?.id) {
       return { success: false, error: 'Only an admin can delete files uploaded by others' }
@@ -266,6 +269,7 @@ export async function deleteTenantAsset(assetId: string): Promise<Result<object>
     await admin.from('tenant_assets').delete().eq('asset_id', assetId).eq('tenant_id', tenantId)
     return { success: true }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to delete asset' }
+    console.error('[assets] deleteTenantAsset failed:', err)
+    return { success: false, error: errorMessage(err, 'Failed to delete asset') }
   }
 }
