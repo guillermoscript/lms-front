@@ -99,7 +99,7 @@ export function AssetDetailDialog({ asset, onOpenChange, onDelete }: AssetDetail
                     return (
                       <li key={`${u.type}-${u.name}-${i}`}>
                         {u.href ? (
-                          <Link href={`/${locale}${u.href}`} className="text-primary underline-offset-2 hover:underline">
+                          <Link href={u.href} className="text-primary underline-offset-2 hover:underline">
                             {label}
                           </Link>
                         ) : (
