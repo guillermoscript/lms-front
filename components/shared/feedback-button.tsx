@@ -346,6 +346,9 @@ export function FeedbackButton() {
             'fixed top-0 left-0 z-40 grid place-items-center rounded-full',
             'border border-border/60 bg-card/80 text-muted-foreground shadow-sm backdrop-blur-sm',
             'cursor-grab touch-none select-none',
+            // The guided tour's overlay (driver.js, z-index 10000) swallows every pointer
+            // event, so the puck would sit dimmed but dead. Hide it for the tour's duration.
+            '[.driver-active_&]:hidden',
             // Resting state is deliberately faint: it should read as available, not as
             // something demanding attention while the user is reading a lesson.
             'opacity-45',
