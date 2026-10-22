@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { uploadCourseImage } from '@/app/actions/teacher/course-images'
+import { uploadCourseImage } from '@/lib/storage/course-image-upload'
+import { useTenant } from '@/components/tenant/tenant-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -27,6 +28,7 @@ import { getEmbedUrl, VIDEO_IFRAME_ALLOW } from '@/lib/video/embed'
 export function LessonDetailsStep() {
   const { formData, updateField, initialData, setActiveStep, courseId } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
+  const tenant = useTenant()
   const previewEmbedUrl = getEmbedUrl(formData.video_url)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -34,13 +36,11 @@ export function LessonDetailsStep() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !tenant?.id) return
     setUploading(true)
     setImageError(null)
     try {
-      const data = new FormData()
-      data.append('file', file)
-      const result = await uploadCourseImage(data)
+      const result = await uploadCourseImage(file, tenant.id)
       if (result.success) updateField('image', result.url)
       else setImageError(result.error)
     } catch (err) {
