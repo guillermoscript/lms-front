@@ -12,6 +12,7 @@
 // lesson_completions), selects safe display columns only, and NEVER selects
 // lesson content.
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchLiveEntitlementKeys } from '@/lib/services/course-access'
 import { isFreePreviewEnabled } from '@/lib/settings/free-preview'
 import { collectBoundIds } from './collect-bound-ids'
 import { planCheckoutHref, productHref } from './checkout-href'
@@ -543,11 +544,10 @@ export async function getLandingStats(tenantId: string): Promise<LandingStats> {
   const index = await getPublishedCourseIndex(admin, tenantId)
   const courseIds = [...index.keys()]
 
-  const { count: students } = await admin
-    .from('enrollments')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
+  // Students who can open a course now (entitlements), not enrollment rows.
+  const students = await fetchLiveEntitlementKeys(admin, tenantId)
+    .then((keys) => keys.size)
+    .catch(() => 0)
 
   // lesson_completions has no tenant_id/course_id — scope via the tenant's lessons.
   let completions = 0

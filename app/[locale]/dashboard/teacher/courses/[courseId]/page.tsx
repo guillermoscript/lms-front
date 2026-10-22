@@ -1,6 +1,7 @@
 import { ContentListExplorer } from '@/components/teacher/content-list-explorer'
 import { BulkContentCheckbox } from '@/components/teacher/bulk-content-manager'
 import { createClient } from '@/lib/supabase/server'
+import { fetchLiveEntitlementKeys, liveEntitlementKey } from '@/lib/services/course-access'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -50,6 +51,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed } from '@/lib/ui-state-keys'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import { getCourseProgressReport, type CourseItem } from '@/lib/analytics/student-progress'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 import { hasVisibleCoursePosts, isCommunityEnabled } from '@/lib/community/access'
@@ -190,12 +193,17 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .order('sequence', { ascending: true }),
-    supabase
-      .from('enrollments')
-      .select('enrollment_id, user_id, course_id, enrollment_date, status, tenant_id')
-      .eq('course_id', parseInt(courseId))
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active'),
+    // Every active enrollment (a plain read is capped at 1000 rows).
+    fetchAllRows('enrollments', (from, to) =>
+      supabase
+        .from('enrollments')
+        .select('enrollment_id, user_id, course_id, enrollment_date, status, tenant_id', { count: 'exact' })
+        .eq('course_id', parseInt(courseId))
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .order('enrollment_id')
+        .range(from, to)
+    ),
     supabase
       .from('certificate_templates')
       .select('*')
@@ -225,17 +233,24 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
   const exams = examsRes.data || []
-  const rawEnrollments = enrollmentsRes.data || []
+  // The roster lists people who can open the course: entitlements decide, not the enrollment row.
+  const liveKeys = await fetchLiveEntitlementKeys(supabase, tenantId, { courseIds: [parseInt(courseId)] })
+  const rawEnrollments = enrollmentsRes.filter((e) => liveKeys.has(liveEntitlementKey(e.user_id, e.course_id)))
   const certificateTemplate = certificateTemplateRes.data
   const issuedCertificates = issuedCertificatesRes.data || []
 
   // Fetch profiles for enrolled users (no FK between enrollments and profiles).
   // Filter nulls + dedupe: a null id makes PostgREST reject the whole .in() query.
   const enrolledUserIds = [...new Set(rawEnrollments.map((e) => e.user_id).filter(Boolean))]
-  const { data: enrollmentProfiles } = enrolledUserIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', enrolledUserIds)
-    : { data: [] }
-  const profilesMap = new Map((enrollmentProfiles || []).map((p) => [p.id, p]))
+  const enrollmentProfiles = await fetchAllRowsIn('profiles', enrolledUserIds, (chunk, from, to) =>
+    supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url', { count: 'exact' })
+      .in('id', chunk)
+      .order('id')
+      .range(from, to)
+  )
+  const profilesMap = new Map(enrollmentProfiles.map((p) => [p.id, p]))
 
   // The email/password sign-up form never collects a name (only Google gives one),
   // so handle_new_user() leaves profiles.full_name NULL and every row rendered

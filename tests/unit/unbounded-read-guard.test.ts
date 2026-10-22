@@ -77,7 +77,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
     'scoped — the write-back `.in()` only ever carries the ids from the same pass’s own `.limit(BATCH_LIMIT)` read (200), so it cannot reach the API row cap',
 
   // scoped: one course (large, but bounded by a course roster)
-  'app/[locale]/dashboard/teacher/courses/[courseId]/page.tsx::enrollments': 'scoped — one course roster',
   'app/[locale]/dashboard/teacher/courses/[courseId]/certificates/page.tsx::enrollments': 'scoped — one course roster',
   'app/actions/teacher/courses.ts::enrollments': 'scoped — one course roster',
   'app/actions/admin/notifications.ts::enrollments': 'scoped — one course roster',
