@@ -4318,7 +4318,6 @@ export type Database = {
       lessons: {
         Row: {
           ai_task_description: string | null
-          ai_task_instructions: string | null
           content: string | null
           course_id: number | null
           created_at: string | null
@@ -4339,7 +4338,6 @@ export type Database = {
         }
         Insert: {
           ai_task_description?: string | null
-          ai_task_instructions?: string | null
           content?: string | null
           course_id?: number | null
           created_at?: string | null
@@ -4360,7 +4358,6 @@ export type Database = {
         }
         Update: {
           ai_task_description?: string | null
-          ai_task_instructions?: string | null
           content?: string | null
           course_id?: number | null
           created_at?: string | null
@@ -8388,6 +8385,10 @@ export type Database = {
           question_id: number
         }[]
       }
+      get_lesson_ai_system_prompt: {
+        Args: { _lesson_id: number }
+        Returns: string
+      }
       get_exam_submissions: {
         Args: { p_exam_id: number }
         Returns: {
@@ -8741,6 +8742,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      upsert_lesson_ai_task: {
+        Args: {
+          _lesson_id: number
+          _requirements?: Json
+          _system_prompt: string
+          _task_instructions: string
+        }
+        Returns: number
       }
       update_token_last_used: {
         Args: { ip_input: unknown; token_id_input: number }
