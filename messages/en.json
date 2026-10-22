@@ -2593,16 +2593,7 @@
       },
       "imagePicker": {
         "title": "Choose an image",
-        "description": "Reuse an image you already uploaded or add a new one.",
-        "libraryTab": "My images",
-        "uploadTab": "Upload new",
-        "empty": "No images yet. Upload your first one.",
-        "selectImage": "Use image {name}",
-        "dropHint": "Drag an image here or click to browse",
-        "limits": "JPEG, PNG, GIF or WebP · up to 5MB",
-        "uploading": "Uploading…",
-        "uploadError": "Could not upload the image",
-        "cancel": "Cancel"
+        "description": "Reuse an image you already uploaded or add a new one."
       }
     },
     "admin": {
@@ -2792,7 +2783,8 @@
         "apiTokens": "API Tokens",
         "monetization": "Monetization",
         "appearance": "Appearance",
-        "website": "Website"
+        "website": "Website",
+        "assets": "Assets"
       },
       "appearance": {
         "title": "Appearance",
@@ -5021,7 +5013,8 @@
     "myBilling": "Billing & Receipts",
     "community": "Community",
     "profile": "Profile",
-    "flashcardReviews": "Flashcard Review"
+    "flashcardReviews": "Flashcard Review",
+    "assets": "Assets"
   },
   "userNav": {
     "profile": "Profile",
@@ -9774,5 +9767,34 @@
       "back": "Back to earnings",
       "notFound": "Statement not found"
     }
+  },
+  "assets": {
+    "title": "Assets",
+    "description": "Every image your school has uploaded — course covers, landing page, certificates, community and AI images — in one place.",
+    "searchPlaceholder": "Search by file name",
+    "filterBySource": "Filter by where it was used",
+    "all": "All",
+    "sources": {
+      "course": "Course covers",
+      "landing_page": "Landing page",
+      "certificate": "Certificates",
+      "community": "Community",
+      "ai_generated": "AI generated",
+      "library": "Library",
+      "other": "Other"
+    },
+    "summary": "{count, plural, one {# file} other {# files}} · {size} used",
+    "empty": "No files yet. Drop an image above to add your first one.",
+    "select": "Use {name}",
+    "delete": "Delete {name}",
+    "deleted": "File deleted",
+    "deleteTitle": "Delete {name}?",
+    "deleteInUse": "This file is used in {count, plural, one {# place} other {# places}}: {where}. Deleting it will leave a broken image there.",
+    "deleteUnused": "Nothing in your school uses this file. This cannot be undone.",
+    "deleteConfirm": "Delete",
+    "cancel": "Cancel",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {count}"
   }
 }

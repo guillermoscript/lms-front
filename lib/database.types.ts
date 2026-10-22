@@ -7229,6 +7229,48 @@ export type Database = {
           },
         ]
       }
+      tenant_assets: {
+        Row: {
+          asset_id: string
+          bucket: string
+          created_at: string
+          kind: string
+          mime_type: string | null
+          name: string
+          path: string
+          size_bytes: number | null
+          source: string
+          tenant_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          asset_id?: string
+          bucket: string
+          created_at?: string
+          kind?: string
+          mime_type?: string | null
+          name: string
+          path: string
+          size_bytes?: number | null
+          source?: string
+          tenant_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          asset_id?: string
+          bucket?: string
+          created_at?: string
+          kind?: string
+          mime_type?: string | null
+          name?: string
+          path?: string
+          size_bytes?: number | null
+          source?: string
+          tenant_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           access_cutoff_at: string | null

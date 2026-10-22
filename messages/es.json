@@ -2593,16 +2593,7 @@
       },
       "imagePicker": {
         "title": "Elige una imagen",
-        "description": "Reutiliza una imagen que ya subiste o agrega una nueva.",
-        "libraryTab": "Mis imágenes",
-        "uploadTab": "Subir nueva",
-        "empty": "Aún no hay imágenes. Sube la primera.",
-        "selectImage": "Usar la imagen {name}",
-        "dropHint": "Arrastra una imagen aquí o haz clic para buscarla",
-        "limits": "JPEG, PNG, GIF o WebP · hasta 5MB",
-        "uploading": "Subiendo…",
-        "uploadError": "No se pudo subir la imagen",
-        "cancel": "Cancelar"
+        "description": "Reutiliza una imagen que ya subiste o agrega una nueva."
       }
     },
     "admin": {
@@ -2792,7 +2783,8 @@
         "apiTokens": "Tokens de API",
         "monetization": "Monetización",
         "appearance": "Apariencia",
-        "website": "Sitio Web"
+        "website": "Sitio Web",
+        "assets": "Archivos"
       },
       "appearance": {
         "title": "Apariencia",
@@ -4902,7 +4894,8 @@
     "myPayments": "Mis Pagos",
     "myBilling": "Facturación y Recibos",
     "community": "Comunidad",
-    "flashcardReviews": "Repaso de Tarjetas"
+    "flashcardReviews": "Repaso de Tarjetas",
+    "assets": "Archivos"
   },
   "userNav": {
     "profile": "Perfil",
@@ -9774,5 +9767,34 @@
       "back": "Volver a ingresos",
       "notFound": "Estado de cuenta no encontrado"
     }
+  },
+  "assets": {
+    "title": "Archivos",
+    "description": "Todas las imágenes que ha subido tu escuela — portadas de cursos, página de inicio, certificados, comunidad e imágenes con IA — en un solo lugar.",
+    "searchPlaceholder": "Buscar por nombre de archivo",
+    "filterBySource": "Filtrar por dónde se usó",
+    "all": "Todos",
+    "sources": {
+      "course": "Portadas de cursos",
+      "landing_page": "Página de inicio",
+      "certificate": "Certificados",
+      "community": "Comunidad",
+      "ai_generated": "Generadas con IA",
+      "library": "Biblioteca",
+      "other": "Otros"
+    },
+    "summary": "{count, plural, one {# archivo} other {# archivos}} · {size} usados",
+    "empty": "Aún no hay archivos. Suelta una imagen arriba para añadir la primera.",
+    "select": "Usar {name}",
+    "delete": "Eliminar {name}",
+    "deleted": "Archivo eliminado",
+    "deleteTitle": "¿Eliminar {name}?",
+    "deleteInUse": "Este archivo se usa en {count, plural, one {# lugar} other {# lugares}}: {where}. Al eliminarlo quedará una imagen rota allí.",
+    "deleteUnused": "Nada en tu escuela usa este archivo. Esta acción no se puede deshacer.",
+    "deleteConfirm": "Eliminar",
+    "cancel": "Cancelar",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "pageOf": "Página {page} de {count}"
   }
 }

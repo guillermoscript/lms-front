@@ -241,6 +241,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     title: t('website'), href: "/dashboard/admin/landing-page", icon: IconLayout,
                     items: [
                         { title: t('appearance'), href: "/dashboard/admin/appearance" },
+                        { title: t('assets'), href: "/dashboard/admin/assets" },
                     ],
                 },
                 {
