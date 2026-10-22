@@ -451,13 +451,20 @@ export function registerLessonTools(server: LmsServer) {
         await session.verifyLessonOwnership(lesson_id);
         const supabase = session.getClient();
 
-        const { data, error } = await supabase
-          .from("lessons_ai_tasks")
-          .select(
-            "id, lesson_id, task_instructions, system_prompt, created_at, updated_at"
-          )
-          .eq("lesson_id", lesson_id)
-          .maybeSingle();
+        // system_prompt is not SELECT-able by clients: read it via the
+        // staff/author-gated RPC. (`updated_at` never existed on this table.)
+        const [taskRes, promptRes] = await Promise.all([
+          supabase
+            .from("lessons_ai_tasks")
+            .select("id, lesson_id, task_instructions, requirements, created_at")
+            .eq("lesson_id", lesson_id)
+            .maybeSingle(),
+          supabase.rpc("get_lesson_ai_system_prompt", { _lesson_id: lesson_id }),
+        ]);
+        const error = taskRes.error ?? promptRes.error;
+        const data = taskRes.data
+          ? { ...taskRes.data, system_prompt: promptRes.data as string | null }
+          : null;
 
         if (error) return errorResult(`Getting AI task: ${error.message}`);
         if (!data) {
@@ -518,20 +525,28 @@ export function registerLessonTools(server: LmsServer) {
         await session.verifyLessonOwnership(lesson_id);
         const supabase = session.getClient();
 
-        const upsertObj: Record<string, unknown> = {
-          lesson_id,
-          task_instructions: task_instructions ?? null,
-          system_prompt: system_prompt ?? null,
-        };
-
-        const { data, error } = await supabase
+        // The RPC overwrites every column, so carry the structured requirements
+        // over (this tool never edits them).
+        const { data: existing } = await supabase
           .from("lessons_ai_tasks")
-          .upsert(upsertObj, { onConflict: "lesson_id" })
-          .select("*")
-          .single();
+          .select("requirements")
+          .eq("lesson_id", lesson_id)
+          .maybeSingle();
+
+        const { data: taskId, error } = await supabase.rpc(
+          "upsert_lesson_ai_task",
+          {
+            _lesson_id: lesson_id,
+            _task_instructions: task_instructions ?? null,
+            _system_prompt: system_prompt ?? null,
+            _requirements: existing?.requirements ?? null,
+          }
+        );
 
         if (error)
           return errorResult(`Upserting lesson AI task: ${error.message}`);
+
+        const data = { id: taskId, lesson_id, task_instructions: task_instructions ?? null };
 
         return ok(
           data as Record<string, unknown>,

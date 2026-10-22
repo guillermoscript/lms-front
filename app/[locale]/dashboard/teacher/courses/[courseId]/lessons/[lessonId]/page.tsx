@@ -62,7 +62,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
       // The AI task lives in lessons_ai_tasks — that is what the student runtime
       // reads and what the editor writes. The lessons.ai_task_* columns are
       // legacy and only ever populated by a version restore.
-      .select('*, lessons_ai_tasks(task_instructions, system_prompt, requirements)')
+      .select('*, lessons_ai_tasks(task_instructions, requirements)')
       .eq('id', parseInt(lessonId))
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
@@ -83,6 +83,11 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
   const aiTask = Array.isArray(lesson.lessons_ai_tasks)
     ? lesson.lessons_ai_tasks[0]
     : lesson.lessons_ai_tasks
+  // system_prompt is not SELECT-able by clients; staff/author read it via RPC.
+  // The author/admin guard above has already run.
+  const { data: systemPrompt } = aiTask
+    ? await supabase.rpc('get_lesson_ai_system_prompt', { _lesson_id: lesson.id })
+    : { data: null }
 
   return (
     <div className="flex flex-1 flex-col bg-background">
@@ -111,7 +116,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
           // columns can hold a task the student runtime no longer serves, and
           // showing it would tell the teacher a removed task is still live.
           ai_task_description: aiTask?.task_instructions || null,
-          ai_task_instructions: aiTask?.system_prompt || null,
+          ai_task_instructions: systemPrompt || null,
           ai_task_requirements: parseStructuredRequirements(aiTask?.requirements),
           is_preview: lesson.is_preview ?? null,
           resources: resources || [],

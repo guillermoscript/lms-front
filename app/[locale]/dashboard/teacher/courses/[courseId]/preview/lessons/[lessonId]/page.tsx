@@ -46,7 +46,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
   const [{ data: lessonData, error: lessonError }, { data: allLessons }] = await Promise.all([
     supabase
       .from('lessons')
-      .select('*, courses(title), lessons_ai_tasks(*)')
+      .select('*, courses(title), lessons_ai_tasks(task_instructions, requirements)')
       .eq('id', parseInt(lessonId))
       .eq('tenant_id', tenantId)
       .single(),

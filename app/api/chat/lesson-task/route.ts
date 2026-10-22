@@ -14,6 +14,7 @@ import { lastUserMessageHasAttachments, persistLastUserAttachments, sanitizeLast
 import { LESSON_TASK_TOOL_INVOCATION_VERSION } from '@/lib/ai/lesson-task-history'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -25,7 +26,7 @@ const bodySchema = z.object({
 
 interface LessonAITaskRow {
     task_instructions?: string
-    system_prompt?: string
+    system_prompt?: string // filled server-side below; clients cannot SELECT it
     requirements?: unknown
 }
 
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
         supabase,
         lessonId,
         tenantId,
-        'title, description, content, course_id, lessons_ai_tasks(task_instructions, system_prompt, requirements), course:courses!inner(tenant_id)'
+        'title, description, content, course_id, lessons_ai_tasks(task_instructions, requirements), course:courses!inner(tenant_id)'
     )
 
     if (!lesson) return new Response('Lesson not found', { status: 404 })
@@ -96,7 +97,23 @@ export async function POST(req: Request) {
         // NULL/invalid `requirements` falls back to the free-text task below (#806
         // compatibility contract) — never a 500 on a row from before this shipped.
         const structuredRequirements = parseStructuredRequirements(aiTaskRow?.requirements)
-        const aiTask = aiTaskRow ? { ...aiTaskRow, requirements: structuredRequirements } : undefined
+        // The teacher's private prompt is not SELECT-able by students (column
+        // privilege), so it is read here with the service role. Access and tenant
+        // were already proven by fetchTenantLesson above; the tenant is re-checked
+        // on the query as well. The value only ever goes into the model prompt.
+        let teacherPrompt: string | undefined
+        if (aiTaskRow) {
+            const { data: secret } = await createAdminClient()
+                .from('lessons_ai_tasks')
+                .select('system_prompt, lessons!inner(tenant_id)')
+                .eq('lesson_id', lessonId)
+                .eq('lessons.tenant_id', tenantId)
+                .maybeSingle()
+            teacherPrompt = secret?.system_prompt ?? undefined
+        }
+        const aiTask = aiTaskRow
+            ? { ...aiTaskRow, system_prompt: teacherPrompt, requirements: structuredRequirements }
+            : undefined
 
         // 6. side effects: save user message
         const messageText = lastUserMessageText(messages)

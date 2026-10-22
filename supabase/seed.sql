@@ -759,7 +759,7 @@ ON CONFLICT (plan_id, payment_provider, interval) DO NOTHING;
 -- Adding: 2004-2008 (seq 3-7) — a complete learning path
 -- ---------------------------------------------------------------------------
 INSERT INTO lessons (id, course_id, title, description, content, sequence, status, tenant_id,
-                     ai_task_description, ai_task_instructions)
+                     ai_task_description)
 OVERRIDING SYSTEM VALUE
 VALUES
 -- Lesson 3: Functions
@@ -836,18 +836,7 @@ def add_to_total(amount):
   3, 'published',
   '00000000-0000-0000-0000-000000000002',
   -- AI task: practice writing functions
-  'Write a Python function called `calculate_stats` that takes a list of numbers and returns a dictionary with keys "mean", "median", "min", and "max". Then write a second function `filter_outliers` that removes values more than 2 standard deviations from the mean.',
-  'You are a Python tutor evaluating the student''s understanding of functions.
-
-Check their solution for:
-1. **Correct function signatures** with type hints
-2. **Proper return values** (dict for calculate_stats, list for filter_outliers)
-3. **Edge cases** — empty list handling, single-element list
-4. **Code quality** — docstrings, meaningful variable names, no unnecessary globals
-
-Guide them with hints if they struggle. Do NOT give the full solution.
-Mark the task complete when both functions work correctly and handle at least one edge case.
-Award partial credit if only one function is correct.'
+  'Write a Python function called `calculate_stats` that takes a list of numbers and returns a dictionary with keys "mean", "median", "min", and "max". Then write a second function `filter_outliers` that removes values more than 2 standard deviations from the mean.'
 ),
 -- Lesson 4: Data Structures
 (
@@ -925,19 +914,7 @@ averages = {name: sum(g) / len(g) for name, g in grades.items()}
 | **Set** | Unique items, membership testing |',
   4, 'published',
   '00000000-0000-0000-0000-000000000002',
-  'Build a simple contact book using dictionaries. Create functions to: (1) add a contact with name, phone, and email, (2) search contacts by partial name match, (3) list all contacts sorted alphabetically, (4) delete a contact by name. Use a list of dictionaries as your data store.',
-  'You are a Python tutor focused on data structures.
-
-Evaluate the student''s contact book implementation:
-1. **Correct use of dictionaries** — each contact should be a dict with proper keys
-2. **Search function** — should handle partial matches (case-insensitive)
-3. **Sort function** — must use sorted() with a key function
-4. **Delete function** — should handle "contact not found" gracefully
-5. **Code organization** — functions should be well-named and focused
-
-If the student uses a class instead of plain functions, that''s acceptable and shows initiative.
-Mark complete when all 4 operations work correctly.
-Bonus: acknowledge if they add input validation or duplicate detection.'
+  'Build a simple contact book using dictionaries. Create functions to: (1) add a contact with name, phone, and email, (2) search contacts by partial name match, (3) list all contacts sorted alphabetically, (4) delete a contact by name. Use a list of dictionaries as your data store.'
 ),
 -- Lesson 5: File I/O
 (
@@ -1035,7 +1012,7 @@ except PermissionError:
 ```',
   5, 'published',
   '00000000-0000-0000-0000-000000000002',
-  NULL, NULL
+  NULL
 ),
 -- Lesson 6: Error Handling
 (
@@ -1124,19 +1101,7 @@ def process_order(order_id):
 ```',
   6, 'published',
   '00000000-0000-0000-0000-000000000002',
-  'Create a `BankAccount` class with methods `deposit(amount)`, `withdraw(amount)`, and `transfer(other_account, amount)`. Use custom exceptions for: insufficient funds, negative amounts, and invalid account. Write test cases that trigger each exception.',
-  'You are a Python tutor evaluating error handling skills.
-
-Check for:
-1. **Custom exception classes** — at least 2 (InsufficientFunds, InvalidAmount)
-2. **Proper exception hierarchy** — should inherit from Exception or a common base
-3. **Meaningful error messages** with context (balance, amount, etc.)
-4. **Try/except usage** in test cases — student should demonstrate catching exceptions
-5. **Edge cases** — zero amounts, negative amounts, self-transfer
-
-Do NOT accept bare `except:` clauses — they must catch specific exceptions.
-Mark complete when the class works correctly and has at least 3 test cases demonstrating exception handling.
-Bonus: acknowledge use of `__str__` or `__repr__` on custom exceptions.'
+  'Create a `BankAccount` class with methods `deposit(amount)`, `withdraw(amount)`, and `transfer(other_account, amount)`. Use custom exceptions for: insufficient funds, negative amounts, and invalid account. Write test cases that trigger each exception.'
 ),
 -- Lesson 7: Modules and Project Structure
 (
@@ -1246,7 +1211,7 @@ pip install -r requirements.txt
 5. **Pin dependency versions** in requirements.txt',
   7, 'published',
   '00000000-0000-0000-0000-000000000002',
-  NULL, NULL
+  NULL
 )
 ON CONFLICT (id) DO NOTHING;
 

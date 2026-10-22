@@ -57,17 +57,14 @@ export async function createLesson(courseId: number, data: LessonFormData) {
       const requirements = data.ai_task_requirements
         ? structuredRequirementsSchema.parse(data.ai_task_requirements)
         : null
-      const { error: taskError } = await ctx.supabase
-        .from('lessons_ai_tasks')
-        .upsert(
-          {
-            lesson_id: newLesson.id,
-            task_instructions: data.ai_task_description || '',
-            system_prompt: data.ai_task_instructions || '',
-            requirements,
-          },
-          { onConflict: 'lesson_id' }
-        )
+      // RPC, not .upsert(): clients cannot SELECT system_prompt, and
+      // ON CONFLICT DO UPDATE reads EXCLUDED.system_prompt.
+      const { error: taskError } = await ctx.supabase.rpc('upsert_lesson_ai_task', {
+        _lesson_id: newLesson.id,
+        _task_instructions: data.ai_task_description || '',
+        _system_prompt: data.ai_task_instructions || '',
+        _requirements: requirements,
+      })
       if (taskError) throw taskError
     }
 
@@ -131,17 +128,14 @@ export async function updateLesson(
       const requirements = data.ai_task_requirements
         ? structuredRequirementsSchema.parse(data.ai_task_requirements)
         : null
-      const { error: taskError } = await ctx.supabase
-        .from('lessons_ai_tasks')
-        .upsert(
-          {
-            lesson_id: lessonId,
-            task_instructions: data.ai_task_description || '',
-            system_prompt: data.ai_task_instructions || '',
-            requirements,
-          },
-          { onConflict: 'lesson_id' }
-        )
+      // RPC, not .upsert(): clients cannot SELECT system_prompt, and
+      // ON CONFLICT DO UPDATE reads EXCLUDED.system_prompt.
+      const { error: taskError } = await ctx.supabase.rpc('upsert_lesson_ai_task', {
+        _lesson_id: lessonId,
+        _task_instructions: data.ai_task_description || '',
+        _system_prompt: data.ai_task_instructions || '',
+        _requirements: requirements,
+      })
       if (taskError) throw taskError
     } else {
       // Both fields cleared means the teacher removed the task. Without this the
