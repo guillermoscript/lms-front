@@ -29,6 +29,7 @@ import { createSchoolOnBehalf } from '@/app/actions/platform/create-school-on-be
 type Row = Record<string, unknown>
 const NOW = new Date('2026-10-20T12:00:00Z')
 const ADMIN_ID = 'super-1'
+const INVITE_URL = `https://acme.example.test/join-school?invite=${'ab'.repeat(32)}`
 
 function makeAdmin(opts: {
   slugTaken?: boolean
@@ -97,7 +98,7 @@ const run = (admin: never, input: Record<string, unknown> = {}) =>
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.issueInvitation.mockResolvedValue({ ok: true, emailSent: true, joinUrl: 'https://acme.example.test/join-school' })
+  mocks.issueInvitation.mockResolvedValue({ ok: true, emailSent: true, joinUrl: INVITE_URL })
   mocks.syncTenantPlan.mockResolvedValue(undefined)
   mocks.reconcile.mockResolvedValue(undefined)
   mocks.setActiveTenant.mockResolvedValue(true)
@@ -217,7 +218,7 @@ describe('createSchoolOnBehalfCore', () => {
   })
 
   it('unknown email: invited as admin, link returned even if the email did not send', async () => {
-    mocks.issueInvitation.mockResolvedValue({ ok: true, emailSent: false, joinUrl: 'https://acme.example.test/join-school' })
+    mocks.issueInvitation.mockResolvedValue({ ok: true, emailSent: false, joinUrl: INVITE_URL })
     const { admin } = makeAdmin()
     const r = await run(admin)
     expect(r).toMatchObject({
@@ -226,7 +227,7 @@ describe('createSchoolOnBehalfCore', () => {
         kind: 'invited',
         email: 'owner@example.com',
         emailSent: false,
-        joinUrl: 'https://acme.example.test/join-school',
+        joinUrl: INVITE_URL,
       },
     })
     expect(mocks.issueInvitation).toHaveBeenCalledWith(

@@ -8,7 +8,9 @@
  * school the web last stamped (guillermoscript/lms-app#33).
  *
  * Body: `{ tenantId } | { slug }`, plus `join: true` once the user has said
- * yes to joining. A member is switched; a non-member is joined only where the
+ * yes to joining, and `inviteToken` (the `invite` query param of an invitation
+ * link) to take the invited role — the token must match an invitation to the
+ * caller's own email; the email alone never does. A member is switched; a non-member is joined only where the
  * web would join them without asking (`canJoinWithoutAsking`) or with
  * `join: true` — otherwise 409 `join_required`, so the app can ask first, as
  * the web's join card does. Either way the answer carries the role, and the
@@ -34,11 +36,16 @@ export const dynamic = 'force-dynamic'
 // which the seeded tenants (`00000000-…-000000000001`) do not have.
 const TENANT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+const INVITE_TOKEN = /^[0-9a-f]{32,128}$/i
+
 const bodySchema = z
   .object({
     tenantId: z.string().regex(TENANT_ID).optional(),
     slug: z.string().trim().toLowerCase().min(1).max(63).optional(),
     join: z.boolean().optional(),
+    // Secret from the invitation link (`?invite=<token>`). Without it an
+    // invitation is never consumed, whatever the account's email.
+    inviteToken: z.string().regex(INVITE_TOKEN).optional(),
   })
   .refine((b) => Boolean(b.tenantId) !== Boolean(b.slug), {
     message: 'Pass exactly one of tenantId or slug',
@@ -58,7 +65,7 @@ export async function POST(req: Request) {
       { status: 400 }
     )
   }
-  const { tenantId: requestedId, slug, join } = parsed.data
+  const { tenantId: requestedId, slug, join, inviteToken } = parsed.data
 
   // Service role throughout: the caller's JWT names the school they are
   // leaving, so their RLS client cannot see the one they are going to. Every
@@ -113,14 +120,14 @@ export async function POST(req: Request) {
     return Response.json({ error: BANNED_MESSAGE, code: 'banned', school }, { status: 403 })
   }
 
-  if (!join && !(await canJoinWithoutAsking({ admin, user, tenantId: tenant.id }))) {
+  if (!join && !(await canJoinWithoutAsking({ admin, user, tenantId: tenant.id, inviteToken }))) {
     return Response.json(
       { error: 'Joining this school needs your confirmation', code: 'join_required', school },
       { status: 409 }
     )
   }
 
-  const outcome = await joinSchool({ admin, user, tenantId: tenant.id })
+  const outcome = await joinSchool({ admin, user, tenantId: tenant.id, inviteToken })
   if (!outcome.ok) {
     // `already_member` means a concurrent request joined first — the metadata
     // is what is left to do. If that fails, the reason is not "already a

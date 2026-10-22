@@ -37,6 +37,7 @@ const state = vi.hoisted(() => ({
 function builder(table: string) {
   const eqs: [string, unknown][] = []
   const neqs: [string, unknown][] = []
+  const gts: [string, string][] = []
   let op: 'select' | 'insert' | 'update' | 'upsert' = 'select'
   let limitN = Infinity
 
@@ -55,6 +56,7 @@ function builder(table: string) {
     source()
       .filter((r) => eqs.every(([c, v]) => matches(r, c, v)))
       .filter((r) => neqs.every(([c, v]) => r[c] !== v))
+      .filter((r) => gts.every(([c, v]) => String(r[c]) > v))
       .slice(0, limitN)
   const readError = () => state.readErrors[table] ?? null
   const result = () => {
@@ -69,6 +71,7 @@ function builder(table: string) {
     select: () => b,
     eq: (c: string, v: unknown) => (eqs.push([c, v]), b),
     neq: (c: string, v: unknown) => (neqs.push([c, v]), b),
+    gt: (c: string, v: string) => (gts.push([c, v]), b),
     order: () => b,
     limit: (n: number) => ((limitN = n), b),
     insert: (values: Row) => {
@@ -203,12 +206,54 @@ describe('POST /api/tenant/switch', () => {
     expect((await res.json()).joined).toBe(true)
   })
 
-  it('joins without asking when the school invited them, in the invited role', async () => {
+  const TOKEN = 'a'.repeat(64)
+  const invitation = (over: Row = {}) => ({
+    id: 9,
+    tenant_id: X.id,
+    email: 'stu@example.com',
+    status: 'pending',
+    role: 'teacher',
+    token: TOKEN,
+    expires_at: '2999-01-01T00:00:00.000Z',
+    ...over,
+  })
+
+  it('joins without asking, in the invited role, when the invite token matches their email', async () => {
     state.memberships = [{ user_id: 'user-1', tenant_id: OTHER, role: 'student', status: 'active' }]
-    state.invitations = [{ id: 9, tenant_id: X.id, email: 'stu@example.com', status: 'pending', role: 'teacher' }]
-    const res = await post({ tenantId: X.id })
+    state.invitations = [invitation()]
+    const res = await post({ tenantId: X.id, inviteToken: TOKEN })
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ role: 'teacher', joined: true })
+  })
+
+  it('an invitation matched by email alone is NOT consumed: asks first, then joins as a student', async () => {
+    state.memberships = [{ user_id: 'user-1', tenant_id: OTHER, role: 'student', status: 'active' }]
+    state.invitations = [invitation()]
+    const asked = await post({ tenantId: X.id })
+    expect(asked.status).toBe(409)
+    const res = await post({ tenantId: X.id, join: true })
+    expect(await res.json()).toMatchObject({ role: 'student', joined: true })
+    expect(state.updates.filter((u) => u.table === 'tenant_invitations')).toEqual([])
+  })
+
+  it('a wrong, expired or other-account token does not grant the invited role', async () => {
+    state.memberships = [{ user_id: 'user-1', tenant_id: OTHER, role: 'student', status: 'active' }]
+    for (const inv of [
+      invitation({ token: 'b'.repeat(64) }),
+      invitation({ expires_at: '2000-01-01T00:00:00.000Z' }),
+      invitation({ email: 'someone-else@example.com' }),
+      invitation({ tenant_id: 'tenant-other' }),
+    ]) {
+      state.invitations = [inv]
+      const res = await post({ tenantId: X.id, join: true, inviteToken: TOKEN })
+      expect(await res.json()).toMatchObject({ role: 'student' })
+      state.memberships = [{ user_id: 'user-1', tenant_id: OTHER, role: 'student', status: 'active' }]
+    }
+  })
+
+  it('400s a malformed inviteToken', async () => {
+    const res = await post({ tenantId: X.id, inviteToken: 'nope' })
+    expect(res.status).toBe(400)
   })
 
   it('reinstates a removed member instead of inserting a second row', async () => {

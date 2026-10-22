@@ -33,6 +33,7 @@ import { StudentCertificateCard } from '@/components/student/student-certificate
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAccessibleCourseIds } from '@/lib/services/course-access'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
@@ -51,6 +52,9 @@ type EnrolledCourse = {
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
     const profileClient = await createClient()
+
+    // Access is decided by entitlements; enrollments only carry progress.
+    const accessibleCourseIds = [...(await fetchAccessibleCourseIds(supabase, userId, tenantId))]
 
     const [profileRes, subscriptionRes, transactionsRes, certificatesRes, enrollmentsRes] = await Promise.all([
         profileClient
@@ -97,6 +101,7 @@ async function getProfileData(userId: string, tenantId: string) {
             .eq('user_id', userId)
             .eq('tenant_id', tenantId)
             .eq('status', 'active')
+            .in('course_id', accessibleCourseIds.length > 0 ? accessibleCourseIds : [-1])
             .order('enrollment_date', { ascending: false })
             .limit(6),
     ])

@@ -1,7 +1,6 @@
 'use server';
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { headers } from 'next/headers';
@@ -12,161 +11,6 @@ import { getPaymentProvider, PROVIDER_CAPABILITIES, type PaymentProvider } from 
 import { assertSalesOpen } from '@/lib/billing/sales-gate';
 import { isSalesBlockedError, SalesBlockedError } from '@/lib/billing/sales-block-error';
 
-/**
- * Mock checkout — creates a successful transaction.
- *
- * Enrollment is handled by the `after_transaction_insert` DB trigger
- * (`trigger_manage_transactions`), which calls `enroll_user` /
- * `handle_new_subscription` — the same single path the Stripe webhook uses.
- * In production this action is replaced by the Stripe webhook.
- */
-export async function enrollUser(courseId?: string, planId?: string, paymentMethod: string = 'mock_test') {
-    // 1. Authenticate user + resolve tenant
-    const supabase = await createServerClient();
-    const userId = await getCurrentUserId()
-    if (!userId) {
-        throw new Error("You must be logged in to enroll.");
-    }
-    const tenantId = await getCurrentTenantId();
-
-    // Since #528 the transactions INSERT policy pins `status = 'pending'` for the
-    // user-scoped client, because a student could otherwise POST a 'successful'
-    // row straight to PostgREST and let the after_transaction_insert trigger hand
-    // them the course. This action legitimately needs to write 'successful', so
-    // the two inserts below use the admin client. Per CLAUDE.md, that shifts the
-    // tenant check to us: `userId` comes from the session, and the product/plan
-    // lookups that follow are tenant-scoped reads on the USER-scoped client, so a
-    // caller can only reach rows their own tenant owns.
-    const adminClient = createAdminClient();
-
-    try {
-        if (courseId) {
-            // Get product for this course (pick first match, scoped to tenant)
-            const { data: productCourses } = await supabase
-                .from('product_courses')
-                .select('product_id, product:products(*)')
-                .eq('course_id', parseInt(courseId))
-                .eq('tenant_id', tenantId)
-                .limit(1);
-
-            if (!productCourses || productCourses.length === 0) {
-                throw new Error("No product found for this course.");
-            }
-
-            const product = productCourses[0].product as unknown as {
-                product_id: number;
-                price: number | string;
-                currency: string;
-            };
-
-            // Platform fee sales gate (#929): refuse before writing anything.
-            // The row below carries the column default provider ('manual').
-            await assertSalesOpen(tenantId, {
-                kind: 'transaction',
-                userId,
-                productId: product.product_id,
-                paymentProvider: 'manual',
-            }, adminClient);
-
-            // Create the transaction. The after_transaction_insert trigger
-            // enrolls the user (entitlements + enrollment record) — no explicit
-            // RPC call here, the trigger is the single enrollment path.
-            const { data: transaction, error: txError } = await adminClient
-                .from('transactions')
-                .insert({
-                    user_id: userId,
-                    tenant_id: tenantId,
-                    product_id: product.product_id,
-                    amount: product.price,
-                    currency: product.currency,
-                    payment_method: paymentMethod,
-                    status: 'successful' // Note: must be 'successful' not 'succeeded'
-                })
-                .select()
-                .single();
-
-            if (txError) {
-                if (isSalesBlockedError(txError)) throw new SalesBlockedError();
-                console.error("Transaction error:", txError);
-                throw new Error("Failed to create transaction: " + txError.message);
-            }
-
-            revalidatePath('/dashboard/student');
-            return { success: true, transaction_id: transaction.transaction_id };
-
-        } else if (planId) {
-            // Get plan details (scoped to tenant)
-            const { data: plan, error: planError } = await supabase
-                .from('plans')
-                .select('*')
-                .eq('plan_id', parseInt(planId))
-                .eq('tenant_id', tenantId)
-                .single();
-
-            if (planError || !plan) {
-                throw new Error("Plan not found.");
-            }
-
-            // Parallel-subscription guard (#459) — same-plan renewal passes.
-            const conflict = await findConflictingSubscription(supabase, {
-                userId,
-                tenantId,
-                planId: plan.plan_id,
-            });
-            if (conflict) {
-                throw new Error(PARALLEL_SUBSCRIPTION_MESSAGE);
-            }
-
-            // Platform fee sales gate (#929); a held-subscription renewal passes.
-            await assertSalesOpen(tenantId, {
-                kind: 'transaction',
-                userId,
-                planId: plan.plan_id,
-                paymentProvider: 'manual',
-            }, adminClient);
-
-            // Create the transaction. The after_transaction_insert trigger
-            // creates the subscription + entitlements (or extends an existing
-            // subscription on renewal).
-            const { data: transaction, error: txError } = await adminClient
-                .from('transactions')
-                .insert({
-                    user_id: userId,
-                    tenant_id: tenantId,
-                    plan_id: plan.plan_id,
-                    amount: plan.price,
-                    currency: plan.currency,
-                    payment_method: paymentMethod,
-                    status: 'successful'
-                })
-                .select()
-                .single();
-
-            if (txError) {
-                if (isSalesBlockedError(txError)) throw new SalesBlockedError();
-                console.error("Transaction error:", txError);
-                throw new Error("Failed to create transaction: " + txError.message);
-            }
-
-            revalidatePath('/dashboard/student');
-            return { success: true, transaction_id: transaction.transaction_id };
-        }
-
-        throw new Error("Must provide either courseId or planId");
-
-    } catch (error) {
-        console.error("Enrollment failed:", error);
-        throw error;
-    }
-}
-
-/**
- * Enroll the current user in a free course.
- *
- * Grants a `free` entitlement via the grant_free_entitlement RPC
- * (SECURITY DEFINER, idempotent). No product/transaction is fabricated.
- * See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
- */
 /**
  * Activate a free (price = 0) plan for the current user.
  *
@@ -458,6 +302,15 @@ export async function changePlan(newPlanId?: string) {
     return { success: true };
 }
 
+/**
+ * Enroll the current user in a free course.
+ *
+ * Grants a `free` entitlement via the grant_free_entitlement RPC
+ * (SECURITY DEFINER, idempotent). No product/transaction is fabricated.
+ * "Free" = no linked product AND no plan with a price (see the RPC).
+ * A paid purchase can never complete here: it only settles through a real
+ * provider flow, a staff-confirmed payment request or a provider webhook.
+ */
 export async function enrollFree(courseId?: string) {
     const supabase = await createServerClient();
     const userId = await getCurrentUserId()
@@ -522,6 +375,43 @@ export async function enrollFree(courseId?: string) {
 
         if (hasPaidProduct) {
             throw new Error("This course is not free. Please use the paid enrollment flow.");
+        }
+
+        // A course sold only through a priced plan is not free either
+        // (mirrors grant_free_entitlement, which is the authority).
+        const { data: planCourses, error: planCoursesError } = await supabase
+            .from('plan_courses')
+            .select('plan:plans!inner(price, tenant_id, deleted_at)')
+            .eq('course_id', numericCourseId)
+            .eq('plan.tenant_id', tenantId)
+            .is('plan.deleted_at', null);
+
+        if (planCoursesError) {
+            throw new Error("Could not verify course pricing.");
+        }
+
+        const hasPaidPlan = planCourses?.some(({ plan }) => {
+            const linkedPlan = plan as unknown as { price: number | string } | null;
+            return linkedPlan !== null && Number(linkedPlan.price) > 0;
+        });
+
+        if (hasPaidPlan) {
+            throw new Error("This course is not free. Please use the paid enrollment flow.");
+        }
+
+        // Staff-revoked free access stays revoked (the RPC refuses it too).
+        const { data: revokedFree } = await supabase
+            .from('entitlements')
+            .select('entitlement_id')
+            .eq('user_id', userId)
+            .eq('course_id', numericCourseId)
+            .eq('tenant_id', tenantId)
+            .eq('source_type', 'free')
+            .eq('status', 'revoked')
+            .limit(1);
+
+        if (revokedFree && revokedFree.length > 0) {
+            throw new Error("Your access to this course was revoked. Contact your school.");
         }
 
         // Platform fee sales gate (#929): no NEW free enrollment while blocked.

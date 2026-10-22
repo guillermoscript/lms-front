@@ -81,7 +81,7 @@ implementation.
   currency; `lms_set_school_theme` — theme kit + brand colour, custom colours
   gated on `custom_branding`; `lms_list_school_members`,
   `lms_change_member_role` — last-admin and student-limit (`LM001`) guards;
-  `lms_invite_member` — records the invitation and returns the join link, no
+  `lms_invite_member` — records the invitation and returns its personal `?invite=<token>` join link, no
   email; `lms_get_plan_usage` — `get_plan_features` + `get_tenant_plan_usage`),
   school life for every role (`lms_my_notifications`,
   `lms_mark_notifications_read`, `lms_my_league`), and admin-only commerce

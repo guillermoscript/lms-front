@@ -12,6 +12,8 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { buildPageMetadata } from '@/lib/seo'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { parseInviteToken } from '@/lib/tenant/invitation-token'
+import { hasValidInvitation } from '@/lib/tenant/join-school'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -22,11 +24,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function JoinSchoolPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[] }>
+  searchParams: Promise<{ next?: string | string[]; invite?: string | string[] }>
 }) {
   // The three inputs are independent — resolve them together, not as a
   // waterfall of awaits.
-  const [{ next: requestedNext }, supabase, userId, t] = await Promise.all([
+  const [{ next: requestedNext, invite: requestedInvite }, supabase, userId, t] = await Promise.all([
     searchParams,
     createClient(),
     getCurrentUserId(),
@@ -41,10 +43,17 @@ export default async function JoinSchoolPage({
     ''
   )
   const destination = nextPath || '/dashboard/student'
+  // Secret from the invitation link. Shape-checked here, matched in SQL by
+  // joinSchool; it must survive the login / sign-up detour below.
+  const inviteToken = parseInviteToken(Array.isArray(requestedInvite) ? requestedInvite[0] : requestedInvite)
 
   // Redirect to login if not authenticated, keeping the intent through login
   if (!userId) {
-    const returnTo = nextPath ? `/join-school?next=${encodeURIComponent(nextPath)}` : '/join-school'
+    const returnParams = new URLSearchParams()
+    if (nextPath) returnParams.set('next', nextPath)
+    if (inviteToken) returnParams.set('invite', inviteToken)
+    const returnQuery = returnParams.toString()
+    const returnTo = returnQuery ? `/join-school?${returnQuery}` : '/join-school'
     redirect(`/auth/login?next=${encodeURIComponent(returnTo)}`)
   }
 
@@ -181,18 +190,16 @@ export default async function JoinSchoolPage({
 
   let hasInvitation = false
   if (!memberOfNothing && !wantsToPay) {
-    // Admin client: `tenant_invitations` is not readable by someone who is not
-    // yet a member, which is precisely who is looking at this page.
-    const email = (await getSessionUser())?.email?.toLowerCase()
-    if (email) {
-      const { data: invitation } = await createAdminClient()
-        .from('tenant_invitations')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .eq('email', email)
-        .eq('status', 'pending')
-        .maybeSingle()
-      hasInvitation = Boolean(invitation)
+    const sessionUser = await getSessionUser()
+    if (sessionUser) {
+      // Admin client: `tenant_invitations` is not readable by someone who is
+      // not yet a member. Needs the token AND the invited email.
+      hasInvitation = await hasValidInvitation({
+        admin: createAdminClient(),
+        user: { id: sessionUser.id, email: sessionUser.email },
+        tenantId,
+        inviteToken,
+      })
     }
   }
 
@@ -239,14 +246,14 @@ export default async function JoinSchoolPage({
         </Card>
       )}
 
-      <JoinSchoolForm tenant={tenant} destination={destination} />
+      <JoinSchoolForm tenant={tenant} destination={destination} inviteToken={inviteToken} />
     </div>
   )
 
   if (!autoJoin) return body
 
   return (
-    <AutoJoinSchool schoolName={tenant.name} destination={destination}>
+    <AutoJoinSchool schoolName={tenant.name} destination={destination} inviteToken={inviteToken}>
       {body}
     </AutoJoinSchool>
   )

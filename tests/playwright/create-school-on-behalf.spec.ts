@@ -300,6 +300,9 @@ test.describe('create school on behalf of someone (#984)', () => {
     const joinUrl = await page.getByTestId('create-school-join-url').inputValue()
     expect(new URL(joinUrl).hostname).toBe(`${SLUG.comped}.lvh.me`)
     expect(new URL(joinUrl).pathname.replace(/^\/(en|es)/, '')).toBe('/join-school')
+    // The link carries the invitation's secret: a bare /join-school can no longer claim the admin role.
+    const inviteToken = new URL(joinUrl).searchParams.get('invite')
+    expect(inviteToken).toMatch(/^[0-9a-f]{64}$/)
 
     const t = await tenantBySlug(admin, SLUG.comped)
     expect(t).toBeTruthy()
@@ -309,11 +312,12 @@ test.describe('create school on behalf of someone (#984)', () => {
     expect(t!.comped_until).toBeTruthy()
     const { data: inv } = await admin
       .from('tenant_invitations')
-      .select('role, status')
+      .select('role, status, token, expires_at')
       .eq('tenant_id', t!.id)
       .eq('email', INVITEE_EMAIL)
       .single()
-    expect(inv).toMatchObject({ role: 'admin', status: 'pending' })
+    expect(inv).toMatchObject({ role: 'admin', status: 'pending', token: inviteToken })
+    expect(new Date(inv!.expires_at as string).getTime()).toBeGreaterThan(Date.now() + 13 * DAY_MS)
 
     const { context, page: inviteePage, arrived } = await acceptAsInvitee(browser, joinUrl)
     try {

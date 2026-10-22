@@ -8,6 +8,7 @@ import { isPlanLimitError, STUDENT_LIMIT_MESSAGE } from '@/lib/billing/plan-limi
 import { isTenantBannedError } from '@/lib/tenant/ban'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
+import { parseInviteToken } from '@/lib/tenant/invitation-token'
 
 export const BANNED_MESSAGE = 'You were removed from this school and cannot rejoin. Contact the school if you think this is a mistake.'
 
@@ -33,10 +34,19 @@ export async function joinSchool({
   admin,
   user,
   tenantId,
+  inviteToken,
 }: {
   admin: SupabaseClient
   user: { id: string; email?: string | null }
   tenantId: string
+  /**
+   * The secret from the invitation link (`?invite=<token>`). An invitation is
+   * consumed ONLY when this matches a pending, unexpired invitation of this
+   * school AND the signed-in account's email is the invited address. Email
+   * alone never grants an invited role (including admin): sign-up does not
+   * verify the address, so anyone could register it first.
+   */
+  inviteToken?: string | null
 }): Promise<JoinSchoolOutcome> {
   // Read the membership with the admin client, not the caller's RLS client
   // (#550): a removed member's own row may be invisible to them, and a false
@@ -83,37 +93,53 @@ export async function joinSchool({
     return { ok: false, code: 'student_limit', error: STUDENT_LIMIT_MESSAGE }
   }
 
-  // Check for pending invitation to determine role. A reinstated member keeps
-  // the role they held unless a fresh invitation reassigns it.
-  const userEmail = user.email?.toLowerCase()
+  // The role comes from an invitation only when the caller presents its token.
+  // A reinstated member keeps the role they held unless a fresh invitation
+  // reassigns it.
   let viaInvite = false
+  let claimedInvitationId: string | null = null
   let assignedRole: 'student' | 'teacher' | 'admin' =
     (existingMembership?.role as 'student' | 'teacher' | undefined) === 'teacher'
       ? 'teacher'
       : 'student'
 
-  if (userEmail) {
-    const { data: invitation } = await admin
+  const token = parseInviteToken(inviteToken)
+  const userEmail = user.email?.trim().toLowerCase()
+  if (token && userEmail) {
+    // Claim atomically: token, tenant, address, status and expiry are all
+    // matched in the UPDATE's WHERE, so a token is spent exactly once even
+    // under a race, and nothing is compared in JS. Invitation emails are stored
+    // lowercased (issueInvitation).
+    const { data: claimed, error: claimError } = await admin
       .from('tenant_invitations')
-      .select('id, role')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
       .eq('tenant_id', tenantId)
+      .eq('token', token)
       .eq('email', userEmail)
       .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .select('id, role')
       .maybeSingle()
-
-    if (invitation) {
+    if (claimError) {
+      console.error('Failed to claim invitation:', claimError)
+    } else if (claimed) {
       viaInvite = true
-      assignedRole = invitation.role as 'student' | 'teacher' | 'admin'
-      // Mark invitation as accepted
-      const { error: invitationError } = await admin
-        .from('tenant_invitations')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('id', invitation.id)
-      // Non-blocking: invitation bookkeeping failure shouldn't stop the join.
-      if (invitationError) {
-        console.error('Failed to mark invitation as accepted:', invitationError)
-      }
+      claimedInvitationId = claimed.id as string
+      assignedRole =
+        claimed.role === 'admin' ? 'admin' : claimed.role === 'teacher' ? 'teacher' : 'student'
     }
+  }
+
+  // The invitation was spent before the membership write below; give it back if
+  // that write fails, so a seat-limit race does not burn the invitee's link.
+  const releaseInvitation = async () => {
+    if (!claimedInvitationId) return
+    const { error: releaseError } = await admin
+      .from('tenant_invitations')
+      .update({ status: 'pending', accepted_at: null })
+      .eq('id', claimedInvitationId)
+      .eq('status', 'accepted')
+    if (releaseError) console.error('Failed to release invitation:', releaseError)
   }
 
   // A reinstatement updates the surviving row instead, which is why the unique
@@ -136,6 +162,7 @@ export async function joinSchool({
       })
 
   if (error) {
+    await releaseInvitation()
     // The pre-check above lost a race for the last seat; the trigger is the
     // authoritative answer and this is the message it stands for.
     if (isPlanLimitError(error)) {
@@ -243,17 +270,19 @@ export async function setActiveTenant(
  * Whether a non-member may be joined to `tenantId` without being asked — the
  * same rule `app/[locale]/join-school/page.tsx` applies before it auto-joins
  * (#790), minus the checkout case, which only exists on the web. A seat costs
- * the school, so a user who already belongs somewhere and has no invitation
- * must choose to join explicitly.
+ * the school, so a user who already belongs somewhere and holds no valid
+ * invitation token must choose to join explicitly.
  */
 export async function canJoinWithoutAsking({
   admin,
   user,
   tenantId,
+  inviteToken,
 }: {
   admin: SupabaseClient
   user: { id: string; email?: string | null }
   tenantId: string
+  inviteToken?: string | null
 }): Promise<boolean> {
   const { data: memberships } = await admin
     .from('tenant_users')
@@ -264,14 +293,36 @@ export async function canJoinWithoutAsking({
     .limit(1)
   if ((memberships ?? []).length === 0) return true
 
-  const email = user.email?.toLowerCase()
-  if (!email) return false
+  return hasValidInvitation({ admin, user, tenantId, inviteToken })
+}
+
+/**
+ * Read-only twin of the claim in `joinSchool`: is `inviteToken` a pending,
+ * unexpired invitation of this school addressed to this account's email? Used
+ * to decide whether to join silently; it spends nothing.
+ */
+export async function hasValidInvitation({
+  admin,
+  user,
+  tenantId,
+  inviteToken,
+}: {
+  admin: SupabaseClient
+  user: { id: string; email?: string | null }
+  tenantId: string
+  inviteToken?: string | null
+}): Promise<boolean> {
+  const token = parseInviteToken(inviteToken)
+  const email = user.email?.trim().toLowerCase()
+  if (!token || !email) return false
   const { data: invitation } = await admin
     .from('tenant_invitations')
     .select('id')
     .eq('tenant_id', tenantId)
+    .eq('token', token)
     .eq('email', email)
     .eq('status', 'pending')
+    .gt('expires_at', new Date().toISOString())
     .maybeSingle()
   return Boolean(invitation)
 }

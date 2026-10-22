@@ -263,26 +263,12 @@ export interface SchoolSettingsInput {
   logo_url?: string;
   favicon_url?: string;
   currency?: string;
-  allow_self_enrollment?: boolean;
-  auto_enrollment?: boolean;
-  require_enrollment_approval?: boolean;
-  course_capacity_enabled?: boolean;
   free_preview_enabled?: boolean;
-  max_enrollments_per_user?: number;
-  enrollment_expiration_days?: number;
   /** Raw list (or `{ accounts }`); stored normalized as `{ accounts }`. */
   manual_payment_accounts?: unknown;
 }
 
-const BOOLEAN_KEYS = [
-  "allow_self_enrollment",
-  "auto_enrollment",
-  "require_enrollment_approval",
-  "course_capacity_enabled",
-  "free_preview_enabled",
-] as const;
-
-const INTEGER_KEYS = ["max_enrollments_per_user", "enrollment_expiration_days"] as const;
+const BOOLEAN_KEYS = ["free_preview_enabled"] as const;
 
 /**
  * Turn the tool input into `tenant_settings` rows, applying the same gate the
@@ -352,15 +338,6 @@ export function buildSettingsRows(
     if (input[key] !== undefined) out[key] = { enabled: input[key] };
   }
 
-  for (const key of INTEGER_KEYS) {
-    const value = input[key];
-    if (value === undefined) continue;
-    if (!Number.isInteger(value) || value < 0) {
-      return { ok: false, error: `${key} must be a whole number ≥ 0 (0 = no limit).` };
-    }
-    out[key] = { value };
-  }
-
   if (input.manual_payment_accounts !== undefined) {
     out.manual_payment_accounts = {
       accounts: normalizeManualPaymentAccounts(input.manual_payment_accounts),
@@ -384,9 +361,6 @@ const SETTING_CATEGORY: Record<string, string> = {
   solana_accept_sol: "payment", currency: "payment", tax_rate: "payment",
   invoice_prefix: "payment", require_payment_approval: "payment",
   manual_payment_instructions: "payment", manual_payment_accounts: "payment",
-  auto_enrollment: "enrollment", require_enrollment_approval: "enrollment",
-  max_enrollments_per_user: "enrollment", allow_self_enrollment: "enrollment",
-  enrollment_expiration_days: "enrollment", course_capacity_enabled: "enrollment",
   free_preview_enabled: "enrollment",
 };
 

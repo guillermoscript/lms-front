@@ -7,7 +7,7 @@
  *   1. load the pending transaction (must belong to the caller + tenant),
  *   2. load + decrypt the tenant's Pay credentials (tenant_payment_wallets),
  *   3. fetch recent incoming transfers and run the shared reconcile core
- *      (note-code match / exact-amount match / ambiguous → never guess),
+ *      (note-code match only; an unbound exact-amount transfer stays pending → never guess),
  *   4. on a match, the core flips the transaction → successful (the
  *      after_transaction_update trigger creates the entitlements).
  *

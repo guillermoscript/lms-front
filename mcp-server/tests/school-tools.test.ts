@@ -347,10 +347,9 @@ describe("buildSettingsRows", () => {
     expect(settingsLib.buildSettingsRows({ site_name: "x".repeat(121) }).ok).toBe(false);
   });
 
-  it("stores flags as { enabled } and numbers as { value }", () => {
+  it("stores flags as { enabled } and text as { value }", () => {
     const out = settingsLib.buildSettingsRows({
       free_preview_enabled: false,
-      enrollment_expiration_days: 30,
       currency: "cop",
       timezone: "America/Bogota",
       logo_url: "",
@@ -359,7 +358,6 @@ describe("buildSettingsRows", () => {
       ok: true,
       settings: {
         free_preview_enabled: { enabled: false },
-        enrollment_expiration_days: { value: 30 },
         currency: { value: "COP" },
         timezone: { value: "America/Bogota" },
         logo_url: { value: "" },

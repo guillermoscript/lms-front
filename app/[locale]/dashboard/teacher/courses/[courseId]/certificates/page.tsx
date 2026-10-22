@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchLiveEntitlementKeys, liveEntitlementKey } from '@/lib/services/course-access'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
@@ -80,7 +81,9 @@ export default async function CertificatesPage({ params }: PageProps) {
 
   const template = templateRes.data
   const certificates = certsRes.data || []
-  const enrollments = enrollmentsRes.data || []
+  // Only students who can still open the course are offered a certificate.
+  const liveKeys = await fetchLiveEntitlementKeys(supabase, tenantId, { courseIds: [parseInt(courseId)] })
+  const enrollments = (enrollmentsRes.data || []).filter((e) => liveKeys.has(liveEntitlementKey(e.user_id, e.course_id)))
   const brand = await getSchoolBrand(tenantId)
 
   // Students who don't have certificates yet

@@ -207,7 +207,12 @@ export async function getResourceDownloadUrl(
 ): Promise<ActionResult<{ url: string }>> {
   try {
     const tenantId = await getCurrentTenantId()
-    const userId = await getCurrentUserId()
+    // Verified identity: this signs storage URLs through the admin client.
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const userId = user?.id
     if (!userId) throw new Error('Not authenticated')
 
     // Same gate as the app's GET /api/lessons/:id/resources/:id/url (#848).

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchLiveEntitlementKeys } from '@/lib/services/course-access'
 
 export interface PublicReview {
     reviewId: number
@@ -27,19 +28,17 @@ export async function getCourseSocialProof(
 ): Promise<CourseSocialProof> {
     const admin = createAdminClient()
 
-    const [{ data: ratings }, { count: studentCount }] = await Promise.all([
+    const [{ data: ratings }, studentCount] = await Promise.all([
         admin
             .from('reviews')
             .select('review_id, rating, review_text, created_at, user_id')
             .eq('entity_type', 'courses')
             .eq('entity_id', courseId)
             .order('created_at', { ascending: false }),
-        admin
-            .from('enrollments')
-            .select('*', { count: 'exact', head: true })
-            .eq('course_id', courseId)
-            .eq('tenant_id', tenantId)
-            .eq('status', 'active'),
+        // Students who can open the course now (entitlements), not enrollment rows.
+        fetchLiveEntitlementKeys(admin, tenantId, { courseIds: [courseId] })
+            .then((keys) => keys.size)
+            .catch(() => 0),
     ])
 
     const allRatings = ratings ?? []

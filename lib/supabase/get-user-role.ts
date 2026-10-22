@@ -54,6 +54,33 @@ export const getUserRole = cache(async (): Promise<'student' | 'teacher' | 'admi
 })
 
 /**
+ * The caller's role in the current tenant, ONLY if they hold an ACTIVE
+ * tenant_users row; null for non-members, removed and banned users.
+ *
+ * getUserRole() deliberately never returns null for a signed-in user (it
+ * falls back to 'student'), so an `if (!role)` membership gate built on it
+ * never fires. Use this for service-role writes that must be member-only
+ * (community actions).
+ */
+export const getActiveMemberRole = cache(
+  async (): Promise<'student' | 'teacher' | 'admin' | null> => {
+    const userId = await getCurrentUserId()
+    if (!userId) return null
+
+    const supabase = await createClient()
+    const { data: membership } = await supabase
+      .from('tenant_users')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('tenant_id', await getCurrentTenantId())
+      .eq('status', 'active')
+      .maybeSingle()
+
+    return (membership?.role as 'student' | 'teacher' | 'admin' | undefined) ?? null
+  }
+)
+
+/**
  * Get user role from JWT claims (used in middleware)
  */
 export function getRoleFromClaims(claims: { tenant_role?: string; user_role?: string } | null | undefined): 'student' | 'teacher' | 'admin' {
@@ -85,11 +112,18 @@ export async function getUserTenantId(): Promise<string | null> {
  * Check if current user is a super admin by querying the super_admins table directly.
  * Does NOT trust JWT claims to prevent privilege escalation.
  *
- * Uses x-user-id header (set by middleware) to avoid redundant getUser() calls.
+ * Derives the user from supabase.auth.getUser() (verified), not x-user-id.
  * Wrapped in React.cache() to dedupe repeated calls within one request tree.
  */
 export const isSuperAdmin = cache(async (): Promise<boolean> => {
-  const userId = await getCurrentUserId()
+  // Verified identity (getUser() validates the JWT with Supabase Auth). The
+  // x-user-id header is deliberately NOT used: this gate guards service-role
+  // platform actions, so it must not rest on a request header.
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const userId = user?.id
   if (!userId) return false
 
   const adminClient = createAdminClient()
