@@ -1,6 +1,7 @@
 import { ContentListExplorer } from '@/components/teacher/content-list-explorer'
 import { BulkContentCheckbox } from '@/components/teacher/bulk-content-manager'
 import { createClient } from '@/lib/supabase/server'
+import { fetchLiveEntitlementKeys, liveEntitlementKey } from '@/lib/services/course-access'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -231,7 +232,9 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
   const exams = examsRes.data || []
-  const rawEnrollments = enrollmentsRes
+  // The roster lists people who can open the course: entitlements decide, not the enrollment row.
+  const liveKeys = await fetchLiveEntitlementKeys(supabase, tenantId, { courseIds: [parseInt(courseId)] })
+  const rawEnrollments = enrollmentsRes.filter((e) => liveKeys.has(liveEntitlementKey(e.user_id, e.course_id)))
   const certificateTemplate = certificateTemplateRes.data
   const issuedCertificates = issuedCertificatesRes.data || []
 

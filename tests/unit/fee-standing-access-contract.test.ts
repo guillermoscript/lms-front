@@ -56,6 +56,8 @@ describe('D5: fee standing never gates course access', () => {
     '20261009110000_platform_fee_gate_929.sql': 'gates NEW free grants only (grant_free_entitlement)',
     '20261009120000_platform_fee_hardening_929.sql':
       'gates NEW subscription course choices only (self_enroll_subscription_course); re-enrolling a held course stays allowed',
+    '20261022160000_free_grant_excludes_plan_courses.sql':
+      'only narrows NEW free grants (grant_free_entitlement refuses priced-plan courses and revoked rows); keeps the fee gate on new grants',
   }
 
   // billing_mode core (#982) redefines has_course_access so an `internal` school is

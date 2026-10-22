@@ -225,57 +225,14 @@ When enabled, payments require admin approval before processing.
 
 ## Enrollment Settings
 
-### Auto Enrollment
-**Setting Key:** `auto_enrollment`  
-**Type:** Object `{ enabled: boolean }`  
-**Default:** `{ enabled: false }`
-
-Automatically enroll new users in designated courses upon registration.
-
-**Note:** Configure which courses in the course settings.
-
-### Allow Self Enrollment
-**Setting Key:** `allow_self_enrollment`  
+### Free Preview Enabled
+**Setting Key:** `free_preview_enabled`  
 **Type:** Object `{ enabled: boolean }`  
 **Default:** `{ enabled: true }`
 
-Allow students to enroll themselves in courses without admin intervention.
+Lets anyone, signed in or not, read the one lesson per course marked as a free preview. Enforced in anon RLS (`lib/settings/free-preview.ts`).
 
-When disabled, all enrollments require manual admin approval.
-
-### Require Enrollment Approval
-**Setting Key:** `require_enrollment_approval`  
-**Type:** Object `{ enabled: boolean }`  
-**Default:** `{ enabled: false }`
-
-Require admin approval before students can access enrolled courses.
-
-### Maximum Enrollments Per User
-**Setting Key:** `max_enrollments_per_user`  
-**Type:** Number  
-**Default:** 0
-
-Maximum number of courses a user can enroll in.
-
-**Example:** Set to `5` to limit users to 5 courses. Set to `0` for unlimited.
-
-### Enrollment Expiration Days
-**Setting Key:** `enrollment_expiration_days`  
-**Type:** Number  
-**Default:** 365
-
-Number of days until enrollment expires and user loses access.
-
-**Example:** `365` = 1 year, `180` = 6 months. Set to `0` for never expires.
-
-### Course Capacity Enabled
-**Setting Key:** `course_capacity_enabled`  
-**Type:** Object `{ enabled: boolean }`  
-**Default:** `{ enabled: false }`
-
-Allow setting maximum student limits for individual courses.
-
-When enabled, courses can specify a capacity limit in course settings.
+**Not settings:** course access and its expiry live on `entitlements` (`expires_at` is set from the subscription end date; products and free grants never expire), not in tenant settings. The old `auto_enrollment`, `allow_self_enrollment`, `require_enrollment_approval`, `max_enrollments_per_user`, `enrollment_expiration_days` and `course_capacity_enabled` keys were never enforced and were removed. Add a setting back only together with the code that reads it.
 
 ---
 

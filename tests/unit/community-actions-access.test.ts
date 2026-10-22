@@ -59,7 +59,7 @@ vi.mock('@/lib/supabase/tenant', () => ({
   getCurrentTenantId: async () => state.tenantId,
   getCurrentUserId: async () => state.userId,
 }))
-vi.mock('@/lib/supabase/get-user-role', () => ({ getUserRole: async () => state.role }))
+vi.mock('@/lib/supabase/get-user-role', () => ({ getActiveMemberRole: async () => state.role }))
 vi.mock('@/lib/services/course-access', () => ({ hasCourseAccess: async () => state.access }))
 const { revalidatePath, track } = vi.hoisted(() => ({
   revalidatePath: vi.fn(),

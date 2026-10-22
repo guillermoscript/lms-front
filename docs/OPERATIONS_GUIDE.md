@@ -493,7 +493,7 @@ They go to `/dashboard/admin/billing` and choose:
 
 1. Student goes to `myacademy.yourdomain.com`
 2. Clicks **Sign Up** or **Log In** → lands on `/join-school`
-3. Clicks **Join** — this calls `joinCurrentSchool()`:
+3. Clicks **Join** — this calls `joinCurrentSchool(inviteToken?)` (the `invite` query param of an invitation link; without it the person always joins as a student):
    - Checks the school hasn't hit its student limit
    - Inserts a `tenant_users` row (role: student)
    - Refreshes their JWT to include `tenant_id` and `tenant_role`

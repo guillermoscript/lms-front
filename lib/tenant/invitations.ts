@@ -3,6 +3,10 @@ import { sendEmail } from '@/lib/email/send'
 import { invitationTemplate } from '@/lib/email/templates/invitation'
 import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
+import { generateInviteToken, withInviteToken } from '@/lib/tenant/invitation-token'
+
+/** How long an invitation link stays valid (`tenant_invitations.expires_at`). */
+export const INVITATION_TTL_DAYS = 14
 
 export type InvitationRole = 'student' | 'teacher' | 'admin'
 
@@ -15,7 +19,11 @@ export interface IssueInvitationResult {
    * or when the send threw. The invitation row exists either way.
    */
   emailSent: boolean
-  /** The school's join page, so the UI can hand over a link that works. */
+  /**
+   * This invitation's join link (`/join-school?invite=<token>`). The token is
+   * the invitation's secret and the only way to consume it, so the link is
+   * what the UI must hand over, not the bare join page.
+   */
   joinUrl: string
 }
 
@@ -28,7 +36,13 @@ export async function buildJoinUrl(slug?: string | null): Promise<string> {
 }
 
 /**
- * Insert a pending invitation and optionally email it. Authorisation is the
+ * Insert a pending invitation and optionally email it. Every invitation carries
+ * a fresh secret token and a 14-day expiry; `joinSchool` consumes it only when
+ * the token AND the account email match (email alone is never enough, because
+ * sign-up does not verify the address). Re-inviting an address that already has
+ * a pending invitation ROTATES it (new token, new expiry, possibly a new role,
+ * the old link dies) instead of refusing, which is also how an expired or
+ * pre-token invitation gets resent. Authorisation is the
  * caller's: `createInvitation` (school admin) and `createSchoolOnBehalf`
  * (super admin) each verify who is asking before they get here.
  */
@@ -51,7 +65,9 @@ export async function issueInvitation({
 }): Promise<IssueInvitationResult> {
   const normalizedEmail = email.toLowerCase()
 
-  // Check for existing pending invitation (unique constraint will also catch this)
+  const token = generateInviteToken()
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
   const { data: existingInvite } = await admin
     .from('tenant_invitations')
     .select('id')
@@ -60,29 +76,31 @@ export async function issueInvitation({
     .eq('status', 'pending')
     .maybeSingle()
 
-  if (existingInvite) {
-    return {
-      ok: false,
-      error: 'An invitation is already pending for this email',
-      emailSent: false,
-      joinUrl: '',
-    }
-  }
+  // The partial unique index (tenant_id, email) WHERE pending still guards a
+  // concurrent insert.
+  const { error: writeError } = existingInvite
+    ? await admin
+        .from('tenant_invitations')
+        .update({ role, token, expires_at: expiresAt, invited_by: invitedBy })
+        .eq('id', existingInvite.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+    : await admin.from('tenant_invitations').insert({
+        tenant_id: tenantId,
+        email: normalizedEmail,
+        role,
+        invited_by: invitedBy,
+        token,
+        expires_at: expiresAt,
+      })
 
-  const { error: insertError } = await admin.from('tenant_invitations').insert({
-    tenant_id: tenantId,
-    email: normalizedEmail,
-    role,
-    invited_by: invitedBy,
-  })
-
-  if (insertError) {
-    console.error('Failed to create invitation:', insertError)
+  if (writeError) {
+    console.error('Failed to create invitation:', writeError)
     return { ok: false, error: 'Failed to create invitation', emailSent: false, joinUrl: '' }
   }
 
   const { data: tenant } = await admin.from('tenants').select('name, slug').eq('id', tenantId).single()
-  const joinUrl = await buildJoinUrl(tenant?.slug)
+  const joinUrl = withInviteToken(await buildJoinUrl(tenant?.slug), token)
 
   // The invitation row exists either way; what the caller learns is whether
   // the email really went out, never a guess.

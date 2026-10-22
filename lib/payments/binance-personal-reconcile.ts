@@ -7,17 +7,17 @@
  * means the two can never drift.
  *
  * The authoritative source is the school's own Pay history
- * (GET /sapi/v1/pay/transactions, read-only key). Matching rules, in strict
- * priority order — NEVER guess:
+ * (GET /sapi/v1/pay/transactions, read-only key). Matching is deterministic
+ * and NEVER guesses:
  *
  *   1. The transfer note carries the payment code (= our transaction id) AND
  *      the amount covers the expected price → confirm.
- *   2. No note match: a transfer of the EXACT amount exists AND this is the
- *      ONLY pending binance_personal transaction for that amount in this
- *      tenant → confirm (no possible collision).
- *   3. Anything else (two pendings sharing an amount, no note) → `ambiguous`;
- *      the transaction stays pending and surfaces for one-click manual
- *      confirmation in the admin dashboard.
+ *   2. Anything else → the transaction stays pending. If a transfer of the
+ *      exact amount exists but is not bound to this order by the note, the
+ *      result is `ambiguous` and it surfaces for one-click manual
+ *      confirmation in the admin dashboard. An amount alone is never enough:
+ *      any unrelated incoming USDT transfer of the same amount (even with a
+ *      single pending order) must not settle a student's purchase.
  *
  * Idempotency: the matched Binance orderId is CONSUMED via provider_charge_id
  * (partial unique index transactions_provider_charge_id_unique) so one
@@ -127,33 +127,13 @@ export async function reconcileBinancePersonalTransaction(
     (t) => noteContainsCode(t.note, code) && t.amount >= expected - AMOUNT_EPSILON,
   )
 
-  let candidates = noteMatches
-  let sawExactAmount = false
-  if (candidates.length === 0) {
-    // Rule 2 — exact amount, and we are the ONLY pending transaction that
-    // could claim it in this tenant. Otherwise rule 3: ambiguous, never guess.
-    const exactMatches = eligible.filter((t) => Math.abs(t.amount - expected) < AMOUNT_EPSILON)
-    sawExactAmount = exactMatches.length > 0
-    if (exactMatches.length > 0) {
-      const { count, error: countErr } = await admin
-        .from('transactions')
-        .select('transaction_id', { count: 'exact', head: true })
-        .eq('tenant_id', tx.tenant_id)
-        .eq('payment_provider', 'binance_personal')
-        .eq('status', 'pending')
-        .eq('amount', expected)
-      if (countErr) {
-        return { status: 'error', message: 'Failed to check for colliding pending transactions' }
-      }
-      if ((count ?? 0) <= 1) {
-        candidates = exactMatches
-      }
-    }
-  }
-
-  if (candidates.length === 0) {
+  if (noteMatches.length === 0) {
+    // No transfer is bound to this order. A same-amount transfer without the
+    // code is only a hint for the admin, never a settlement.
+    const sawExactAmount = eligible.some((t) => Math.abs(t.amount - expected) < AMOUNT_EPSILON)
     return sawExactAmount ? { status: 'ambiguous' } : { status: 'not_found' }
   }
+  const candidates = noteMatches
 
   // Flip → successful, consuming the orderId. If a candidate's orderId was
   // already consumed by another order (23505), try the next one — several

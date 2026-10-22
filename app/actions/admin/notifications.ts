@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
+import { fetchLiveEntitlementKeys, liveEntitlementKey } from '@/lib/services/course-access'
 
 /**
  * The types a person may broadcast. `certificate_issued` and `community` (#870)
@@ -217,7 +218,11 @@ export async function dispatchNotification(
         .eq('tenant_id', notifTenantId)
         .eq('course_id', notification.target_course_id)
         .eq('status', 'active')
-      userIds = enrollments?.map(e => e.user_id) || []
+      // Recipients are people who can still open the course: entitlements decide, not the enrollment row.
+      const live = await fetchLiveEntitlementKeys(adminClient, notifTenantId, { courseIds: [notification.target_course_id] })
+      userIds = (enrollments || [])
+        .filter(e => live.has(liveEntitlementKey(e.user_id, notification.target_course_id as number)))
+        .map(e => e.user_id)
     } else if (notification.target_type === 'user' && notification.target_user_ids) {
       userIds = notification.target_user_ids
     }

@@ -4174,18 +4174,6 @@
             "faviconUrlHint": "URL of your browser tab icon (recommended: 32x32px ICO or PNG)"
           },
           "enrollment": {
-            "auto": "Auto Enrollment",
-            "autoHint": "Automatically enroll new users in designated courses",
-            "self": "Allow Self Enrollment",
-            "selfHint": "Allow students to enroll themselves in courses",
-            "approval": "Require Enrollment Approval",
-            "approvalHint": "Require admin approval before students can access courses",
-            "max": "Maximum Enrollments Per User",
-            "maxHint": "Maximum number of courses a user can enroll in (0 = unlimited)",
-            "expiration": "Enrollment Expiration (Days)",
-            "expirationHint": "Number of days until enrollment expires (0 = never expires)",
-            "capacity": "Enable Course Capacity",
-            "capacityHint": "Allow setting maximum student limits for courses",
             "freePreview": "Public Lesson Previews",
             "freePreviewHint": "Let anyone see one free lesson per course, even without an account, so prospective students can try before they buy.",
             "freePreviewCount": "{count} lessons are currently public."

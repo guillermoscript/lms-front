@@ -21,9 +21,11 @@ interface JoinSchoolFormProps {
    * dashboard) so a purchase or enroll intent survives the join step (#684).
    */
   destination: string
+  /** Secret from the invitation link, passed through to the join. */
+  inviteToken?: string | null
 }
 
-export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
+export function JoinSchoolForm({ tenant, destination, inviteToken }: JoinSchoolFormProps) {
   const t = useTranslations('joinSchool')
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +35,7 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
     setError(null)
 
     try {
-      const result = await joinCurrentSchool()
+      const result = await joinCurrentSchool(inviteToken)
 
       if (!result.success) {
         setError(result.error || t('error'))

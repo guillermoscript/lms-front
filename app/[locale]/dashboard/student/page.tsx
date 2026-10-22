@@ -19,6 +19,7 @@ import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
 import { getLessonCompletions } from '@lms/core'
 import { getUiState } from '@/lib/supabase/ui-state'
+import { fetchAccessibleCourseIds } from '@/lib/services/course-access'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 
 interface DashboardEnrollmentRow {
@@ -34,7 +35,7 @@ interface DashboardEnrollmentRow {
 async function getData(userId: string, tenantId: string) {
   const supabase = createAdminClient()
 
-  const [enrollments, examSubmissions, lessonCompletions, upcomingExams, activeSubscription] = await Promise.all([
+  const [enrollments, examSubmissions, lessonCompletions, upcomingExams, activeSubscription, accessibleCourseIds] = await Promise.all([
     supabase
       .from('enrollments')
       .select(`
@@ -83,11 +84,16 @@ async function getData(userId: string, tenantId: string) {
       .gte('end_date', new Date().toISOString())
       .order('end_date', { ascending: false })
       .limit(1),
+
+    // Access is decided by entitlements; the enrollment row only carries progress.
+    fetchAccessibleCourseIds(supabase, userId, tenantId),
   ])
 
   if (enrollments.error) throw new Error(enrollments.error.message)
 
-  const courses = (enrollments.data as unknown as DashboardEnrollmentRow[] | null)?.map((enrollment) => {
+  const courses = (enrollments.data as unknown as DashboardEnrollmentRow[] | null)
+    ?.filter((enrollment) => enrollment.course?.course_id != null && accessibleCourseIds.has(enrollment.course.course_id))
+    .map((enrollment) => {
     const course = enrollment.course
     const lessons = course?.lessons || []
     const completedLessons = lessons.filter((l) =>

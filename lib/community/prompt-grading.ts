@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchLiveEntitlementKeys, liveEntitlementKey } from '@/lib/services/course-access'
 import type { GradingRow, ViewerPromptGrade } from '@/lib/community/prompt-grades'
 
 type AdminClient = ReturnType<typeof createAdminClient>
@@ -69,7 +70,7 @@ export async function getPromptGradingRoster({
   if (postError) throw postError
   if (!post || post.is_hidden || post.post_type !== 'discussion_prompt' || !post.is_graded) return null
 
-  const [lesson, enrolled, answers, grades] = await Promise.all([
+  const [lesson, enrolledRows, liveKeys, answers, grades] = await Promise.all([
     post.lesson_id
       ? admin
           .from('lessons')
@@ -89,6 +90,8 @@ export async function getPromptGradingRoster({
         .order('user_id')
         .range(from, to)
     ),
+    // Access is the entitlement, not the enrollment row: a lapsed student is not graded.
+    fetchLiveEntitlementKeys(admin, tenantId, { courseIds: [courseId] }),
     allRows<{ id: string; author_id: string; content: string; created_at: string }>((from, to) =>
       admin
         .from('community_comments')
@@ -111,6 +114,8 @@ export async function getPromptGradingRoster({
         .range(from, to)
     ),
   ])
+
+  const enrolled = enrolledRows.filter((e) => liveKeys.has(liveEntitlementKey(e.user_id, courseId)))
 
   const candidateIds = [
     ...new Set([

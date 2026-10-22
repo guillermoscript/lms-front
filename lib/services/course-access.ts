@@ -7,6 +7,8 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import {
   computeCourseAccess,
   type CourseAccess,
@@ -89,24 +91,74 @@ export async function fetchCourseAccess(
 
 /**
  * The set of course_ids the user currently has active (non-expired) access to.
- * Handy for "already enrolled" checks on listing pages.
+ * Handy for "already enrolled" checks on listing pages. Pass `tenantId` to
+ * scope to one school (a user can belong to several).
  */
 export async function fetchAccessibleCourseIds(
   supabase: SupabaseClient,
   userId: string,
+  tenantId?: string,
 ): Promise<Set<number>> {
   const nowIso = new Date().toISOString()
-  const { data } = await supabase
+  let query = supabase
     .from('entitlements')
     .select('course_id, expires_at')
     .eq('user_id', userId)
     .eq('status', 'active')
+  if (tenantId) query = query.eq('tenant_id', tenantId)
+  const { data } = await query
 
   const ids = new Set<number>()
   for (const row of (data ?? []) as Array<{ course_id: number; expires_at: string | null }>) {
     if (!row.expires_at || row.expires_at > nowIso) ids.add(row.course_id)
   }
   return ids
+}
+
+/** Key for a (user, course) pair in the set returned by `fetchLiveEntitlementKeys`. */
+export function liveEntitlementKey(userId: string, courseId: number): string {
+  return `${userId}:${courseId}`
+}
+
+/**
+ * Every (user, course) pair in a school that currently has a LIVE entitlement
+ * (status 'active' AND not past `expires_at`), as `liveEntitlementKey` strings.
+ *
+ * Use this — not `enrollments.status = 'active'` — whenever a list, count or
+ * recipient set means "people who can open the course": `enrollments` is
+ * learning progress only and can lag behind an expiry that passes in time.
+ * Narrow with `courseIds` (a teacher's courses, one course) or `userId`.
+ * Complete reads (paged), so it is safe past PostgREST's 1000-row cap; throws
+ * on a read error rather than returning a short set.
+ */
+export async function fetchLiveEntitlementKeys(
+  supabase: SupabaseClient,
+  tenantId: string,
+  scope: { courseIds?: number[]; userId?: string } = {},
+): Promise<Set<string>> {
+  const nowIso = new Date().toISOString()
+  type Row = { entitlement_id: number; user_id: string; course_id: number }
+
+  const base = () => {
+    let q = supabase
+      .from('entitlements')
+      .select('entitlement_id, user_id, course_id', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+    if (scope.userId) q = q.eq('user_id', scope.userId)
+    return q
+  }
+
+  const rows: Row[] = scope.courseIds
+    ? await fetchAllRowsIn<Row, number>('entitlements', scope.courseIds, (chunk, from, to) =>
+        base().in('course_id', chunk).order('entitlement_id').range(from, to),
+      )
+    : await fetchAllRows<Row>('entitlements', (from, to) =>
+        base().order('entitlement_id').range(from, to),
+      )
+
+  return new Set(rows.map((r) => liveEntitlementKey(r.user_id, r.course_id)))
 }
 
 /**

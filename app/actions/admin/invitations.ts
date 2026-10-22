@@ -20,7 +20,7 @@ export interface CreateInvitationResult {
    * the invitation slice of #676).
    */
   emailSent?: boolean
-  /** The school's join page, so the UI can hand the admin a link that works. */
+  /** This invitation's join link (`/join-school?invite=<token>`), to share. */
   joinUrl?: string
 }
 

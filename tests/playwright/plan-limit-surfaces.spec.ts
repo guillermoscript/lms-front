@@ -109,16 +109,22 @@ test.describe('plan limits — every surface at the cap (#296)', () => {
 
     // An invitation is the one path that could be argued to "reserve" a seat.
     // It does not: the seat count is what the plan sells.
-    const { error: inviteError } = await admin.from('tenant_invitations').insert({
-      tenant_id: QA.id,
-      email: SEEDED.alice.email,
-      role: 'student',
-      invited_by: SEEDED.owner.id,
-      status: 'pending',
-    })
+    const { data: invite, error: inviteError } = await admin
+      .from('tenant_invitations')
+      .insert({
+        tenant_id: QA.id,
+        email: SEEDED.alice.email,
+        role: 'student',
+        invited_by: SEEDED.owner.id,
+        status: 'pending',
+      })
+      .select('token')
+      .single()
     expect(inviteError).toBeNull()
 
     await loginExpectingJoinSchool(page, QA_BASE, SEEDED.alice.email, SEEDED.alice.password)
+    // Open the invitation link itself: only the token consumes an invitation.
+    await page.goto(`${QA_BASE}/${LOCALE}/join-school?invite=${invite!.token}`, { waitUntil: 'domcontentloaded' })
     // Alice was invited, so the join runs on arrival (#790) and the refusal is
     // on screen without a click — with the manual form underneath as the retry.
     // The seat check happens before the invitation is touched, so the

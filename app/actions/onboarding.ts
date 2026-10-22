@@ -7,6 +7,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { bestEffortLocale } from '@/lib/i18n/best-effort-locale'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 
 interface OnboardingData {
   schoolName: string
@@ -20,6 +21,13 @@ export async function completeOnboarding(data: OnboardingData) {
     const userId = await getCurrentUserId()
     if (!userId) {
       return { success: false, error: 'Not authenticated' }
+    }
+
+    // The wizard rewrites the school's name/description/logo through the admin
+    // client, so it is an admin-only mutation. The creator passes: they get an
+    // active admin tenant_users row in createSchoolForUser before /onboarding.
+    if ((await getUserRole()) !== 'admin') {
+      return { success: false, error: 'Unauthorized: Admin access required' }
     }
 
     const tenantId = await getCurrentTenantId()

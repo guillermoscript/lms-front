@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
@@ -133,16 +134,10 @@ export const updateSchoolSettingsInput = z.object({
     .max(8)
     .optional()
     .describe("Default selling currency (ISO 4217, e.g. 'USD', 'COP')"),
-  allow_self_enrollment: z.boolean().optional().describe("Students may enroll themselves"),
-  auto_enrollment: z.boolean().optional(),
-  require_enrollment_approval: z.boolean().optional(),
-  course_capacity_enabled: z.boolean().optional(),
   free_preview_enabled: z
     .boolean()
     .optional()
     .describe("Lessons marked as free previews are readable without enrolling"),
-  max_enrollments_per_user: z.number().int().min(0).optional().describe("0 = no limit"),
-  enrollment_expiration_days: z.number().int().min(0).optional().describe("0 = never expires"),
   manual_payment_accounts: z
     .array(z.unknown())
     .max(50)
@@ -834,7 +829,7 @@ export function registerSchoolTools(server: LmsServer) {
     {
       name: "lms_invite_member",
       description:
-        "Invite someone to the school as a student or teacher. Records the invitation so they get that role when they join with this email, and returns the school's join link to share — no email is sent from here. Requires a verified email on the admin's account. Admin only.",
+        "Invite someone to the school as a student or teacher. Records the invitation and returns its personal join link (with a secret invite token, valid 14 days) — the invitee gets that role only by opening that link signed in with this email. Inviting an already-pending address issues a fresh link and voids the old one. The link is the secret: share it only with the invitee — no email is sent from here. Requires a verified email on the admin's account. Admin only.",
       inputSchema: inviteMemberInput,
       outputSchema: inviteMemberOutput,
       annotations: {
@@ -867,6 +862,12 @@ export function registerSchoolTools(server: LmsServer) {
           );
         }
 
+        // Re-inviting a pending address refreshes it (new token, new expiry)
+        // instead of refusing: the old link stops working, and this is how an
+        // expired invitation is resent.
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
         const { data: pending, error: pendingError } = await supabase
           .from("tenant_invitations")
           .select("id")
@@ -875,18 +876,37 @@ export function registerSchoolTools(server: LmsServer) {
           .eq("status", "pending")
           .maybeSingle();
         if (pendingError) return errorResult(`Checking invitations: ${pendingError.message}`);
-        if (pending) return errorResult("An invitation is already pending for this email.");
 
-        const { data: created, error } = await supabase
-          .from("tenant_invitations")
-          .insert({ tenant_id: tenantId, email, role, invited_by: session.getUserId() })
-          .select("id")
-          .single();
-        if (error) {
-          if ((error as { code?: string }).code === "23505") {
-            return errorResult("An invitation is already pending for this email.");
+        let invitationId: string;
+        if (pending) {
+          const { error: refreshError } = await supabase
+            .from("tenant_invitations")
+            .update({ role, token, expires_at: expiresAt, invited_by: session.getUserId() })
+            .eq("id", pending.id)
+            .eq("tenant_id", tenantId)
+            .eq("status", "pending");
+          if (refreshError) return errorResult(`Refreshing invitation: ${refreshError.message}`);
+          invitationId = pending.id as string;
+        } else {
+          const { data: created, error } = await supabase
+            .from("tenant_invitations")
+            .insert({
+              tenant_id: tenantId,
+              email,
+              role,
+              invited_by: session.getUserId(),
+              token,
+              expires_at: expiresAt,
+            })
+            .select("id")
+            .single();
+          if (error) {
+            if ((error as { code?: string }).code === "23505") {
+              return errorResult("An invitation is already pending for this email. Try again.");
+            }
+            return errorResult(`Creating invitation: ${error.message}`);
           }
-          return errorResult(`Creating invitation: ${error.message}`);
+          invitationId = created.id as string;
         }
 
         // Inviting does not take a seat; joining does, and the join is refused
@@ -898,11 +918,14 @@ export function registerSchoolTools(server: LmsServer) {
             !!usage && usage.max_students >= 0 && usage.students >= usage.max_students;
         }
 
-        const joinUrl = await joinUrlFor(session);
+        const baseJoinUrl = await joinUrlFor(session);
+        // The link carries the invitation's secret: it is the only thing that
+        // can consume the invitation (the email alone no longer does).
+        const joinUrl = baseJoinUrl ? `${baseJoinUrl}?invite=${token}` : null;
         const lines = [
           `Invitation recorded for ${email} as ${role}. No email was sent — share the join link${
             joinUrl ? `: ${joinUrl}` : " from the dashboard (Users → Invite)"
-          }. When they sign in with this email and join, they get the ${role} role.`,
+          }. When they open it signed in with this email, they get the ${role} role (valid 14 days; the link is personal).`,
         ];
         if (studentLimitReached) {
           lines.push(
@@ -912,7 +935,7 @@ export function registerSchoolTools(server: LmsServer) {
 
         return structured(
           {
-            invitation_id: created.id as string,
+            invitation_id: invitationId,
             email,
             role,
             join_url: joinUrl,

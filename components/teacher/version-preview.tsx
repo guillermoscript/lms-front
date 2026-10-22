@@ -189,19 +189,16 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
   const videoUrl = snapshot.video_url as string | undefined
   const status = snapshot.status as string | undefined
   const aiTaskDescription = snapshot.ai_task_description as string | undefined
-  const aiTaskInstructions = snapshot.ai_task_instructions as string | undefined
   const aiTask = snapshot.ai_task as Record<string, unknown> | null | undefined
 
   // lessons_ai_tasks is the live source of truth, so a snapshot that recorded it
-  // as null means there was no task — the legacy lesson columns can still hold a
-  // removed one, and are only trusted for snapshots taken before that key existed.
+  // as null means there was no task. The legacy lessons.ai_task_description is
+  // only trusted for snapshots taken before the `ai_task` key existed.
   const snapshotHasTaskRow = 'ai_task' in snapshot
   const taskPrompt = snapshotHasTaskRow
     ? (aiTask?.task_instructions as string | undefined)
     : aiTaskDescription
-  const systemPrompt = snapshotHasTaskRow
-    ? (aiTask?.system_prompt as string | undefined)
-    : aiTaskInstructions
+  const systemPrompt = aiTask?.system_prompt as string | undefined
 
   return (
     <div className="space-y-6">
