@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { ExamSubmissionsReview } from '@/components/teacher/exam-submissions-review'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionsPage({ params }: { params: Promise<{ courseId: string; examId: string }> }) {
@@ -24,25 +26,33 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
 
   if (!exam) return notFound()
 
-  // Fetch submissions with scores
-  const { data: rawSubmissions } = await supabase
-    .from('exam_submissions')
-    .select('*')
-    .eq('exam_id', parseInt(examId))
-    .eq('tenant_id', tenantId)
-    .order('submission_date', { ascending: false })
+  // Fetch ALL submissions (PostgREST caps a plain read at 1000 rows; the stat
+  // cards are computed over this set). Count-verified, stable PK order.
+  const rawSubmissions = await fetchAllRows('exam_submissions', (from, to) =>
+    supabase
+      .from('exam_submissions')
+      .select('*', { count: 'exact' })
+      .eq('exam_id', parseInt(examId))
+      .eq('tenant_id', tenantId)
+      .order('submission_date', { ascending: false })
+      .order('submission_id', { ascending: false })
+      .range(from, to)
+  )
 
-  if (!rawSubmissions) return notFound()
-
-  // Fetch student profiles
-  const studentIds = rawSubmissions.map(s => s.student_id)
-  const { data: students } = studentIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name').in('id', studentIds)
-    : { data: [] }
+  // Fetch student profiles (chunked: a long .in() list overflows the URL limit)
+  const studentIds = rawSubmissions.map(s => s.student_id).filter(Boolean)
+  const students = await fetchAllRowsIn('profiles', studentIds, (chunk, from, to) =>
+    supabase
+      .from('profiles')
+      .select('id, full_name', { count: 'exact' })
+      .in('id', chunk)
+      .order('id')
+      .range(from, to)
+  )
 
   // Transform submissions to match component interface
   const submissions = rawSubmissions.map(submission => {
-    const student = students?.find(s => s.id === submission.student_id)
+    const student = students.find(s => s.id === submission.student_id)
     const reviewStatus = submission.review_status || 'pending'
     const requiresAttention = submission.requires_attention
       || reviewStatus === 'pending_teacher_review'

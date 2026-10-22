@@ -1,0 +1,286 @@
+"use client"
+
+/**
+ * niko-table — created by Semir N. (Semkoo, https://github.com/Semkoo) with AI assistance.
+ *
+ * Before reporting anything: please check the changelog first.
+ *  - In-repo: ./CHANGELOG.md
+ *  - Docs site: https://niko-table.com/changelog
+ *
+ * Found a bug or have a fix? Open an issue or PR on GitHub so other
+ * users (and future LLMs reading this code) benefit:
+ * https://github.com/Semkoo/niko-table-registry
+ */
+import React from "react"
+import type { RowData } from "@tanstack/react-table"
+import { Check, CircleHelp } from "lucide-react"
+import { useTranslations } from "next-intl"
+
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import { useDataTable } from "../core/data-table-context"
+
+import { SORT_ICONS, SORT_LABELS } from "../config/data-table"
+import type { SortIconVariant } from "../config/data-table"
+import { FILTER_VARIANTS } from "../lib/constants"
+import type { FilterVariant } from "../lib/constants"
+
+import type { DataTableColumn, DataTableInstance } from "../types"
+/**
+ * Sort options menu items for composition inside TableColumnActions.
+ *
+ * @example
+ * ```tsx
+ * <TableColumnActions>
+ *   <TableColumnSortOptions column={column} />
+ * </TableColumnActions>
+ * ```
+ */
+export function TableColumnSortOptions<TData extends RowData, TValue>({
+  column,
+  table: propTable,
+  variant: propVariant,
+  withSeparator = true,
+}: {
+  column: DataTableColumn<TData, TValue>
+  table?: DataTableInstance<TData>
+  variant?: SortIconVariant
+  /** Whether to render a separator before the options. @default true */
+  withSeparator?: boolean
+}) {
+  const t = useTranslations("dataTable")
+  const context = useDataTable<TData>()
+  const table = propTable || context.table
+  const sortState = column.getIsSorted()
+
+  const variant: FilterVariant =
+    propVariant || column.columnDef.meta?.variant || FILTER_VARIANTS.TEXT
+
+  const icons = SORT_ICONS[variant] || SORT_ICONS[FILTER_VARIANTS.TEXT]
+  const labels = SORT_LABELS[variant] || SORT_LABELS[FILTER_VARIANTS.TEXT]
+  // SORT_LABELS holds the English defaults; translate them by value.
+  const sortLabel = (label: string) => {
+    const keys: Record<string, string> = {
+      Asc: "asc",
+      Desc: "desc",
+      "Low to High": "lowToHigh",
+      "High to Low": "highToLow",
+      "Oldest First": "oldestFirst",
+      "Newest First": "newestFirst",
+      "False First": "falseFirst",
+      "True First": "trueFirst",
+    }
+    return keys[label] ? t(`sort.${keys[label]}`) : label
+  }
+
+  const sortIndex = column.getSortIndex()
+  const isMultiSort = table && table.state.sorting.length > 1
+  const showSortBadge = isMultiSort && sortIndex !== -1
+
+  /**
+   * Use a ref for immediate synchronous access to shift key state.
+   * React state updates are batched and async, which can cause race conditions
+   * when the dropdown closes - the keyup event might reset state before
+   * handleSort reads it. A ref provides synchronous access.
+   */
+  const isShiftPressedRef = React.useRef(false)
+  const [isShiftPressed, setIsShiftPressed] = React.useState(false)
+
+  React.useEffect(() => {
+    // Sync from the event's own `shiftKey` on every key/pointer event, and
+    // clear on blur: a missed Shift keyup (window blur, OS shortcut) would
+    // otherwise leave Shift "stuck", turning later plain picks into multi-sort
+    // additions that leave the primary order unchanged.
+    const sync = (e: KeyboardEvent | MouseEvent | PointerEvent) => {
+      const down = e.shiftKey
+      isShiftPressedRef.current = down
+      setIsShiftPressed(down)
+    }
+    const clear = () => {
+      isShiftPressedRef.current = false
+      setIsShiftPressed(false)
+    }
+    const opts = { capture: true } as const
+    const events = ["keydown", "keyup", "pointerdown", "mousedown"] as const
+    events.forEach(n => window.addEventListener(n, sync as EventListener, opts))
+    window.addEventListener("blur", clear)
+    return () => {
+      events.forEach(n =>
+        window.removeEventListener(n, sync as EventListener, opts),
+      )
+      window.removeEventListener("blur", clear)
+    }
+  }, [])
+
+  const handleSort = (
+    direction: "asc" | "desc" | false,
+    e: React.MouseEvent,
+  ) => {
+    // Keyboard activation synthesizes a click whose `shiftKey` is false, so the
+    // window-level ref is what carries Shift for Enter/Space; the event's own
+    // flag covers a plain shift-click.
+    const isMulti = isShiftPressedRef.current || isShiftPressed || e.shiftKey
+
+    if (direction === false) {
+      column.clearSorting()
+    } else {
+      const isDesc = direction === "desc"
+      const canMultiSort = column.getCanMultiSort()
+
+      /**
+       * @see https://tanstack.com/table/v8/docs/guide/sorting#multi-sorting
+       * When using toggleSorting explicitly, we must manually pass the multi-sort flag.
+       */
+      column.toggleSorting(isDesc, canMultiSort ? isMulti : false)
+    }
+  }
+
+  return (
+    <>
+      {withSeparator && <DropdownMenuSeparator />}
+      <DropdownMenuGroup>
+      <DropdownMenuLabel className="flex items-center justify-between text-xs font-normal text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span>{t("columnSort")}</span>
+          {showSortBadge && (
+            <Tooltip>
+              <TooltipTrigger render={<span className="flex size-4 cursor-help items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground" />}>{sortIndex + 1}</TooltipTrigger>
+              <TooltipContent side="right">
+                {t("sortPriority")}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <Tooltip>
+          <TooltipTrigger render={<CircleHelp className="size-3.5 cursor-help" />}></TooltipTrigger>
+          <TooltipContent side="right">
+            {t("multiSortTip")}
+          </TooltipContent>
+        </Tooltip>
+      </DropdownMenuLabel>
+      </DropdownMenuGroup>
+      <DropdownMenuItem
+        onClick={e => handleSort("asc", e)}
+        className={cn(
+          "flex items-center",
+          sortState === "asc" && "bg-accent text-accent-foreground",
+        )}
+      >
+        <icons.asc className="mr-2 size-4 text-muted-foreground/70" />
+        <span className="flex-1">{sortLabel(labels.asc)}</span>
+        {sortState === "asc" && <Check className="ml-2 size-4" />}
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onClick={e => handleSort("desc", e)}
+        className={cn(
+          "flex items-center",
+          sortState === "desc" && "bg-accent text-accent-foreground",
+        )}
+      >
+        <icons.desc className="mr-2 size-4 text-muted-foreground/70" />
+        <span className="flex-1">{sortLabel(labels.desc)}</span>
+        {sortState === "desc" && <Check className="ml-2 size-4" />}
+      </DropdownMenuItem>
+      {sortState && (
+        <DropdownMenuItem onClick={() => column.clearSorting()}>
+          <icons.unsorted className="mr-2 size-4 text-muted-foreground/70" />
+          {t("clearSort")}
+        </DropdownMenuItem>
+      )}
+    </>
+  )
+}
+
+/**
+ * Standalone dropdown menu for sorting.
+ *
+ * For composition inside TableColumnActions, use TableColumnSortOptions instead.
+ *
+ * @example
+ * ```tsx
+ * // Standalone
+ * <TableColumnSortMenu column={column} table={table} />
+ *
+ * // Composed
+ * <TableColumnActions>
+ *   <TableColumnSortOptions column={column} />
+ * </TableColumnActions>
+ * ```
+ */
+export function TableColumnSortMenu<TData extends RowData, TValue>({
+  column,
+  table: propTable,
+  variant: propVariant,
+  className,
+}: {
+  column: DataTableColumn<TData, TValue>
+  table?: DataTableInstance<TData>
+  variant?: SortIconVariant
+  className?: string
+}) {
+  const context = useDataTable<TData>()
+  const table = propTable || context.table
+  const t = useTranslations("dataTable")
+  const canSort = column.getCanSort()
+  const sortState = column.getIsSorted()
+
+  const variant: FilterVariant =
+    propVariant || column.columnDef.meta?.variant || FILTER_VARIANTS.TEXT
+
+  const icons = SORT_ICONS[variant] || SORT_ICONS[FILTER_VARIANTS.TEXT]
+
+  if (!canSort) return null
+
+  const SortIcon =
+    sortState === "asc"
+      ? icons.asc
+      : sortState === "desc"
+        ? icons.desc
+        : icons.unsorted
+
+  const sortIndex = column.getSortIndex()
+  const isMultiSort = table && table.state.sorting.length > 1
+  const showSortBadge = isMultiSort && sortIndex !== -1
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className={cn(
+                      "size-7 transition-opacity dark:text-muted-foreground",
+                      sortState && "text-primary",
+                      className,
+                    )} />}><div className="relative flex items-center justify-center">
+                      <SortIcon className="size-4" />
+                      {showSortBadge && (
+                        <span className="absolute -top-1 -right-2 flex size-3 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground">
+                          {sortIndex + 1}
+                        </span>
+                      )}
+                    </div><span className="sr-only">{t("sortColumn")}</span></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <TableColumnSortOptions
+          column={column}
+          table={table}
+          variant={variant}
+          withSeparator={false}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+TableColumnSortOptions.displayName = "TableColumnSortOptions"
+TableColumnSortMenu.displayName = "TableColumnSortMenu"

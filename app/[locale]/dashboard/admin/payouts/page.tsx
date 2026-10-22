@@ -1,24 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
-import { formatByCurrency, formatMoney, sumByCurrency } from '@/lib/payments/format-money'
+import { formatByCurrency, sumByCurrency } from '@/lib/payments/format-money'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { PayoutsTable } from '@/components/admin/payouts-table'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  IconBuildingBank,
   IconCurrencyDollar,
   IconClock,
   IconAlertCircle,
@@ -32,7 +21,6 @@ export default async function AdminPayoutsPage({
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.payouts')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const dateLocale = locale === 'es' ? es : enUS
 
   const userId = await getCurrentUserId()
   if (!userId) {
@@ -87,41 +75,6 @@ export default async function AdminPayoutsPage({
   const totalPaidByCurrency = sumByCurrency(rows.filter((p) => p.status === 'paid'))
 
   const pendingCount = rows.filter((p) => p.status === 'pending' || p.status === 'processing').length
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return (
-          <Badge className="bg-success/10 text-success border-success/30 text-[10px]">
-            {t('status.paid')}
-          </Badge>
-        )
-      case 'processing':
-        return (
-          <Badge className="bg-brand-tint text-brand-text border-primary/30 text-[10px]">
-            {t('status.processing')}
-          </Badge>
-        )
-      case 'pending':
-        return (
-          <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px]">
-            {t('status.pending')}
-          </Badge>
-        )
-      case 'failed':
-        return (
-          <Badge variant="destructive" className="text-[10px]">
-            {t('status.failed')}
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant="secondary" className="text-[10px]">
-            {status}
-          </Badge>
-        )
-    }
-  }
 
   return (
     <div className="min-h-screen bg-background" data-testid="payouts-page">
@@ -197,99 +150,22 @@ export default async function AdminPayoutsPage({
             <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table className="text-sm">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('table.headers.period')}
-                    </TableHead>
-                    <TableHead className="text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('table.headers.amount')}
-                    </TableHead>
-                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('table.headers.status')}
-                    </TableHead>
-                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('table.headers.method')}
-                    </TableHead>
-                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('table.headers.paidAt')}
-                    </TableHead>
-                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('table.headers.stripeRef')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.length > 0 ? (
-                    rows.map((payout) => (
-                      <TableRow
-                        key={payout.payout_id}
-                        className="transition-colors hover:bg-muted/40"
-                      >
-                        <TableCell className="text-xs text-muted-foreground tabular-nums">
-                          {payout.period_start
-                            ? format(new Date(payout.period_start), 'MMM d, yyyy', { locale: dateLocale })
-                            : '—'}
-                          {' – '}
-                          {payout.period_end
-                            ? format(new Date(payout.period_end), 'MMM d, yyyy', { locale: dateLocale })
-                            : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">
-                          {formatMoney(payout.amount, payout.currency, locale)}
-                        </TableCell>
-                        <TableCell>
-                          {statusBadge(payout.status || '')}
-                          {payout.failure_reason && (
-                            <p className="mt-0.5 text-[10px] text-destructive">{payout.failure_reason}</p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {payout.payout_method === 'manual' ? t('method.manual') : t('method.stripeConnect')}
-                          {payout.note && (
-                            <p className="mt-0.5 max-w-[16rem] text-[10px] text-muted-foreground">{payout.note}</p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs tabular-nums text-muted-foreground">
-                          {payout.paid_at
-                            ? format(new Date(payout.paid_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })
-                            : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {payout.stripe_payout_id ? (
-                            <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
-                              {payout.stripe_payout_id.length > 24
-                                ? `${payout.stripe_payout_id.slice(0, 12)}…${payout.stripe_payout_id.slice(-8)}`
-                                : payout.stripe_payout_id}
-                            </code>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-12 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                            <IconBuildingBank className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{t('empty.title')}</p>
-                            <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
-                              {t('empty.description')}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <PayoutsTable
+              locale={locale}
+              rows={rows.map((p) => ({
+                id: p.payout_id,
+                periodStart: p.period_start,
+                periodEnd: p.period_end,
+                amount: Number(p.amount ?? 0),
+                currency: p.currency,
+                status: p.status || '',
+                failureReason: p.failure_reason,
+                method: p.payout_method === 'manual' ? 'manual' : 'stripeConnect',
+                note: p.note,
+                paidAt: p.paid_at,
+                stripePayoutId: p.stripe_payout_id,
+              }))}
+            />
           </CardContent>
         </Card>
       </main>

@@ -12,29 +12,32 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations, useFormatter } from 'next-intl'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { IconUsers, IconAlertTriangle, IconChartBar } from '@tabler/icons-react'
+import { DataTableRoot } from '@/components/niko-table/core/data-table-root'
+import { DataTable } from '@/components/niko-table/core/data-table'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  DataTableHeader,
+  DataTableBody,
+  DataTableEmptyBody,
+} from '@/components/niko-table/core/data-table-structure'
+import { DataTableToolbarSection } from '@/components/niko-table/components/data-table-toolbar-section'
+import { DataTableSearchFilter } from '@/components/niko-table/components/data-table-search-filter'
+import { DataTableFacetedFilter } from '@/components/niko-table/components/data-table-faceted-filter'
+import { DataTableClearFilter } from '@/components/niko-table/components/data-table-clear-filter'
+import { DataTablePagination } from '@/components/niko-table/components/data-table-pagination'
+import { DataTableColumnHeader } from '@/components/niko-table/components/data-table-column-header'
+import { DataTableColumnTitle } from '@/components/niko-table/components/data-table-column-title'
+import { DataTableColumnSortMenu } from '@/components/niko-table/components/data-table-column-sort'
 import {
-  IconUsers,
-  IconChevronLeft,
-  IconChevronRight,
-  IconArrowsSort,
-  IconSortDescending,
-  IconSortAscending,
-  IconAlertTriangle,
-  IconChartBar,
-} from '@tabler/icons-react'
-import { cn } from '@/lib/utils'
+  DataTableEmptyIcon,
+  DataTableEmptyMessage,
+  DataTableEmptyTitle,
+  DataTableEmptyFilteredMessage,
+} from '@/components/niko-table/components/data-table-empty-state'
+import type { DataTableColumnDef } from '@/components/niko-table/types'
 import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
 import {
   ENGAGEMENT_STATUSES,
@@ -47,8 +50,6 @@ import {
 import { EngagementBadge, ProgressCell, CountCell, ActivityTime } from './student-progress-cells'
 import { StudentProgressSheet, type SheetStudent } from './student-progress-sheet'
 import { LessonFunnel } from './lesson-funnel'
-
-const PAGE_SIZE = 10
 
 interface StudentEnrollment {
   enrollment_id: string | number
@@ -75,12 +76,24 @@ interface CourseStudentsTableProps {
   exams: CourseItem[]
 }
 
-type Filter = 'all' | EngagementStatus
-type SortKey = 'lastActivity' | 'progress' | 'name'
-
 interface Row extends SheetStudent {
   enrollmentId: string | number
+  /** Flat, sortable/filterable mirrors of `progress` for the table columns. */
+  name: string
+  percentage: number
+  lessonsDone: number
+  exercisesDone: number
+  examsDone: number
+  lastActivity: number
+  status: EngagementStatus
 }
+
+const sortHeader = () => (
+  <DataTableColumnHeader>
+    <DataTableColumnTitle />
+    <DataTableColumnSortMenu />
+  </DataTableColumnHeader>
+)
 
 function getInitials(name: string | null | undefined) {
   if (!name) return ''
@@ -123,65 +136,173 @@ export function CourseStudentsTable({
   exercises,
   exams,
 }: CourseStudentsTableProps) {
-  const t = useTranslations('dashboard.teacher.manageCourse')
   const tl = useTranslations('dashboard.teacher.manageCourse.studentList')
   const format = useFormatter()
 
-  const [filter, setFilter] = useState<Filter>('all')
-  const [sortKey, setSortKey] = useState<SortKey>('lastActivity')
-  const [sortAsc, setSortAsc] = useState(false)
-  const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<Row | null>(null)
 
   const rows = useMemo<Row[]>(() => {
     const byUser = new Map(report.students.map((s) => [s.userId, s]))
     const totals = { lessons: lessons.length, exercises: exercises.length, exams: exams.length }
-    return enrollments.map((e) => ({
-      enrollmentId: e.enrollment_id,
-      userId: e.user_id,
+    return enrollments.map((e) => {
+      const progress = byUser.get(e.user_id) ?? emptyProgress(e.user_id, totals)
       // Most students sign up without a name, so the email is the only thing
       // that identifies them — show it instead of "Unknown Student".
-      displayName: e.profiles?.full_name || e.email || tl('unknownStudent'),
-      avatarUrl: e.profiles?.avatar_url ?? null,
-      enrolledAt: e.enrollment_date,
-      progress: byUser.get(e.user_id) ?? emptyProgress(e.user_id, totals),
-    }))
+      const displayName = e.profiles?.full_name || e.email || tl('unknownStudent')
+      return {
+        enrollmentId: e.enrollment_id,
+        userId: e.user_id,
+        displayName,
+        avatarUrl: e.profiles?.avatar_url ?? null,
+        enrolledAt: e.enrollment_date,
+        progress,
+        name: displayName,
+        percentage: progress.overallPercentage,
+        lessonsDone: progress.lessonsCompleted,
+        exercisesDone: progress.exercisesCompleted,
+        examsDone: progress.examsPassed,
+        lastActivity: time(progress.lastActivityAt),
+        status: progress.status,
+      }
+    })
   }, [enrollments, report.students, lessons.length, exercises.length, exams.length, tl])
 
-  const visible = useMemo(() => {
-    const filtered = filter === 'all' ? rows : rows.filter((r) => r.progress.status === filter)
-    const dir = sortAsc ? 1 : -1
-    return [...filtered].sort((a, b) => {
-      let cmp = 0
-      if (sortKey === 'progress') {
-        cmp = a.progress.overallPercentage - b.progress.overallPercentage
-      } else if (sortKey === 'lastActivity') {
-        cmp = time(a.progress.lastActivityAt) - time(b.progress.lastActivityAt)
-      } else {
-        cmp = -a.displayName.localeCompare(b.displayName)
-      }
-      return cmp * dir || a.displayName.localeCompare(b.displayName)
-    })
-  }, [rows, filter, sortKey, sortAsc])
+  const generatedAt = report.generatedAt
 
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
-  const safePage = Math.min(page, totalPages - 1)
-  const paginated = visible.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+  const columns = useMemo<DataTableColumnDef<Row>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: sortHeader,
+        meta: { label: tl('table.student') },
+        cell: ({ row }) => {
+          const r = row.original
+          return (
+            <div className="flex items-center gap-3" data-testid="student-row" data-status={r.status}>
+              <Avatar size="sm">
+                {r.avatarUrl && <AvatarImage src={r.avatarUrl} alt={r.displayName} />}
+                <AvatarFallback>{getInitials(r.displayName)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 max-w-44">
+                {/* The name is the keyboard-reachable way into the sheet; the row click is a convenience. */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelected(r)
+                  }}
+                  title={r.displayName}
+                  aria-label={tl('table.detailsFor', { name: r.displayName })}
+                  className="block max-w-full truncate text-left font-medium hover:underline focus-visible:outline-none focus-visible:underline"
+                >
+                  {r.displayName}
+                </button>
+                {r.enrolledAt && (
+                  <div className="text-xs text-muted-foreground">
+                    {tl('sheet.enrolled', {
+                      date: format.dateTime(new Date(r.enrolledAt), { dateStyle: 'medium' }),
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'percentage',
+        accessorKey: 'percentage',
+        header: sortHeader,
+        meta: { label: tl('table.progress'), variant: 'number' },
+        cell: ({ row }) => (
+          <ProgressCell
+            value={row.original.progress.overallPercentage}
+            total={row.original.progress.totalLessons}
+            label={tl('table.progress')}
+            emptyLabel={tl('noLessons')}
+          />
+        ),
+      },
+      {
+        id: 'lessonsDone',
+        accessorKey: 'lessonsDone',
+        header: sortHeader,
+        meta: { label: tl('table.lessons'), variant: 'number' },
+        cell: ({ row }) => (
+          <CountCell done={row.original.progress.lessonsCompleted} total={row.original.progress.totalLessons} />
+        ),
+      },
+      {
+        id: 'exercisesDone',
+        accessorKey: 'exercisesDone',
+        header: sortHeader,
+        meta: { label: tl('table.exercises'), variant: 'number' },
+        cell: ({ row }) => (
+          <CountCell done={row.original.progress.exercisesCompleted} total={row.original.progress.totalExercises} />
+        ),
+      },
+      {
+        id: 'examsDone',
+        accessorKey: 'examsDone',
+        header: sortHeader,
+        meta: { label: tl('table.exams'), variant: 'number' },
+        cell: ({ row }) => (
+          <CountCell done={row.original.progress.examsPassed} total={row.original.progress.totalExams} />
+        ),
+      },
+      {
+        id: 'lastActivity',
+        accessorKey: 'lastActivity',
+        header: sortHeader,
+        meta: { label: tl('table.lastActivity'), variant: 'date' },
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            <ActivityTime
+              value={row.original.progress.lastActivityAt}
+              now={generatedAt}
+              emptyLabel={tl('noActivity')}
+            />
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: sortHeader,
+        meta: { label: tl('table.status') },
+        cell: ({ row }) => (
+          <EngagementBadge
+            status={row.original.status}
+            label={tl(`status.${row.original.status}`)}
+            title={tl(`statusHint.${row.original.status}`, { days: STALL_DAYS })}
+          />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{tl('table.actions')}</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            {/* NOTE: IssueCertificateButton also appears in the Certificates tab.
+               This is intentional redundancy — teachers may issue from either context. */}
+            <IssueCertificateButton
+              compact
+              courseId={courseId}
+              userId={row.original.userId}
+              studentName={row.original.displayName}
+              existingCertificateId={issuedCertificates.find((c) => c.user_id === row.original.userId)?.id}
+            />
+          </div>
+        ),
+      },
+    ],
+    [tl, format, generatedAt, courseId, issuedCertificates],
+  )
 
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortAsc((v) => !v)
-    } else {
-      setSortKey(key)
-      setSortAsc(key === 'name')
-    }
-    setPage(0)
-  }
-
-  const applyFilter = (next: Filter) => {
-    setFilter(next)
-    setPage(0)
-  }
+  const statusOptions = ENGAGEMENT_STATUSES.map((s) => ({ value: s, label: tl(`status.${s}`) }))
 
   const { summary } = report
   const hasLessons = lessons.length > 0
@@ -205,201 +326,49 @@ export function CourseStudentsTable({
         </Alert>
       )}
 
-      {/* Summary + status filter. The counts ARE the filter: one row, no duplicate widgets. */}
       {enrollments.length > 0 && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div
-            role="group"
-            aria-label={tl('filter.label')}
-            className="flex flex-wrap items-center gap-1.5"
-            data-testid="student-status-filter"
-          >
-            <FilterChip active={filter === 'all'} onClick={() => applyFilter('all')} count={summary.total}>
-              {tl('filter.all')}
-            </FilterChip>
-            {ENGAGEMENT_STATUSES.map((s) => (
-              <FilterChip
-                key={s}
-                active={filter === s}
-                onClick={() => applyFilter(s)}
-                count={summary.byStatus[s]}
-                title={tl(`statusHint.${s}`, { days: STALL_DAYS })}
-                status={s}
-              >
-                {tl(`status.${s}`)}
-              </FilterChip>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground" data-testid="student-avg-progress">
-            {hasLessons && summary.avgProgress != null
-              ? tl('summary.avgProgress', { value: summary.avgProgress })
-              : tl('noLessons')}
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground" data-testid="student-avg-progress">
+          {hasLessons && summary.avgProgress != null
+            ? tl('summary.avgProgress', { value: summary.avgProgress })
+            : tl('noLessons')}
+        </p>
       )}
 
       <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-3">
-                    <SortButton onClick={() => toggleSort('name')} label={tl('table.student')}>
-                      <SortIcon column="name" sortKey={sortKey} sortAsc={sortAsc} />
-                    </SortButton>
-                  </TableHead>
-                  <TableHead className="px-3">
-                    <SortButton onClick={() => toggleSort('progress')} label={tl('table.progress')}>
-                      <SortIcon column="progress" sortKey={sortKey} sortAsc={sortAsc} />
-                    </SortButton>
-                  </TableHead>
-                  <TableHead className="px-3 text-right whitespace-nowrap">{tl('table.lessons')}</TableHead>
-                  <TableHead className="px-3 text-right whitespace-nowrap">{tl('table.exercises')}</TableHead>
-                  <TableHead className="px-3 text-right whitespace-nowrap">{tl('table.exams')}</TableHead>
-                  <TableHead className="px-3">
-                    <SortButton onClick={() => toggleSort('lastActivity')} label={tl('table.lastActivity')}>
-                      <SortIcon column="lastActivity" sortKey={sortKey} sortAsc={sortAsc} />
-                    </SortButton>
-                  </TableHead>
-                  <TableHead className="px-3">{tl('table.status')}</TableHead>
-                  <TableHead className="px-3 text-right">{tl('table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginated.length > 0 ? (
-                  paginated.map((row) => {
-                    const p = row.progress
-                    return (
-                      <TableRow
-                        key={row.enrollmentId}
-                        data-testid="student-row"
-                        data-status={p.status}
-                        className="cursor-pointer"
-                        onClick={() => setSelected(row)}
-                      >
-                        <TableCell className="px-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar size="sm">
-                              {row.avatarUrl && <AvatarImage src={row.avatarUrl} alt={row.displayName} />}
-                              <AvatarFallback>{getInitials(row.displayName)}</AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 max-w-44">
-                              {/* The name is the keyboard-reachable way into the sheet; the row click is a convenience. */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelected(row)
-                                }}
-                                title={row.displayName}
-                                aria-label={tl('table.detailsFor', { name: row.displayName })}
-                                className="block max-w-full truncate text-left font-medium hover:underline focus-visible:outline-none focus-visible:underline"
-                              >
-                                {row.displayName}
-                              </button>
-                              {row.enrolledAt && (
-                                <div className="text-xs text-muted-foreground">
-                                  {tl('sheet.enrolled', {
-                                    date: format.dateTime(new Date(row.enrolledAt), { dateStyle: 'medium' }),
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-3">
-                          <ProgressCell
-                            value={p.overallPercentage}
-                            total={p.totalLessons}
-                            label={tl('table.progress')}
-                            emptyLabel={tl('noLessons')}
-                          />
-                        </TableCell>
-                        <TableCell className="px-3 text-right">
-                          <CountCell done={p.lessonsCompleted} total={p.totalLessons} />
-                        </TableCell>
-                        <TableCell className="px-3 text-right">
-                          <CountCell done={p.exercisesCompleted} total={p.totalExercises} />
-                        </TableCell>
-                        <TableCell className="px-3 text-right">
-                          <CountCell done={p.examsPassed} total={p.totalExams} />
-                        </TableCell>
-                        <TableCell className="px-3 whitespace-nowrap text-muted-foreground">
-                          <ActivityTime
-                            value={p.lastActivityAt}
-                            now={report.generatedAt}
-                            emptyLabel={tl('noActivity')}
-                          />
-                        </TableCell>
-                        <TableCell className="px-3">
-                          <EngagementBadge
-                            status={p.status}
-                            label={tl(`status.${p.status}`)}
-                            title={tl(`statusHint.${p.status}`, { days: STALL_DAYS })}
-                          />
-                        </TableCell>
-                        <TableCell className="px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
-                            {/* NOTE: IssueCertificateButton also appears in the Certificates tab.
-                               This is intentional redundancy — teachers may issue from either context. */}
-                            <IssueCertificateButton
-                              compact
-                              courseId={courseId}
-                              userId={row.userId}
-                              studentName={row.displayName}
-                              existingCertificateId={
-                                issuedCertificates.find((c) => c.user_id === row.userId)?.id
-                              }
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="py-12 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <IconUsers className="size-8" />
-                        <p>{enrollments.length === 0 ? tl('noStudents') : tl('noMatch')}</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t px-4 py-3">
-              <p className="text-sm tabular-nums text-muted-foreground">
-                {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, visible.length)} / {visible.length}
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={safePage === 0}
-                  aria-label={t('studentList.pagination.prev')}
-                >
-                  <IconChevronLeft className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={safePage >= totalPages - 1}
-                  aria-label={t('studentList.pagination.next')}
-                >
-                  <IconChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+        <CardContent className="p-4">
+          <DataTableRoot
+            data={rows}
+            columns={columns}
+            getRowId={(row) => String(row.enrollmentId)}
+            initialState={{ sorting: [{ id: 'lastActivity', desc: true }] }}
+            config={{ initialPageSize: 25 }}
+          >
+            <DataTableToolbarSection className="mb-4 flex-wrap">
+              <DataTableSearchFilter placeholder={tl('searchPlaceholder')} className="max-w-md" />
+              <DataTableFacetedFilter
+                accessorKey="status"
+                title={tl('table.status')}
+                options={statusOptions}
+                multiple
+              />
+              <DataTableClearFilter enableResetSorting={false} />
+            </DataTableToolbarSection>
+            <DataTable>
+              <DataTableHeader />
+              <DataTableBody onRowClick={(row) => setSelected(row as Row)}>
+                <DataTableEmptyBody>
+                  <DataTableEmptyIcon>
+                    <IconUsers className="size-8" />
+                  </DataTableEmptyIcon>
+                  <DataTableEmptyMessage>
+                    <DataTableEmptyTitle>{tl('noStudents')}</DataTableEmptyTitle>
+                  </DataTableEmptyMessage>
+                  <DataTableEmptyFilteredMessage>{tl('noMatch')}</DataTableEmptyFilteredMessage>
+                </DataTableEmptyBody>
+              </DataTableBody>
+            </DataTable>
+            <DataTablePagination defaultPageSize={25} />
+          </DataTableRoot>
         </CardContent>
       </Card>
 
@@ -439,71 +408,5 @@ export function CourseStudentsTable({
         }
       />
     </div>
-  )
-}
-
-function FilterChip({
-  active,
-  onClick,
-  count,
-  title,
-  status,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  count: number
-  title?: string
-  status?: EngagementStatus
-  children: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      title={title}
-      data-status={status ?? 'all'}
-      className={cn(
-        'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        active
-          ? 'border-foreground bg-foreground text-background'
-          : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
-      )}
-    >
-      {children}
-      <span className={cn('tabular-nums', active ? 'opacity-80' : 'opacity-70')}>{count}</span>
-    </button>
-  )
-}
-
-function SortIcon({ column, sortKey, sortAsc }: { column: SortKey; sortKey: SortKey; sortAsc: boolean }) {
-  if (sortKey !== column) return <IconArrowsSort className="size-3.5 opacity-40" aria-hidden />
-  return sortAsc ? (
-    <IconSortAscending className="size-3.5" aria-hidden />
-  ) : (
-    <IconSortDescending className="size-3.5" aria-hidden />
-  )
-}
-
-function SortButton({
-  onClick,
-  label,
-  children,
-}: {
-  onClick: () => void
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="-mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {label}
-      {children}
-    </button>
   )
 }

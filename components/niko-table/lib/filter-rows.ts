@@ -1,0 +1,66 @@
+import type { RowData } from "@tanstack/react-table"
+import type { DataTableInstance, DataTableRow } from "../types"
+
+/**
+ * Get filtered rows excluding a specific column's filter.
+ * This is useful when generating options for a column - we want to see
+ * options that exist in the filtered dataset (from other filters) but
+ * not be limited by the current column's own filter.
+ */
+export function getFilteredRowsExcludingColumn<TData extends RowData>(
+  table: DataTableInstance<TData>,
+  coreRows: DataTableRow<TData>[],
+  excludeColumnId: string,
+  columnFilters: Array<{ id: string; value: unknown }>,
+  globalFilter: unknown,
+): DataTableRow<TData>[] {
+  // Filter out the current column's filter
+  const otherFilters = columnFilters.filter(
+    filter => filter.id !== excludeColumnId,
+  )
+
+  // If no filters to apply (excluding the current column), return core rows
+  if (otherFilters.length === 0 && !globalFilter) {
+    return coreRows
+  }
+
+  // Set of real column ids (leaf columns, including hidden accessor columns).
+  // `columnFilters` can carry filter ids that have no matching client column
+  // (for example a filter resolved entirely server-side). Those are skipped
+  // below — checking membership here avoids TanStack's `table.getColumn` dev
+  // warning ("Column with id 'x' does not exist") that fires before the
+  // `!column` guard would catch it.
+  const columnIds = new Set(table.getAllLeafColumns().map(c => c.id))
+
+  // Filter rows manually, excluding the current column's filter
+  return coreRows.filter(row => {
+    // Apply column filters (excluding the current column)
+    for (const filter of otherFilters) {
+      if (!columnIds.has(filter.id)) continue
+
+      const column = table.getColumn(filter.id)
+      if (!column) continue
+
+      // `getFilterFn` resolves the column's `filterFn` through the registry
+      // declared on `tableFeatures({ filterFns })`, so string names and inline
+      // functions both come back as a callable.
+      const filterFn = column.getFilterFn()
+      if (filterFn && !filterFn(row, filter.id, filter.value, () => {})) {
+        return false
+      }
+    }
+
+    // Apply global filter if present
+    if (globalFilter) {
+      const globalFilterFn = table.getGlobalFilterFn()
+      if (
+        globalFilterFn &&
+        !globalFilterFn(row, "global", globalFilter, () => {})
+      ) {
+        return false
+      }
+    }
+
+    return true
+  })
+}

@@ -2,11 +2,12 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { IconAlertCircle, IconBuildingBank, IconClock, IconCalendarMonth, IconReceipt, IconInfoCircle } from '@tabler/icons-react'
+import { IconAlertCircle, IconBuildingBank, IconClock, IconCalendarMonth, IconInfoCircle } from '@tabler/icons-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
-import { formatByCurrency, formatMoney } from '@/lib/payments/format-money'
+import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
+import { formatByCurrency } from '@/lib/payments/format-money'
 import {
   buildEarningsView,
   earningsTxnFromRow,
@@ -14,29 +15,15 @@ import {
   EARNINGS_PROVIDERS,
   PLATFORM_COLLECTED_PROVIDERS,
   SCHOOL_COLLECTED_PROVIDERS,
-  type EarningsStatusFilter,
-  type EarningsCollectorFilter,
   type RawSearchParams,
   type EarningsTxn,
   type TransactionRowForEarnings,
 } from '@/lib/payments/earnings'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EarningsTable, type EarningsTableRow, type EarningsInitialFilters } from '@/components/admin/earnings-table'
 import { FeeBalanceCard } from '@/components/admin/platform-fees/fee-balance-card'
-import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
-
-const PAGE_SIZE = 20
-
-/** Dates are rendered in UTC, the same zone every boundary on this page uses. */
-function formatUtcDate(iso: string, locale: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(d)
-}
 
 export default async function AdminEarningsPage({
   params,
@@ -102,7 +89,7 @@ export default async function AdminEarningsPage({
         .order('payout_id')
         .range(from, to),
     ),
-    getEffectiveRevenueSplit(supabase, tenantId),
+    supabase.from('revenue_splits').select('school_percentage').eq('tenant_id', tenantId).maybeSingle(),
     // Same statuses as the "Open" tab on the payment-requests page.
     supabase
       .from('payment_requests')
@@ -117,6 +104,7 @@ export default async function AdminEarningsPage({
       .eq('status', 'succeeded'),
   ])
 
+  if (split.error) throw new Error(`revenue_splits: ${split.error.message}`)
   if (openRequests.error) throw new Error(`payment_requests: ${openRequests.error.message}`)
   if (feePayments.error) throw new Error(`platform_fee_payments: ${feePayments.error.message}`)
 
@@ -132,7 +120,7 @@ export default async function AdminEarningsPage({
       currency: p.currency || 'usd',
       coveredThrough: p.period_end ?? p.paid_at ?? p.created_at,
     })),
-    schoolPercentage: split.schoolPercentage,
+    schoolPercentage: (split.data?.school_percentage as number | undefined) ?? DEFAULT_SCHOOL_PERCENTAGE,
     openRequests: openRequests.count ?? 0,
     feePayments: (feePayments.data ?? []).map((p) => ({
       amount: Number(p.amount),
@@ -140,52 +128,79 @@ export default async function AdminEarningsPage({
       status: String(p.status),
     })),
     now: new Date(),
-    searchParams: sp,
-    pageSize: PAGE_SIZE,
+    // Unfiltered and unpaged: the table filters, sorts and pages client-side.
+    searchParams: {},
+    pageSize: Number.MAX_SAFE_INTEGER,
   })
 
-  const { filters, page: pageData } = view
+  const { page: pageData } = view
 
-  // Product / plan names for the visible page only.
-  const productIds = Array.from(new Set(pageData.items.map((r) => r.productId).filter((v): v is number => v != null)))
-  const planIds = Array.from(new Set(pageData.items.map((r) => r.planId).filter((v): v is number => v != null)))
+  // Product / plan names for every listed sale (the table filters, sorts and
+  // pages client-side over the full, count-verified list).
   const [products, plans] = await Promise.all([
-    productIds.length
-      ? supabase.from('products').select('product_id, name').eq('tenant_id', tenantId).in('product_id', productIds)
-      : Promise.resolve({ data: [] as { product_id: number; name: string }[] }),
-    planIds.length
-      ? supabase.from('plans').select('plan_id, plan_name').eq('tenant_id', tenantId).in('plan_id', planIds)
-      : Promise.resolve({ data: [] as { plan_id: number; plan_name: string }[] }),
+    fetchAllRows('products', (from, to) =>
+      supabase
+        .from('products')
+        .select('product_id, name', { count: 'exact' })
+        .eq('tenant_id', tenantId)
+        .order('product_id')
+        .range(from, to),
+    ),
+    fetchAllRows('plans', (from, to) =>
+      supabase
+        .from('plans')
+        .select('plan_id, plan_name', { count: 'exact' })
+        .eq('tenant_id', tenantId)
+        .order('plan_id')
+        .range(from, to),
+    ),
   ])
-  const productName = new Map((products.data ?? []).map((p) => [p.product_id, p.name]))
-  const planName = new Map((plans.data ?? []).map((p) => [p.plan_id, p.plan_name]))
+  const productName = new Map(products.map((p) => [p.product_id, p.name]))
+  const planName = new Map(plans.map((p) => [p.plan_id, p.plan_name]))
 
-  const qs = (over: Record<string, string | number | null>) => {
-    const q = new URLSearchParams()
-    const cur: Record<string, string | number | null> = {
-      status: filters.status === 'all' ? null : filters.status,
-      collector: filters.collector === 'all' ? null : filters.collector,
-      currency: filters.currency,
-      from: filters.from,
-      to: filters.to,
-      page: null,
-      ...over,
-    }
-    for (const [k, v] of Object.entries(cur)) if (v != null && v !== '') q.set(k, String(v))
-    const s = q.toString()
-    return `/${locale}/dashboard/admin/earnings${s ? `?${s}` : ''}`
+  const tableRows: EarningsTableRow[] = pageData.items.map((r) => ({
+    transactionId: r.transactionId,
+    label:
+      (r.productId != null && productName.get(r.productId)) ||
+      (r.planId != null && planName.get(r.planId)) ||
+      `#${r.transactionId}`,
+    transactionDate: r.transactionDate,
+    month: new Date(r.transactionDate).toISOString().slice(0, 7),
+    paymentProvider: r.paymentProvider,
+    providerLabel: providerLabel(r.paymentProvider),
+    collectedBy: r.collectedBy,
+    currencyCode: r.currencyCode,
+    kept: r.kept,
+    commission: r.commission,
+    net: r.net,
+    fxRateToUsd: r.fxRateToUsd ?? null,
+    fxRateSource: r.fxRateSource ?? null,
+    status:
+      r.status === 'pending'
+        ? 'pending'
+        : r.status === 'refunded'
+          ? 'refunded'
+          : (r.refundedAmount ?? 0) > 0
+            ? 'partiallyRefunded'
+            : 'successful',
+  }))
+
+  // Legacy ?status= / ?collector= / ?currency= links seed the table's filters.
+  const statusParam = typeof sp.status === 'string' ? sp.status : undefined
+  const collectorParam = typeof sp.collector === 'string' ? sp.collector : undefined
+  const currencyParam = typeof sp.currency === 'string' ? sp.currency.toUpperCase() : undefined
+  const initialFilters: EarningsInitialFilters = {
+    status:
+      statusParam === 'counted'
+        ? ['successful', 'partiallyRefunded']
+        : statusParam === 'pending'
+          ? ['pending']
+          : statusParam === 'refunded'
+            ? ['refunded', 'partiallyRefunded']
+            : undefined,
+    collectedBy: collectorParam === 'school' || collectorParam === 'platform' ? [collectorParam] : undefined,
+    currencyCode: currencyParam && view.currencies.includes(currencyParam) ? [currencyParam] : undefined,
   }
-
-  const statusBadge = (s: string, refunded: boolean) =>
-    s === 'pending' ? (
-      <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px]">{t('status.pending')}</Badge>
-    ) : s === 'refunded' ? (
-      <Badge variant="secondary" className="text-[10px]">{t('status.refunded')}</Badge>
-    ) : refunded ? (
-      <Badge variant="outline" className="text-[10px]">{t('status.partiallyRefunded')}</Badge>
-    ) : (
-      <Badge className="bg-success/10 text-success border-success/30 text-[10px]">{t('status.successful')}</Badge>
-    )
 
   const debtByCurrency = Object.fromEntries(view.feeDebt.map((b) => [b.currency, b.netOwed]))
   const debtSales = view.feeDebt.reduce((n, b) => n + b.sales, 0)
@@ -315,140 +330,10 @@ export default async function AdminEarningsPage({
         <Card>
           <CardHeader className="gap-3">
             <CardTitle>{t('table.title')}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('filters.statusLabel')}>
-              {(['all', 'counted', 'pending', 'refunded'] as const satisfies readonly EarningsStatusFilter[]).map((s) => (
-                <Link key={s} href={qs({ status: s === 'all' ? null : s })} aria-current={filters.status === s ? 'true' : undefined}>
-                  <Button variant={filters.status === s ? 'default' : 'outline'} size="sm" type="button">
-                    {t(`filters.${s}`)}
-                  </Button>
-                </Link>
-              ))}
-            </div>
-            <form method="get" className="flex flex-wrap items-end gap-3" data-testid="earnings-filters">
-              {filters.status !== 'all' && <input type="hidden" name="status" value={filters.status} />}
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {t('filters.collector')}
-                <select name="collector" defaultValue={filters.collector === 'all' ? '' : filters.collector} className="h-8 rounded-md border bg-background px-2 text-sm text-foreground">
-                  {(['all', 'school', 'platform'] as const satisfies readonly EarningsCollectorFilter[]).map((c) => (
-                    <option key={c} value={c === 'all' ? '' : c}>{t(`filters.collectors.${c}`)}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {t('filters.currency')}
-                <select name="currency" defaultValue={filters.currency ?? ''} className="h-8 rounded-md border bg-background px-2 text-sm text-foreground">
-                  <option value="">{t('filters.allCurrencies')}</option>
-                  {view.currencies.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {t('filters.from')}
-                <input type="date" name="from" defaultValue={filters.from ?? ''} className="h-8 rounded-md border bg-background px-2 text-sm text-foreground" />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {t('filters.to')}
-                <input type="date" name="to" defaultValue={filters.to ?? ''} className="h-8 rounded-md border bg-background px-2 text-sm text-foreground" />
-              </label>
-              <Button type="submit" size="sm" variant="outline">{t('filters.apply')}</Button>
-            </form>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table className="text-sm">
-                <TableHeader>
-                  <TableRow>
-                    {(['product', 'date', 'origin', 'collectedBy', 'amount', 'commission', 'net', 'status'] as const).map((h) => (
-                      <TableHead
-                        key={h}
-                        className={`text-[11px] font-medium uppercase tracking-wider text-muted-foreground ${['amount', 'commission', 'net'].includes(h) ? 'text-right' : 'text-left'}`}
-                      >
-                        {t(`table.headers.${h}`)}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pageData.items.length > 0 ? (
-                    pageData.items.map((r) => (
-                      <TableRow
-                        key={r.transactionId}
-                        className="transition-colors hover:bg-muted/40"
-                        data-testid="earnings-row"
-                        data-collector={r.collectedBy}
-                      >
-                        <TableCell className="max-w-[14rem] truncate">
-                          {(r.productId != null && productName.get(r.productId)) ||
-                            (r.planId != null && planName.get(r.planId)) ||
-                            `#${r.transactionId}`}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-                          {formatUtcDate(r.transactionDate, locale)}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{providerLabel(r.paymentProvider)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{t(`table.collectedBy.${r.collectedBy}`)}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatMoney(r.kept, r.currencyCode, locale)}
-                          {r.fxRateToUsd != null && r.fxRateToUsd > 0 && (
-                            // #929: the rate frozen at sale time, so the school can reconcile in its own currency.
-                            <span className="block text-[10px] text-muted-foreground" data-testid="earnings-fx-rate">
-                              {t('table.fxRate', {
-                                currency: r.currencyCode,
-                                rate: new Intl.NumberFormat(locale, { maximumSignificantDigits: 6 }).format(r.fxRateToUsd),
-                                source: r.fxRateSource ?? '—',
-                              })}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatMoney(r.commission, r.currencyCode, locale)}</TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">{formatMoney(r.net, r.currencyCode, locale)}</TableCell>
-                        <TableCell>{statusBadge(r.status, (r.refundedAmount ?? 0) > 0)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={8} className="py-12 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                            <IconReceipt className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{t('empty.title')}</p>
-                            <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">{t('empty.description')}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <EarningsTable rows={tableRows} currencies={view.currencies} initialFilters={initialFilters} />
             <p className="mt-3 text-[11px] text-muted-foreground">{t('table.footnote')}</p>
-
-            {pageData.totalPages > 1 && (
-              <nav className="mt-4 flex items-center justify-between text-sm" aria-label={t('pagination.label')}>
-                <span className="text-xs text-muted-foreground">
-                  {t('pagination.page', { page: pageData.page, total: pageData.totalPages })}
-                </span>
-                <div className="flex gap-2">
-                  {pageData.page > 1 ? (
-                    <Link href={qs({ page: pageData.page - 1 })}>
-                      <Button variant="outline" size="sm" type="button">{t('pagination.prev')}</Button>
-                    </Link>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled>{t('pagination.prev')}</Button>
-                  )}
-                  {pageData.page < pageData.totalPages ? (
-                    <Link href={qs({ page: pageData.page + 1 })}>
-                      <Button variant="outline" size="sm" type="button">{t('pagination.next')}</Button>
-                    </Link>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled>{t('pagination.next')}</Button>
-                  )}
-                </div>
-              </nav>
-            )}
           </CardContent>
         </Card>
       </main>

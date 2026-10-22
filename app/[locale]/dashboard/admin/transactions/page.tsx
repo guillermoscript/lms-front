@@ -1,42 +1,18 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import Link from 'next/link'
-import {
-  IconArrowLeft,
   IconCurrencyDollar,
-  IconCheck,
   IconX,
   IconClock,
 } from '@tabler/icons-react'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { TransactionsTable } from '@/components/admin/transactions-table'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word.charAt(0))
-    .join('')
-    .toUpperCase()
-}
 
 export default async function AdminTransactionsPage({
   params,
@@ -45,9 +21,7 @@ export default async function AdminTransactionsPage({
 }) {
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.transactions')
-  const tm = await getTranslations('dashboard.admin.main')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const dateLocale = locale === 'es' ? es : enUS
   const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
@@ -57,18 +31,36 @@ export default async function AdminTransactionsPage({
 
   const tenantId = await getCurrentTenantId()
 
-  // Get all transactions for this tenant
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .order('transaction_date', { ascending: false })
+  // Every transaction for this tenant, paged and count-verified (#548): the
+  // stat cards below sum this list, and PostgREST silently caps a plain
+  // response at 1000 rows. Stable order on the PK keeps the windows disjoint;
+  // the newest-first display order is applied after.
+  const rows = await fetchAllRows('transactions', (from, to) =>
+    supabase
+      .from('transactions')
+      .select(
+        'transaction_id, user_id, amount, refunded_amount, status, payment_method, transaction_date',
+        { count: 'exact' },
+      )
+      .eq('tenant_id', tenantId)
+      .order('transaction_id')
+      .range(from, to),
+  )
+  const transactions = [...rows].sort(
+    (a, b) => (b.transaction_date ?? '').localeCompare(a.transaction_date ?? ''),
+  )
 
   // Get user profiles for transactions — batch fetch
   const userIds = [...new Set((transactions || []).map((t) => t.user_id).filter(Boolean))]
-  const { data: users } = userIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name').in('id', userIds)
-    : { data: [] }
+  // Chunked: a long `.in()` list overflows the request URL.
+  const users: { id: string; full_name: string | null }[] = []
+  for (let i = 0; i < userIds.length; i += 200) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', userIds.slice(i, i + 200))
+    users.push(...(data || []))
+  }
 
   const usersMap = new Map((users || []).map((u) => [u.id, u]))
 
@@ -173,100 +165,16 @@ export default async function AdminTransactionsPage({
             <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('table.headers.id')}</TableHead>
-                    <TableHead>{t('table.headers.user')}</TableHead>
-                    <TableHead>{t('table.headers.amount')}</TableHead>
-                    <TableHead>{t('table.headers.status')}</TableHead>
-                    <TableHead>{t('table.headers.method')}</TableHead>
-                    <TableHead>{t('table.headers.date')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions && transactions.length > 0 ? (
-                    transactions.map((transaction) => {
-                      const user = usersMap.get(transaction.user_id)
-                      const userName = user?.full_name || t('table.unknown')
-
-                      return (
-                        <TableRow key={transaction.transaction_id}>
-                          <TableCell>
-                            <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
-                              {transaction.transaction_id}
-                            </code>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar size="sm">
-                                <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-                              </Avatar>
-                              <p className="font-medium">{userName}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-semibold tabular-nums">
-                            {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                transaction.status === 'successful'
-                                  ? 'default'
-                                  : transaction.status === 'pending'
-                                    ? 'secondary'
-                                    : transaction.status === 'archived' || transaction.status === 'refunded'
-                                      ? 'secondary'
-                                      : 'destructive'
-                              }
-                              className={`text-[10px] ${transaction.status === 'successful' ? 'bg-success/10 text-success border-success/30' : transaction.status === 'pending' ? 'bg-warning/10 text-warning border-warning/30' : ''}`}
-                            >
-                              {transaction.status === 'successful' && (
-                                <IconCheck className="mr-1 h-3 w-3" />
-                              )}
-                              {transaction.status === 'pending' && (
-                                <IconClock className="mr-1 h-3 w-3" />
-                              )}
-                              {(transaction.status === 'failed' || transaction.status === 'canceled') && (
-                                <IconX className="mr-1 h-3 w-3" />
-                              )}
-                              {tm(`recentActivity.status.${transaction.status}`)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {transaction.payment_method
-                              ? (t.has(`table.methods.${transaction.payment_method}`)
-                                  ? t(`table.methods.${transaction.payment_method}`)
-                                  : transaction.payment_method)
-                              : t('table.notAvailable')}
-                          </TableCell>
-                          <TableCell className="text-xs tabular-nums text-muted-foreground">
-                            {format(new Date(transaction.transaction_date), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-12 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                            <IconCurrencyDollar className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{t('table.empty')}</p>
-                            <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                              {t('description')}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <TransactionsTable
+              transactions={(transactions || []).map((tx) => ({
+                id: String(tx.transaction_id),
+                userName: usersMap.get(tx.user_id)?.full_name ?? null,
+                amount: Number(tx.amount) || 0,
+                status: tx.status,
+                method: tx.payment_method ?? null,
+                date: tx.transaction_date,
+              }))}
+            />
           </CardContent>
         </Card>
       </main>

@@ -1,0 +1,244 @@
+import * as React from "react"
+import {
+  type Cell,
+  type Column,
+  type ColumnDef,
+  type Header,
+  type ReactTable,
+  type Row,
+  type RowData,
+  type TableFeatures,
+} from "@tanstack/react-table"
+import {
+  JOIN_OPERATORS,
+  FILTER_OPERATORS,
+  FILTER_VARIANTS,
+} from "../lib/constants"
+import type { DataTableFeatures } from "../lib/data-table-features"
+
+// ============================================================================
+// TANSTACK REACT-TABLE MODULE AUGMENTATION
+// ============================================================================
+declare module "@tanstack/react-table" {
+  // TypeScript requires an augmentation to repeat the original type parameters
+  // verbatim (same names), so `TFeatures` / `TValue` stay declared even though
+  // only `TData` is referenced below.
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  interface ColumnMeta<
+    TFeatures extends TableFeatures,
+    TData extends RowData,
+    TValue,
+  > {
+    // Display
+    label?: string
+    placeholder?: string
+    /**
+     * Which column absorbs the leftover row width when column resizing is on
+     * (needs `<DataTableColumnResize />`). Filling is ON BY DEFAULT — the first
+     * non-pinned data column flexes automatically — so you rarely set this.
+     *
+     * - `true` overrides the default to flex THIS column instead (use when the
+     *   first column isn't the one that should grow).
+     * - `false` opts this column out of being auto-picked.
+     *
+     * The flex column renders with no width and absorbs the surplus, so every
+     * other column keeps its `size` and a trailing actions/menu column pins to
+     * the right edge. Pure layout — never touches `columnSizing`, so no
+     * persistence side effects. Turn filling off for a whole table with
+     * `TableMeta.disableFlexFill`.
+     */
+    flex?: boolean
+
+    // Filtering
+    variant?: FilterVariant
+    options?: Option[]
+    range?: [number, number]
+    /**
+     * Automatically generate options for select/multiSelect columns if not provided.
+     * When true and no static `options` exist, generation logic (wrappers / hooks) may supply them.
+     */
+    autoOptions?: boolean
+    /** Whether to automatically rename option labels using formatLabel. When false, uses raw value as label. */
+    autoOptionsFormat?: boolean
+    /**
+     * Per-column label formatter applied when options are auto-derived from
+     * row data. Receives the stringified row value and returns the display
+     * label. Wins over `autoOptionsFormat` when present. Ignored when the
+     * caller passes explicit `options`.
+     */
+    formatOptionLabel?: (value: string) => string
+    /** Per-column override for showing counts (falls back to wrapper prop). */
+    showCounts?: boolean
+    /** Per-column override for using filtered rows for counts (falls back to wrapper prop). */
+    dynamicCounts?: boolean
+    /** Merge strategy override: preserve | augment | replace (falls back to wrapper prop). */
+    mergeStrategy?: "preserve" | "augment" | "replace"
+
+    // Formatting
+    unit?: string
+    icon?: React.ComponentType<{ className?: string }>
+
+    // Row Expansion
+    expandedContent?: (row: TData) => React.ReactNode
+  }
+
+  interface TableMeta<TFeatures extends TableFeatures, TData extends RowData> {
+    joinOperator?: JoinOperator
+    hasIndividualJoinOperators?: boolean
+    /**
+     * Turn off default flex fill for the whole table, so columns size to their
+     * own widths and the table scrolls horizontally instead of stretching to
+     * fill. Use for wide, many-column tables meant to scroll.
+     *
+     * Set it statically via `<DataTableRoot meta={{ disableFlexFill: true }}>`
+     * — it's read when table options are built, so toggling it at runtime
+     * alone won't re-apply until another table state change rebuilds them.
+     */
+    disableFlexFill?: boolean
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+}
+
+// ============================================================================
+// CORE TYPES
+// ============================================================================
+
+export interface Option {
+  label: string
+  value: string
+  count?: number
+  icon?: React.ComponentType<{ className?: string }>
+}
+
+// ============================================================================
+// FILTER TYPES
+// ============================================================================
+
+import type {
+  FilterVariant as _FilterVariant,
+  FilterOperator as _FilterOperator,
+  JoinOperator as _JoinOperator,
+} from "../lib/constants"
+
+export type FilterVariant = _FilterVariant
+export type FilterOperator = _FilterOperator
+export type JoinOperator = _JoinOperator
+
+/**
+ * Extended column filter with additional metadata
+ */
+export interface ExtendedColumnFilter<TData> {
+  id: Extract<keyof TData, string>
+  value: string | string[]
+  variant: FilterVariant
+  operator: FilterOperator
+  filterId: string
+  joinOperator?: JoinOperator // Individual join operator for each filter
+  // You can extend with additional properties if needed
+}
+
+/** Global filter type */
+export type GlobalFilter = string | Record<string, unknown>
+
+/**
+ * Extended column sort (for URL state management)
+ */
+export interface ExtendedColumnSort<TData> {
+  id: Extract<keyof TData, string>
+  desc: boolean
+  // You can extend with additional properties if needed
+}
+
+/**
+ * Query keys for URL state management
+ */
+export interface QueryKeys {
+  page?: string
+  perPage?: string
+  sort?: string
+  filters?: string
+  joinOperator?: string
+  // Additional keys can be added as needed
+}
+
+// ============================================================================
+// COLUMN DEFINITION
+// ============================================================================
+
+/**
+ * Extended column definition for data table
+ * Inherits all TanStack Table ColumnDef properties
+ */
+export type DataTableColumnDef<
+  TData extends RowData,
+  TValue = unknown,
+> = ColumnDef<DataTableFeatures, TData, TValue> & {
+  // You can extend with additional properties if needed
+}
+
+/**
+ * Mixed column arrays (plain objects and `createDataTableColumnHelper` results).
+ * Per-column `TValue` varies, so the array uses `any` the same way TanStack's
+ * `columns` option does.
+ */
+export type DataTableColumns<TData extends RowData> = DataTableColumnDef<
+  TData,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any
+>[]
+
+// ============================================================================
+// ROW TYPES
+// ============================================================================
+
+/**
+ * Data table row type
+ * Alias for TanStack Table Row
+ */
+export type DataTableRow<TData extends RowData> = Row<
+  DataTableFeatures,
+  TData
+> & {
+  // You can extend with additional properties if needed
+}
+
+export type DataTableColumn<TData extends RowData, TValue = unknown> = Column<
+  DataTableFeatures,
+  TData,
+  TValue
+>
+
+export type DataTableHeader<TData extends RowData, TValue = unknown> = Header<
+  DataTableFeatures,
+  TData,
+  TValue
+>
+
+export type DataTableCell<TData extends RowData, TValue = unknown> = Cell<
+  DataTableFeatures,
+  TData,
+  TValue
+>
+
+export type DataTableInstance<TData extends RowData> = ReactTable<
+  DataTableFeatures,
+  TData
+> & {
+  // You can extend with additional properties if needed
+}
+
+// ============================================================================
+// CONVENIENCE TYPE HELPERS
+// ============================================================================
+
+/**
+ * Convenience type for accessing constant values with better type safety
+ */
+export type JoinOperatorValues = typeof JOIN_OPERATORS
+export type FilterOperatorValues = typeof FILTER_OPERATORS
+export type FilterVariantValues = typeof FILTER_VARIANTS
+
+/**
+ * Utility type to get the literal values from constant objects
+ */
+export type ValueOf<T> = T[keyof T]

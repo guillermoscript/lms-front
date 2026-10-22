@@ -10,6 +10,7 @@ import { UsersTable } from '@/components/admin/users-table'
 import { InviteUserDialog } from '@/components/admin/invite-user-dialog'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { fetchAuthEmails } from '@/lib/supabase/auth-emails'
 import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 
 export default async function AdminUsersPage() {
@@ -49,13 +50,9 @@ export default async function AdminUsersPage() {
     getSchoolJoinUrl(),
   ])
 
-  // Get emails from auth.users via admin client
-  const profiles = await Promise.all(
-    (rawProfiles || []).map(async (p) => {
-      const { data } = await adminClient.auth.admin.getUserById(p.id)
-      return { ...p, email: data?.user?.email || '' }
-    })
-  )
+  // Get emails from auth.users via one batched listUsers sweep (not N getUserById calls)
+  const emailMap = await fetchAuthEmails(adminClient, (rawProfiles || []).map((p) => p.id))
+  const profiles = (rawProfiles || []).map((p) => ({ ...p, email: emailMap.get(p.id) || '' }))
 
   // Build roles map from tenant_users (authoritative for this tenant)
   const rolesMap = new Map<string, string[]>()

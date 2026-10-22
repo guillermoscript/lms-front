@@ -35,7 +35,6 @@ import {
   IconVideo,
   IconChevronRight,
   IconChartBar,
-  IconLayout,
   IconMessages,
 } from '@tabler/icons-react'
 import { ShareButton } from '@/components/teacher/share-button'
@@ -50,6 +49,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed } from '@/lib/ui-state-keys'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import { getCourseProgressReport, type CourseItem } from '@/lib/analytics/student-progress'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 import { hasVisibleCoursePosts, isCommunityEnabled } from '@/lib/community/access'
@@ -190,12 +191,17 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .order('sequence', { ascending: true }),
-    supabase
-      .from('enrollments')
-      .select('enrollment_id, user_id, course_id, enrollment_date, status, tenant_id')
-      .eq('course_id', parseInt(courseId))
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active'),
+    // Every active enrollment (a plain read is capped at 1000 rows).
+    fetchAllRows('enrollments', (from, to) =>
+      supabase
+        .from('enrollments')
+        .select('enrollment_id, user_id, course_id, enrollment_date, status, tenant_id', { count: 'exact' })
+        .eq('course_id', parseInt(courseId))
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .order('enrollment_id')
+        .range(from, to)
+    ),
     supabase
       .from('certificate_templates')
       .select('*')
@@ -225,17 +231,22 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
   const exams = examsRes.data || []
-  const rawEnrollments = enrollmentsRes.data || []
+  const rawEnrollments = enrollmentsRes
   const certificateTemplate = certificateTemplateRes.data
   const issuedCertificates = issuedCertificatesRes.data || []
 
   // Fetch profiles for enrolled users (no FK between enrollments and profiles).
   // Filter nulls + dedupe: a null id makes PostgREST reject the whole .in() query.
   const enrolledUserIds = [...new Set(rawEnrollments.map((e) => e.user_id).filter(Boolean))]
-  const { data: enrollmentProfiles } = enrolledUserIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', enrolledUserIds)
-    : { data: [] }
-  const profilesMap = new Map((enrollmentProfiles || []).map((p) => [p.id, p]))
+  const enrollmentProfiles = await fetchAllRowsIn('profiles', enrolledUserIds, (chunk, from, to) =>
+    supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url', { count: 'exact' })
+      .in('id', chunk)
+      .order('id')
+      .range(from, to)
+  )
+  const profilesMap = new Map(enrollmentProfiles.map((p) => [p.id, p]))
 
   // The email/password sign-up form never collects a name (only Google gives one),
   // so handle_new_user() leaves profiles.full_name NULL and every row rendered
@@ -341,24 +352,6 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                   >
                     <IconMessages className="h-3.5 w-3.5" />
                     {tc('title')}
-                  </Button>
-                )}
-                {/* The landing builder is admin-only; it opens this course's page or creates one. */}
-                {isAdmin && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    nativeButton={false}
-                    render={
-                      <Link
-                        href={`/dashboard/admin/landing-page?newForCourse=${course.course_id}`}
-                        data-testid="course-landing-page-link"
-                      />
-                    }
-                  >
-                    <IconLayout className="h-3.5 w-3.5" />
-                    {t('landingPage')}
                   </Button>
                 )}
                 <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
