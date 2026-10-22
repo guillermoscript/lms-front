@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { IconFile, IconLoader2, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconFile, IconLoader2, IconSearch } from '@tabler/icons-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -12,12 +12,12 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import {
   deleteTenantAsset,
-  getAssetUsage,
   listTenantAssets,
   type AssetKind,
   type AssetSource,
   type TenantAsset,
 } from '@/app/actions/assets'
+import { AssetDetailDialog, formatSize } from './asset-detail-dialog'
 import { AssetUploader, LIBRARY_BUCKET } from './asset-uploader'
 
 const SOURCES: AssetSource[] = [
@@ -28,12 +28,6 @@ const SOURCES: AssetSource[] = [
   'ai_generated',
   'library',
 ]
-
-function formatSize(bytes: number | null) {
-  if (!bytes) return ''
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 interface AssetLibraryProps {
   /** `manage` shows size, source and delete; `pick` returns the URL of the clicked asset. */
@@ -57,12 +51,14 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
   const [usedBytes, setUsedBytes] = useState(0)
   const [page, setPage] = useState(0)
   const [source, setSource] = useState<AssetSource | undefined>()
+  const [unusedOnly, setUnusedOnly] = useState(false)
+  const [selected, setSelected] = useState<TenantAsset | null>(null)
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [loadedKey, setLoadedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
-  const [toDelete, setToDelete] = useState<{ asset: TenantAsset; description: string } | null>(null)
+  const [toDelete, setToDelete] = useState<TenantAsset | null>(null)
   const requestId = useRef(0)
 
   useEffect(() => {
@@ -70,12 +66,12 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
     return () => clearTimeout(id)
   }, [search])
 
-  const key = `${kind}|${source}|${debounced}|${page}|${reloadKey}`
+  const key = `${kind}|${source}|${unusedOnly}|${debounced}|${page}|${reloadKey}`
   const loading = loadedKey !== key
 
   useEffect(() => {
     const current = ++requestId.current
-    void listTenantAssets({ kind, source, search: debounced, page }).then((res) => {
+    void listTenantAssets({ kind, source, search: debounced, usage: unusedOnly ? 'unused' : undefined, page }).then((res) => {
       if (current !== requestId.current) return
       if (res.success) {
         setAssets(res.assets)
@@ -88,7 +84,7 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
       }
       setLoadedKey(key)
     })
-  }, [kind, source, debounced, page, key])
+  }, [kind, source, unusedOnly, debounced, page, key])
 
   const handleUploaded = useCallback(
     (paths: string[]) => {
@@ -102,22 +98,12 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
     [mode, onSelect]
   )
 
-  const askDelete = async (asset: TenantAsset) => {
-    const res = await getAssetUsage(asset.assetId)
-    const usages = res.success ? res.usages : []
-    setToDelete({
-      asset,
-      description: usages.length
-        ? t('deleteInUse', { count: usages.length, where: usages.map((u) => u.label).join(', ') })
-        : t('deleteUnused'),
-    })
-  }
-
   const confirmDelete = async () => {
     if (!toDelete) return
-    const res = await deleteTenantAsset(toDelete.asset.assetId)
+    const res = await deleteTenantAsset(toDelete.assetId)
     if (res.success) {
       toast.success(t('deleted'))
+      setSelected(null)
       setReloadKey((k) => k + 1)
     } else {
       toast.error(res.error)
@@ -161,6 +147,18 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
               {s ? t(`sources.${s}`) : t('all')}
             </Button>
           ))}
+          <Button
+            type="button"
+            size="sm"
+            variant={unusedOnly ? 'default' : 'outline'}
+            aria-pressed={unusedOnly}
+            onClick={() => {
+              setUnusedOnly(!unusedOnly)
+              setPage(0)
+            }}
+          >
+            {t('unusedOnly')}
+          </Button>
         </div>
       </div>
 
@@ -191,10 +189,9 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
             <li key={asset.assetId} className="group relative overflow-hidden rounded-md border bg-card">
               <button
                 type="button"
-                disabled={mode === 'manage' && !onSelect}
-                onClick={() => onSelect?.(asset.url)}
+                onClick={() => (mode === 'pick' ? onSelect?.(asset.url) : setSelected(asset))}
                 className="block w-full text-left focus-visible:outline-2 focus-visible:outline-ring"
-                aria-label={mode === 'pick' ? t('select', { name: asset.name }) : asset.name}
+                aria-label={mode === 'pick' ? t('select', { name: asset.name }) : t('details', { name: asset.name })}
               >
                 {asset.kind === 'image' ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -218,19 +215,18 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {t(`sources.${asset.source}`)}
+                      {asset.uploadedBy?.name ? ` · ${asset.uploadedBy.name}` : ''}
                       {asset.sizeBytes ? ` · ${formatSize(asset.sizeBytes)}` : ''}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="shrink-0"
-                    aria-label={t('delete', { name: asset.name })}
-                    onClick={() => void askDelete(asset)}
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2 py-0.5 text-xs',
+                      asset.usages.length > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                    )}
                   >
-                    <IconTrash className="h-4 w-4" />
-                  </Button>
+                    {asset.usages.length > 0 ? t('usedCount', { count: asset.usages.length }) : t('unused')}
+                  </span>
                 </div>
               )}
             </li>
@@ -256,11 +252,22 @@ export function AssetLibrary({ mode = 'manage', kind, onSelect, className }: Ass
         </div>
       )}
 
+      <AssetDetailDialog asset={selected} onOpenChange={(o) => !o && setSelected(null)} onDelete={setToDelete} />
+
       <ConfirmDialog
         open={!!toDelete}
         onOpenChange={(open) => !open && setToDelete(null)}
-        title={t('deleteTitle', { name: toDelete?.asset.name ?? '' })}
-        description={toDelete?.description ?? ''}
+        title={t('deleteTitle', { name: toDelete?.name ?? '' })}
+        description={
+          toDelete && toDelete.usages.length > 0
+            ? t('deleteInUse', {
+                count: toDelete.usages.length,
+                where: toDelete.usages
+                  .map((u) => (u.name ? `${t(`usageTypes.${u.type}`)}: ${u.name}` : t(`usageTypes.${u.type}`)))
+                  .join(', '),
+              })
+            : t('deleteUnused')
+        }
         confirmText={t('deleteConfirm')}
         cancelText={t('cancel')}
         variant="destructive"

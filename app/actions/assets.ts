@@ -15,6 +15,21 @@ export type AssetSource =
   | 'library'
   | 'other'
 
+export type AssetUsageType =
+  | 'course'
+  | 'lesson'
+  | 'certificate'
+  | 'landing_page'
+  | 'setting'
+  | 'school_logo'
+  | 'community_post'
+
+export interface AssetUsage {
+  type: AssetUsageType
+  name: string
+  href: string | null
+}
+
 export interface TenantAsset {
   assetId: string
   name: string
@@ -26,16 +41,15 @@ export interface TenantAsset {
   kind: AssetKind
   source: AssetSource
   createdAt: string
-}
-
-export interface AssetUsage {
-  label: string
-  href: string | null
+  uploadedBy: { id: string; name: string } | null
+  /** Live: computed from the school's content every time the library loads. */
+  usages: AssetUsage[]
 }
 
 type Result<T> = ({ success: true } & T) | { success: false; error: string }
 
 const PAGE_SIZE = 48
+const UNUSED_SCAN_LIMIT = 2000
 
 async function requireStaff() {
   const role = await getUserRole()
@@ -43,45 +57,167 @@ async function requireStaff() {
   return { role, tenantId: await getCurrentTenantId() }
 }
 
+interface UsageEntry extends AssetUsage {
+  haystack: string
+}
+
 /**
- * The school's asset library, newest first. Reads through RLS
- * (`is_staff_of(tenant_id)`) with the tenant filter on top.
+ * Everything in the school that can embed an uploaded file, as searchable
+ * text. Built once per request and matched against each asset's
+ * `bucket/path`, so usage is always current — nothing to keep in sync.
+ */
+async function buildUsageIndex(tenantId: string): Promise<UsageEntry[]> {
+  const admin = createAdminClient()
+  const [courses, lessons, templates, pages, settings, tenant, posts] = await Promise.all([
+    admin.from('courses').select('course_id, title, thumbnail_url').eq('tenant_id', tenantId).limit(2000),
+    admin
+      .from('lessons')
+      .select('id, course_id, title, image, video_url, content')
+      .eq('tenant_id', tenantId)
+      .limit(5000),
+    admin
+      .from('certificate_templates')
+      .select('template_name, course_id, logo_url, signature_image_url')
+      .eq('tenant_id', tenantId),
+    admin.from('landing_pages').select('title, puck_data').eq('tenant_id', tenantId),
+    admin.from('tenant_settings').select('setting_key, setting_value').eq('tenant_id', tenantId),
+    admin.from('tenants').select('logo_url').eq('id', tenantId).maybeSingle(),
+    admin
+      .from('community_posts')
+      .select('title, content, media_urls')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(2000),
+  ])
+
+  const index: UsageEntry[] = []
+  for (const c of courses.data ?? []) {
+    index.push({
+      type: 'course',
+      name: c.title,
+      href: `/dashboard/teacher/courses/${c.course_id}`,
+      haystack: c.thumbnail_url ?? '',
+    })
+  }
+  for (const l of lessons.data ?? []) {
+    index.push({
+      type: 'lesson',
+      name: l.title ?? '',
+      href: l.course_id ? `/dashboard/teacher/courses/${l.course_id}/lessons/${l.id}` : null,
+      haystack: `${l.image ?? ''} ${l.video_url ?? ''} ${l.content ?? ''}`,
+    })
+  }
+  for (const t of templates.data ?? []) {
+    index.push({
+      type: 'certificate',
+      name: t.template_name,
+      href: t.course_id ? `/dashboard/teacher/courses/${t.course_id}/certificates` : null,
+      haystack: `${t.logo_url ?? ''} ${t.signature_image_url ?? ''}`,
+    })
+  }
+  for (const p of pages.data ?? []) {
+    index.push({
+      type: 'landing_page',
+      name: p.title,
+      href: '/dashboard/admin/landing-page',
+      haystack: JSON.stringify(p.puck_data ?? {}),
+    })
+  }
+  for (const st of settings.data ?? []) {
+    index.push({
+      type: 'setting',
+      name: st.setting_key,
+      href: '/dashboard/admin/appearance',
+      haystack: JSON.stringify(st.setting_value ?? ''),
+    })
+  }
+  if (tenant.data?.logo_url) {
+    index.push({
+      type: 'school_logo',
+      name: '',
+      href: '/dashboard/admin/appearance',
+      haystack: tenant.data.logo_url,
+    })
+  }
+  for (const post of posts.data ?? []) {
+    index.push({
+      type: 'community_post',
+      name: post.title ?? '',
+      href: '/dashboard/admin/community',
+      haystack: `${post.content} ${JSON.stringify(post.media_urls ?? [])}`,
+    })
+  }
+  return index
+}
+
+function usagesOf(index: UsageEntry[], bucket: string, path: string): AssetUsage[] {
+  const needle = `${bucket}/${path}`
+  return index
+    .filter((e) => e.haystack.includes(needle))
+    .map(({ type, name, href }) => ({ type, name, href }))
+}
+
+/**
+ * The school's asset library, newest first, with who uploaded each file and
+ * where it is used. Reads through RLS (`is_staff_of(tenant_id)`) with the
+ * tenant filter on top.
  */
 export async function listTenantAssets(opts: {
   kind?: AssetKind
   source?: AssetSource
   search?: string
+  /** `unused`: only files nothing in the school references. */
+  usage?: 'unused'
   page?: number
 }): Promise<Result<{ assets: TenantAsset[]; total: number; pageSize: number; usedBytes: number }>> {
   try {
     const { tenantId } = await requireStaff()
     const supabase = await createClient()
     const page = Math.max(0, opts.page ?? 0)
+    const unusedOnly = opts.usage === 'unused'
 
     let query = supabase
       .from('tenant_assets')
       .select('*', { count: 'exact' })
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+    query = unusedOnly
+      ? query.range(0, UNUSED_SCAN_LIMIT - 1)
+      : query.range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
     if (opts.kind) query = query.eq('kind', opts.kind)
     if (opts.source) query = query.eq('source', opts.source)
     const search = opts.search?.trim().replace(/[%_,()]/g, '')
     if (search) query = query.ilike('name', `%${search}%`)
 
-    const { data, error, count } = await query
+    const [{ data, error, count }, { data: sizes }, index] = await Promise.all([
+      query,
+      // Storage used by the whole school (not just this page / filter).
+      supabase.from('tenant_assets').select('size_bytes').eq('tenant_id', tenantId).limit(10000),
+      buildUsageIndex(tenantId),
+    ])
     if (error) throw error
-
-    // Storage used by the whole school (not just this page / filter).
-    const { data: sizes } = await supabase
-      .from('tenant_assets')
-      .select('size_bytes')
-      .eq('tenant_id', tenantId)
-      .limit(10000)
     const usedBytes = (sizes ?? []).reduce((sum, r) => sum + (r.size_bytes ?? 0), 0)
 
+    let rows = (data ?? []).map((r) => ({ row: r, usages: usagesOf(index, r.bucket, r.path) }))
+    let total = count ?? rows.length
+    if (unusedOnly) {
+      rows = rows.filter((r) => r.usages.length === 0)
+      total = rows.length
+      rows = rows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+    }
+
+    const uploaderIds = [...new Set(rows.map((r) => r.row.uploaded_by).filter((id): id is string => !!id))]
     const admin = createAdminClient()
-    const assets = (data ?? []).map((r): TenantAsset => ({
+    const names = new Map<string, string>()
+    if (uploaderIds.length > 0) {
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('id, full_name, username')
+        .in('id', uploaderIds)
+      for (const p of profiles ?? []) names.set(p.id, p.full_name || p.username || '')
+    }
+
+    const assets = rows.map(({ row: r, usages }): TenantAsset => ({
       assetId: r.asset_id,
       name: r.name,
       url: admin.storage.from(r.bucket).getPublicUrl(r.path).data.publicUrl,
@@ -92,69 +228,13 @@ export async function listTenantAssets(opts: {
       kind: r.kind as AssetKind,
       source: r.source as AssetSource,
       createdAt: r.created_at,
+      uploadedBy: r.uploaded_by ? { id: r.uploaded_by, name: names.get(r.uploaded_by) ?? '' } : null,
+      usages,
     }))
 
-    return { success: true, assets, total: count ?? assets.length, pageSize: PAGE_SIZE, usedBytes }
+    return { success: true, assets, total, pageSize: PAGE_SIZE, usedBytes }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to list assets' }
-  }
-}
-
-/** Where an asset is referenced, so deleting it never silently breaks a page. */
-async function findUsages(tenantId: string, bucket: string, path: string): Promise<AssetUsage[]> {
-  const admin = createAdminClient()
-  const url = admin.storage.from(bucket).getPublicUrl(path).data.publicUrl
-  const usages: AssetUsage[] = []
-
-  const [courses, templates, pages, settings] = await Promise.all([
-    admin
-      .from('courses')
-      .select('course_id, title')
-      .eq('tenant_id', tenantId)
-      .eq('thumbnail_url', url),
-    admin
-      .from('certificate_templates')
-      .select('template_id, template_name, logo_url, signature_image_url')
-      .eq('tenant_id', tenantId),
-    admin.from('landing_pages').select('page_id, title, puck_data').eq('tenant_id', tenantId),
-    admin.from('tenant_settings').select('setting_key, setting_value').eq('tenant_id', tenantId),
-  ])
-
-  for (const c of courses.data ?? []) {
-    usages.push({ label: `Course: ${c.title}`, href: `/dashboard/teacher/courses/${c.course_id}` })
-  }
-  for (const t of templates.data ?? []) {
-    if (t.logo_url === url || t.signature_image_url === url) {
-      usages.push({ label: `Certificate: ${t.template_name}`, href: null })
-    }
-  }
-  for (const p of pages.data ?? []) {
-    if (JSON.stringify(p.puck_data ?? {}).includes(url)) {
-      usages.push({ label: `Landing page: ${p.title}`, href: '/dashboard/admin/landing-page' })
-    }
-  }
-  for (const s of settings.data ?? []) {
-    if (JSON.stringify(s.setting_value ?? '').includes(url)) {
-      usages.push({ label: `Setting: ${s.setting_key}`, href: '/dashboard/admin/settings' })
-    }
-  }
-  return usages
-}
-
-export async function getAssetUsage(assetId: string): Promise<Result<{ usages: AssetUsage[] }>> {
-  try {
-    const { tenantId } = await requireStaff()
-    const supabase = await createClient()
-    const { data: asset } = await supabase
-      .from('tenant_assets')
-      .select('bucket, path')
-      .eq('asset_id', assetId)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
-    if (!asset) return { success: false, error: 'Asset not found' }
-    return { success: true, usages: await findUsages(tenantId, asset.bucket, asset.path) }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to check usage' }
   }
 }
 

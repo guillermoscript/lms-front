@@ -9795,6 +9795,31 @@
     "cancel": "Cancelar",
     "previous": "Anterior",
     "next": "Siguiente",
-    "pageOf": "Página {page} de {count}"
+    "pageOf": "Página {page} de {count}",
+    "unusedOnly": "Solo sin usar",
+    "unused": "Sin usar",
+    "usedCount": "Usado en {count}",
+    "details": "Detalles de {name}",
+    "urlCopied": "URL copiada",
+    "copyFailed": "No se pudo copiar la URL",
+    "uploadedBy": "Subido por",
+    "uploadedOn": "Subido el",
+    "size": "Tamaño",
+    "type": "Tipo",
+    "unknownUser": "Usuario desconocido",
+    "unknownUploader": "Sin registro (subido antes del seguimiento)",
+    "usedIn": "Usado en",
+    "notUsed": "Nada en tu escuela usa este archivo.",
+    "copyUrl": "Copiar URL",
+    "openOriginal": "Abrir original",
+    "usageTypes": {
+      "course": "Portada de curso",
+      "lesson": "Lección",
+      "certificate": "Certificado",
+      "landing_page": "Página de inicio",
+      "setting": "Ajuste",
+      "school_logo": "Logo de la escuela",
+      "community_post": "Publicación de la comunidad"
+    }
   }
 }

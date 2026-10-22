@@ -9795,6 +9795,31 @@
     "cancel": "Cancel",
     "previous": "Previous",
     "next": "Next",
-    "pageOf": "Page {page} of {count}"
+    "pageOf": "Page {page} of {count}",
+    "unusedOnly": "Unused only",
+    "unused": "Unused",
+    "usedCount": "Used in {count}",
+    "details": "Details of {name}",
+    "urlCopied": "URL copied",
+    "copyFailed": "Could not copy the URL",
+    "uploadedBy": "Uploaded by",
+    "uploadedOn": "Uploaded on",
+    "size": "Size",
+    "type": "Type",
+    "unknownUser": "Unknown user",
+    "unknownUploader": "Not recorded (uploaded before tracking)",
+    "usedIn": "Used in",
+    "notUsed": "Nothing in your school uses this file.",
+    "copyUrl": "Copy URL",
+    "openOriginal": "Open original",
+    "usageTypes": {
+      "course": "Course cover",
+      "lesson": "Lesson",
+      "certificate": "Certificate",
+      "landing_page": "Landing page",
+      "setting": "Setting",
+      "school_logo": "School logo",
+      "community_post": "Community post"
+    }
   }
 }

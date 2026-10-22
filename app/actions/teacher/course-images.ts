@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { recordAssetUploader } from '@/lib/assets/record-uploader'
 import { nanoid } from 'nanoid'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -41,6 +42,7 @@ export async function uploadCourseImage(
       .upload(filePath, file, { contentType: file.type, upsert: false })
 
     if (error) throw error
+    await recordAssetUploader('course-images', filePath, user.id)
 
     const { data: urlData } = adminClient.storage
       .from('course-images')

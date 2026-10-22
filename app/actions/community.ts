@@ -1,5 +1,6 @@
 'use server'
 
+import { recordAssetUploader } from '@/lib/assets/record-uploader'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -983,6 +984,7 @@ export async function uploadCommunityAsset(
       })
 
     if (error) throw error
+    await recordAssetUploader('community-assets', filePath, userId)
 
     const { data: urlData } = adminClient.storage
       .from('community-assets')
