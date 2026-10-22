@@ -2601,16 +2601,7 @@
       },
       "imagePicker": {
         "title": "Choose an image",
-        "description": "Reuse an image you already uploaded or add a new one.",
-        "libraryTab": "My images",
-        "uploadTab": "Upload new",
-        "empty": "No images yet. Upload your first one.",
-        "selectImage": "Use image {name}",
-        "dropHint": "Drag an image here or click to browse",
-        "limits": "JPEG, PNG, GIF or WebP · up to 5MB",
-        "uploading": "Uploading…",
-        "uploadError": "Could not upload the image",
-        "cancel": "Cancel"
+        "description": "Reuse an image you already uploaded or add a new one."
       }
     },
     "admin": {
@@ -2801,7 +2792,8 @@
         "monetization": "Monetization",
         "appearance": "Appearance",
         "website": "Website",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "assets": "Assets"
       },
       "appearance": {
         "title": "Appearance",
@@ -5039,7 +5031,8 @@
     "community": "Community",
     "profile": "Profile",
     "flashcardReviews": "Flashcard Review",
-    "webhooks": "Webhooks"
+    "webhooks": "Webhooks",
+    "assets": "Assets"
   },
   "userNav": {
     "profile": "Profile",
@@ -9924,6 +9917,60 @@
       "not_found": "Endpoint not found.",
       "limit_reached": "Endpoint limit reached. Delete one first.",
       "internal": "Something went wrong. Try again."
+    }
+  },
+  "assets": {
+    "title": "Assets",
+    "description": "Every image your school has uploaded — course covers, landing page, certificates, community and AI images — in one place.",
+    "searchPlaceholder": "Search by file name",
+    "filterBySource": "Filter by where it was used",
+    "all": "All",
+    "sources": {
+      "course": "Course covers",
+      "landing_page": "Landing page",
+      "certificate": "Certificates",
+      "community": "Community",
+      "ai_generated": "AI generated",
+      "library": "Library",
+      "other": "Other"
+    },
+    "summary": "{count, plural, one {# file} other {# files}} · {size} used",
+    "empty": "No files yet. Drop an image above to add your first one.",
+    "select": "Use {name}",
+    "delete": "Delete {name}",
+    "deleted": "File deleted",
+    "deleteTitle": "Delete {name}?",
+    "deleteInUse": "This file is used in {count, plural, one {# place} other {# places}}: {where}. Deleting it will leave a broken image there.",
+    "deleteUnused": "Nothing in your school uses this file. This cannot be undone.",
+    "deleteConfirm": "Delete",
+    "cancel": "Cancel",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {count}",
+    "unusedOnly": "Unused only",
+    "unused": "Unused",
+    "usedCount": "Used in {count}",
+    "details": "Details of {name}",
+    "urlCopied": "URL copied",
+    "copyFailed": "Could not copy the URL",
+    "uploadedBy": "Uploaded by",
+    "uploadedOn": "Uploaded on",
+    "size": "Size",
+    "type": "Type",
+    "unknownUser": "Unknown user",
+    "unknownUploader": "Not recorded (uploaded before tracking)",
+    "usedIn": "Used in",
+    "notUsed": "Nothing in your school uses this file.",
+    "copyUrl": "Copy URL",
+    "openOriginal": "Open original",
+    "usageTypes": {
+      "course": "Course cover",
+      "lesson": "Lesson",
+      "certificate": "Certificate",
+      "landing_page": "Landing page",
+      "setting": "Setting",
+      "school_logo": "School logo",
+      "community_post": "Community post"
     }
   }
 }

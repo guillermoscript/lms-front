@@ -3,6 +3,7 @@
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { recordAssetUploader } from '@/lib/assets/record-uploader'
 import { nanoid } from 'nanoid'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
@@ -50,6 +51,7 @@ export async function uploadCertificateAsset(
       })
 
     if (error) throw error
+    await recordAssetUploader('landing-page-assets', filePath)
 
     const { data: urlData } = adminClient.storage
       .from('landing-page-assets')

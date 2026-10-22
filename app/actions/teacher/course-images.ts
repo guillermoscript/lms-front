@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { recordAssetUploader } from '@/lib/assets/record-uploader'
 import { nanoid } from 'nanoid'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -41,6 +42,7 @@ export async function uploadCourseImage(
       .upload(filePath, file, { contentType: file.type, upsert: false })
 
     if (error) throw error
+    await recordAssetUploader('course-images', filePath, user.id)
 
     const { data: urlData } = adminClient.storage
       .from('course-images')
@@ -51,69 +53,6 @@ export async function uploadCourseImage(
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to upload image',
-    }
-  }
-}
-
-export interface CourseLibraryImage {
-  name: string
-  url: string
-  createdAt: string | null
-}
-
-const LIBRARY_LIMIT = 200
-
-/**
- * Every image already in this school's folder of the `course-images` bucket —
- * direct uploads at the root plus AI-generated ones one folder down — newest
- * first, so teachers reuse an image instead of uploading it again.
- */
-export async function listCourseImages(): Promise<
-  { success: true; images: CourseLibraryImage[] } | { success: false; error: string }
-> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Not authenticated' }
-
-    const role = await getUserRole()
-    if (role !== 'teacher' && role !== 'admin') {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    const tenantId = await getCurrentTenantId()
-    const bucket = createAdminClient().storage.from('course-images')
-    const listOpts = { limit: LIBRARY_LIMIT, sortBy: { column: 'created_at', order: 'desc' } as const }
-
-    const { data: root, error } = await bucket.list(tenantId, listOpts)
-    if (error) throw error
-
-    const folders = (root ?? []).filter((e) => !e.id).slice(0, 10)
-    const nested = await Promise.all(
-      folders.map(async (f) => {
-        const { data } = await bucket.list(`${tenantId}/${f.name}`, listOpts)
-        return (data ?? []).filter((e) => e.id).map((e) => ({ ...e, path: `${tenantId}/${f.name}/${e.name}` }))
-      })
-    )
-    const files = [
-      ...(root ?? []).filter((e) => e.id).map((e) => ({ ...e, path: `${tenantId}/${e.name}` })),
-      ...nested.flat(),
-    ].filter((e) => /\.(jpe?g|png|gif|webp)$/i.test(e.name))
-
-    const images = files
-      .map((e) => ({
-        name: e.name,
-        url: bucket.getPublicUrl(e.path).data.publicUrl,
-        createdAt: e.created_at ?? null,
-      }))
-      .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
-      .slice(0, LIBRARY_LIMIT)
-
-    return { success: true, images }
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Failed to list images',
     }
   }
 }
