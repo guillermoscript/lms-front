@@ -10,6 +10,8 @@ import {
 import { CoursesTable } from '@/components/admin/courses-table'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminCoursesPage() {
@@ -26,43 +28,68 @@ export default async function AdminCoursesPage() {
 
   // Enrollment + lesson counts don't depend on the course list, so start them
   // immediately — they run concurrently with the courses query instead of behind it.
-  const enrollmentsPromise = supabase.from('enrollments').select('course_id').eq('tenant_id', tenantId)
-  const lessonsPromise = supabase.from('lessons').select('course_id').eq('tenant_id', tenantId)
+  // All reads are paged and count-verified: a plain select is silently capped at 1000 rows.
+  const enrollmentsPromise = fetchAllRows('enrollments', (from, to) =>
+    supabase
+      .from('enrollments')
+      .select('course_id', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('enrollment_id')
+      .range(from, to),
+  )
+  const lessonsPromise = fetchAllRows('lessons', (from, to) =>
+    supabase
+      .from('lessons')
+      .select('course_id', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('id')
+      .range(from, to),
+  )
 
   // Only select the columns the table actually renders (avoid serializing unused
   // course fields into the client component's props).
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('course_id, title, description, status, thumbnail_url, published_at, author_id')
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
+  const courses = await fetchAllRows('courses', (from, to) =>
+    supabase
+      .from('courses')
+      .select('course_id, title, description, status, thumbnail_url, published_at, author_id', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .order('course_id')
+      .range(from, to),
+  )
 
   // Author profiles depend on the course list. Some courses (e.g. system/AI-generated) have no
   // author_id — filter nulls out, otherwise PostgREST's .in() rejects the query and every row
   // falls back to "Unknown".
-  const authorIds = [...new Set(courses?.map((c) => c.author_id).filter((id): id is string => Boolean(id)))]
+  const authorIds = [...new Set(courses.map((c) => c.author_id).filter((id): id is string => Boolean(id)))]
 
-  const [{ data: authors }, { data: enrollments }, { data: lessons }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, avatar_url')
-      .in('id', authorIds.length > 0 ? authorIds : ['none']),
+  const [authors, enrollments, lessons] = await Promise.all([
+    fetchAllRowsIn('profiles', authorIds, (chunk, from, to) =>
+      supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url', { count: 'exact' })
+        .in('id', chunk)
+        .order('id')
+        .range(from, to),
+    ),
     enrollmentsPromise,
     lessonsPromise,
   ])
 
-  const authorsMap = new Map(authors?.map((a) => [a.id, a]))
+  const authorsMap = new Map(authors.map((a) => [a.id, a]))
 
   const enrollmentCounts = new Map<number, number>()
-  enrollments?.forEach((e) => {
+  enrollments.forEach((e) => {
     enrollmentCounts.set(e.course_id, (enrollmentCounts.get(e.course_id) || 0) + 1)
   })
 
   const lessonCounts = new Map<number, number>()
-  lessons?.forEach((l) => {
+  lessons.forEach((l) => {
     lessonCounts.set(l.course_id, (lessonCounts.get(l.course_id) || 0) + 1)
   })
 
-  const publishedCount = courses?.filter((c) => c.status === 'published').length || 0
-  const draftCount = courses?.filter((c) => c.status === 'draft').length || 0
+  const publishedCount = courses.filter((c) => c.status === 'published').length
+  const draftCount = courses.filter((c) => c.status === 'draft').length
 
   return (
     <div className="min-h-screen bg-background" data-testid="admin-courses-page">
@@ -85,7 +112,7 @@ export default async function AdminCoursesPage() {
             {/* Admins create courses through the teacher editor. Without this
                 entry point the page reads as a read-only report and admins
                 cannot find how to add a course (Sentry LMS-FRONT-9N). */}
-            <Button size="sm" className="gap-2" render={<Link href="/dashboard/admin/courses/new" />} data-testid="admin-create-course">
+            <Button size="sm" className="gap-2" nativeButton={false} render={<Link href="/dashboard/admin/courses/new" />} data-testid="admin-create-course">
               <IconPlus className="h-3.5 w-3.5" />
               {t('createCourse')}
             </Button>
@@ -101,7 +128,7 @@ export default async function AdminCoursesPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight">{courses?.length || 0}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{courses.length}</p>
                 </div>
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
                   <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
@@ -146,7 +173,7 @@ export default async function AdminCoursesPage() {
           </CardHeader>
           <CardContent>
             <CoursesTable
-              courses={courses || []}
+              courses={courses}
               authorsMap={authorsMap}
               lessonCounts={lessonCounts}
               enrollmentCounts={enrollmentCounts}

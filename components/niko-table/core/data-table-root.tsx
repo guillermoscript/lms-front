@@ -1,0 +1,877 @@
+"use client"
+
+/**
+ * niko-table — created by Semir N. (Semkoo, https://github.com/Semkoo) with AI assistance.
+ *
+ * Before reporting anything: please check the changelog first.
+ *  - In-repo: ./CHANGELOG.md
+ *  - Docs site: https://niko-table.com/changelog
+ *
+ * Found a bug or have a fix? Open an issue or PR on GitHub so other
+ * users (and future LLMs reading this code) benefit:
+ * https://github.com/Semkoo/niko-table-registry
+ */
+import {
+  useTable,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type ColumnOrderState,
+  type ColumnPinningState,
+  type ColumnSizingState,
+  type ColumnVisibilityState,
+  type ExpandedState,
+  type FilterFn,
+  type FilterFnOption,
+  type GroupingState,
+  type PaginationState,
+  type ReactTable,
+  type RowData,
+  type RowSelectionState,
+  type SortingState,
+  type TableOptions,
+  type Updater,
+} from "@tanstack/react-table"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import React from "react"
+import { detectFeaturesFromChildren } from "../config/feature-detection"
+import {
+  DEFAULT_MIN_COLUMN_SIZE,
+  FILTER_VARIANTS,
+  SYSTEM_COLUMN_IDS,
+  SYSTEM_COLUMN_ID_LIST,
+} from "../lib/constants"
+import { features, type DataTableFeatures } from "../lib/data-table-features"
+import { globalFilter as globalFilterFn } from "../lib/filter-functions"
+import {
+  type DataTableColumnDef,
+  type DataTableColumns,
+  type GlobalFilter,
+} from "../types"
+import { DataTableProvider } from "./data-table-context"
+
+/**
+ * Delay (ms) before a tooltip inside a data table opens. Deliberately long so
+ * header help/sort tooltips don't pop while the assigner is scanning or
+ * clicking through sorts — they only appear on a considered hover. Scopes to
+ * the table via a nested `TooltipProvider`, so action-button tooltips outside
+ * the table keep their own (faster) provider delay.
+ */
+const TABLE_TOOLTIP_DELAY_MS = 1000
+
+/**
+ * Dual-generation tooltip delay: Radix's provider reads `delayDuration`,
+ * Base UI's reads `delay`, and each ignores the other prop. Spread as an
+ * object (not literal attributes) so it typechecks against both shadcn
+ * generations and the CLI's Base UI codemod leaves it alone.
+ */
+const tooltipProviderDelay = {
+  delayDuration: TABLE_TOOLTIP_DELAY_MS,
+  delay: TABLE_TOOLTIP_DELAY_MS,
+}
+
+export interface DataTableConfig {
+  // Feature toggles
+  enablePagination?: boolean
+  enableFilters?: boolean
+  enableSorting?: boolean
+  enableRowSelection?: boolean
+  enableMultiSort?: boolean
+  enableGrouping?: boolean
+  enableExpanding?: boolean
+  /**
+   * Enable drag-to-resize column widths (opt-in; off by default so existing
+   * tables are unaffected). When on, columns render at `column.getSize()` and a
+   * resize handle appears on each resizable header's right edge. Drop
+   * `<DataTableColumnResize />` inside the root to enable via feature detection.
+   * Double-click a grip to autosize; columns opt out with `enableResizing: false`.
+   */
+  enableColumnResizing?: boolean
+  /**
+   * When grouping is active, how grouped columns are placed in the column flow.
+   * TanStack default: `'reorder'` (move grouped columns to the start).
+   * `'remove'` hides them; `false` leaves them in place.
+   */
+  groupedColumnMode?: false | "reorder" | "remove"
+
+  // Manual modes (for server-side)
+  manualSorting?: boolean
+  manualPagination?: boolean
+  manualFiltering?: boolean
+  pageCount?: number
+
+  // Initial state
+  initialPageSize?: number
+  initialPageIndex?: number
+
+  // Auto-reset behaviors
+  autoResetPageIndex?: boolean
+  autoResetExpanded?: boolean
+}
+
+interface TableRootProps<TData extends RowData> extends Omit<
+  Partial<TableOptions<DataTableFeatures, TData>>,
+  // `key` is dropped so React's reserved `key` prop keeps its own semantics
+  // — TanStack v9 added a `key` table option that would otherwise force
+  // `<DataTableRoot key={…}>` to be a string.
+  "columns" | "data" | "getRowId" | "key"
+> {
+  // Option 1: Pass a pre-configured table instance
+  table?: ReactTable<DataTableFeatures, TData>
+
+  // Option 2: Let DataTableRoot create its own table
+  columns?: DataTableColumns<TData>
+  data?: TData[]
+
+  children: React.ReactNode
+  className?: string
+
+  // Configuration object
+  config?: DataTableConfig
+  getRowId?: (originalRow: TData, index: number) => string
+
+  // Loading state
+  isLoading?: boolean
+
+  // Event handlers
+  onGlobalFilterChange?: (value: GlobalFilter) => void
+  onPaginationChange?: (updater: Updater<PaginationState>) => void
+  onSortingChange?: (updater: Updater<SortingState>) => void
+  onColumnVisibilityChange?: (updater: Updater<ColumnVisibilityState>) => void
+  onColumnFiltersChange?: (updater: Updater<ColumnFiltersState>) => void
+  onRowSelectionChange?: (updater: Updater<RowSelectionState>) => void
+  onExpandedChange?: (updater: Updater<ExpandedState>) => void
+  onGroupingChange?: (updater: Updater<GroupingState>) => void
+  onColumnOrderChange?: (updater: Updater<ColumnOrderState>) => void
+  onRowSelection?: (selectedRows: TData[]) => void
+}
+
+// Internal component that handles hooks for direct props mode
+function DataTableRootInternal<TData extends RowData>({
+  columns,
+  data,
+  children,
+  className,
+  config,
+  getRowId,
+  isLoading,
+  onGlobalFilterChange,
+  onPaginationChange,
+  onSortingChange,
+  onColumnVisibilityChange,
+  onColumnFiltersChange,
+  onRowSelectionChange,
+  onExpandedChange,
+  onGroupingChange,
+  onColumnOrderChange,
+  onColumnPinningChange,
+  onColumnSizingChange,
+  onRowSelection,
+  // Destructured by name so the `tableOptions` memo depends on stable values
+  // — depending on the whole `rest` bag invalidated the memo every render
+  // and triggered the "state update on a component that hasn't mounted yet"
+  // warning under React 19 + Strict Mode + Turbopack HMR.
+  state: restState,
+  initialState: restInitialState,
+  globalFilterFn: restGlobalFilterFn,
+  // Lifted out of the passthrough bag: these are emitted after the spread in
+  // `tableOptions`, so a consumer-supplied value (server-driven grouping /
+  // expansion) must win over the feature-derived default.
+  manualGrouping: manualGroupingProp,
+  manualExpanding: manualExpandingProp,
+  // Spread into `tableOptions` but NOT in the memo deps. Lift any passthrough
+  // option that needs to invalidate the memo into the destructure list above.
+  ...passthroughTableOptions
+}: Omit<TableRootProps<TData>, "table"> & {
+  columns: DataTableColumns<TData>
+  data: TData[]
+}) {
+  // Memoize so `columns.some()` only runs when the columns array changes.
+  const hasSelectColumn = React.useMemo(
+    () => columns?.some(col => col.id === SYSTEM_COLUMN_IDS.SELECT) ?? false,
+    [columns],
+  )
+
+  const hasExpandColumn = React.useMemo(
+    () =>
+      columns?.some(
+        col =>
+          col.id === SYSTEM_COLUMN_IDS.EXPAND ||
+          (col.meta &&
+            "expandedContent" in col.meta &&
+            col.meta.expandedContent),
+      ) ?? false,
+    [columns],
+  )
+
+  // Stable identity prevents downstream memo cascades (detectFeatures,
+  // processedColumns, tableOptions) from invalidating each render.
+  const finalConfig: DataTableConfig = React.useMemo(
+    () => ({
+      enablePagination: config?.enablePagination,
+      enableFilters: config?.enableFilters,
+      enableSorting: config?.enableSorting,
+      enableRowSelection: config?.enableRowSelection ?? hasSelectColumn,
+      enableMultiSort: config?.enableMultiSort,
+      enableGrouping: config?.enableGrouping,
+      enableExpanding: config?.enableExpanding ?? hasExpandColumn,
+      enableColumnResizing: config?.enableColumnResizing,
+      groupedColumnMode: config?.groupedColumnMode,
+      manualSorting: config?.manualSorting,
+      manualPagination: config?.manualPagination,
+      manualFiltering: config?.manualFiltering,
+      pageCount: config?.pageCount,
+      initialPageSize: config?.initialPageSize,
+      initialPageIndex: config?.initialPageIndex,
+      // Default `false` — preserves pagination cursor across filter changes
+      // (better UX for server-side / infinite scroll) and avoids the async
+      // `onPaginationChange` race that fires "state update on unmounted
+      // component" warnings. Opt in via `config={{ autoResetPageIndex: true }}`.
+      autoResetPageIndex: config?.autoResetPageIndex ?? false,
+      autoResetExpanded: config?.autoResetExpanded ?? false,
+    }),
+    [
+      config?.enablePagination,
+      config?.enableFilters,
+      config?.enableSorting,
+      config?.enableRowSelection,
+      hasSelectColumn,
+      config?.enableMultiSort,
+      config?.enableGrouping,
+      config?.enableExpanding,
+      config?.enableColumnResizing,
+      config?.groupedColumnMode,
+      hasExpandColumn,
+      config?.manualSorting,
+      config?.manualPagination,
+      config?.manualFiltering,
+      config?.pageCount,
+      config?.initialPageSize,
+      config?.initialPageIndex,
+      config?.autoResetPageIndex,
+      config?.autoResetExpanded,
+    ],
+  )
+
+  // Cache once: `detectFeaturesFromChildren` recursively walks the React tree
+  // (50-150ms on deep trees). Children structure is stable post-mount.
+  const detectedFeaturesRef = React.useRef<ReturnType<
+    typeof detectFeaturesFromChildren
+  > | null>(null)
+
+  // Only detect features once on mount (children structure is stable)
+  if (detectedFeaturesRef.current === null) {
+    detectedFeaturesRef.current = detectFeaturesFromChildren(children, columns)
+  }
+
+  // Memoize merged feature object so tableOptions stays stable.
+  const detectFeatures = React.useMemo(() => {
+    const detectedFeatures = detectedFeaturesRef.current ?? {}
+
+    const features = {
+      // Use config first, then explicit props, then detected features, then defaults
+      enablePagination:
+        finalConfig.enablePagination ??
+        detectedFeatures.enablePagination ??
+        false,
+      enableFilters:
+        finalConfig.enableFilters ?? detectedFeatures.enableFilters ?? false,
+      enableRowSelection:
+        finalConfig.enableRowSelection ??
+        detectedFeatures.enableRowSelection ??
+        false,
+      enableSorting:
+        finalConfig.enableSorting ?? detectedFeatures.enableSorting ?? false,
+      enableMultiSort:
+        finalConfig.enableMultiSort ?? detectedFeatures.enableMultiSort ?? true,
+      enableGrouping:
+        finalConfig.enableGrouping ?? detectedFeatures.enableGrouping ?? false,
+      enableExpanding:
+        finalConfig.enableExpanding ??
+        detectedFeatures.enableExpanding ??
+        finalConfig.enableGrouping ??
+        detectedFeatures.enableGrouping ??
+        false,
+      enableColumnResizing:
+        finalConfig.enableColumnResizing ??
+        detectedFeatures.enableColumnResizing ??
+        false,
+      manualSorting:
+        finalConfig.manualSorting ?? detectedFeatures.manualSorting ?? false,
+      manualPagination:
+        finalConfig.manualPagination ??
+        detectedFeatures.manualPagination ??
+        false,
+      manualFiltering:
+        finalConfig.manualFiltering ??
+        detectedFeatures.manualFiltering ??
+        false,
+      pageCount: finalConfig.pageCount ?? detectedFeatures.pageCount,
+    }
+
+    return features
+  }, [finalConfig])
+
+  // State management
+  const [globalFilter, setGlobalFilter] = React.useState<GlobalFilter>(
+    restInitialState?.globalFilter ?? "",
+  )
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
+    restInitialState?.rowSelection ?? {},
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<ColumnVisibilityState>(
+      restInitialState?.columnVisibility ?? {},
+    )
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    restInitialState?.columnFilters ?? [],
+  )
+  const [sorting, setSorting] = React.useState<SortingState>(
+    restInitialState?.sorting ?? [],
+  )
+  const [expanded, setExpanded] = React.useState<ExpandedState>(
+    restInitialState?.expanded ?? {},
+  )
+  const [grouping, setGrouping] = React.useState<GroupingState>(
+    restInitialState?.grouping ?? [],
+  )
+  const [columnPinning, setColumnPinning] = React.useState<ColumnPinningState>({
+    start: restInitialState?.columnPinning?.start ?? [],
+    end: restInitialState?.columnPinning?.end ?? [],
+  })
+  const [columnOrder, setColumnOrder] = React.useState<ColumnOrderState>(
+    restInitialState?.columnOrder ?? [],
+  )
+  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>(
+    restInitialState?.columnSizing ?? {},
+  )
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex:
+      finalConfig.initialPageIndex ??
+      restInitialState?.pagination?.pageIndex ??
+      0,
+    pageSize:
+      finalConfig.initialPageSize ??
+      restInitialState?.pagination?.pageSize ??
+      10,
+  })
+
+  // Mount-ref guards prevent React-19 + StrictMode "state update on unmounted
+  // component" warnings when TanStack's async dispatches land on a torn-down fiber.
+  const isMountedRef = React.useRef(true)
+  React.useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Stable identity keeps tableOptions memo from invalidating each render.
+  const handleGlobalFilterChange = React.useCallback(
+    (value: GlobalFilter) => {
+      // Mount-guard local writes; external handler is caller's responsibility.
+      if (isMountedRef.current) {
+        setGlobalFilter(value)
+      }
+      onGlobalFilterChange?.(value)
+    },
+    [onGlobalFilterChange],
+  )
+
+  // O(1) row-by-id lookup; Array.find()-per-selection is O(n × m) — ~500ms lag
+  // at 10k rows × 100 selected.
+  const rowIdMap = React.useMemo(() => {
+    const map = new Map<string, TData>()
+    data?.forEach((row, idx) => {
+      const rowId =
+        getRowId?.(row, idx) ??
+        (row as { id?: string | number }).id?.toString() ??
+        String(idx)
+      map.set(rowId, row)
+    })
+    return map
+  }, [data, getRowId])
+
+  // Stable identity prevents table re-init. Pure setter — `onRowSelection`
+  // fires from the effect below so concurrent-mode double-invokes don't double-fire.
+  // Honors the full TanStack `Updater<T> = T | ((old: T) => T)` contract.
+  const handleRowSelectionChange = React.useCallback(
+    (valueFn: Updater<RowSelectionState>) => {
+      if (!isMountedRef.current) return
+      if (typeof valueFn === "function") {
+        setRowSelection(prev => valueFn(prev))
+      } else {
+        setRowSelection(valueFn)
+      }
+    },
+    [],
+  )
+
+  /**
+   * PERFORMANCE: Stable mount-guarded fallback setters
+   *
+   * WHY: Inline `(u) => isMounted && setX(u)` closures inside `tableOptions` get
+   * recreated on every memo invalidation, and the 6 setX refs added noise to the
+   * dep array (state setters are already stable by React contract).
+   *
+   * IMPACT: tableOptions memo no longer depends on 6 setters; fallback handlers
+   * keep referential identity across renders.
+   *
+   * WHAT: Hoists each fallback to a `useCallback([])`. Mount-guard preserved so
+   * StrictMode-unmounted fibers don't receive setState calls.
+   */
+  const handleSortingChange = React.useCallback((u: Updater<SortingState>) => {
+    if (isMountedRef.current) setSorting(u)
+  }, [])
+
+  const handleColumnFiltersChange = React.useCallback(
+    (u: Updater<ColumnFiltersState>) => {
+      if (isMountedRef.current) setColumnFilters(u)
+    },
+    [],
+  )
+
+  const handleColumnVisibilityChange = React.useCallback(
+    (u: Updater<ColumnVisibilityState>) => {
+      if (isMountedRef.current) setColumnVisibility(u)
+    },
+    [],
+  )
+
+  const handleColumnPinningChange = React.useCallback(
+    (updater: Updater<ColumnPinningState>) => {
+      if (!isMountedRef.current) return
+      setColumnPinning(prev => {
+        const next = typeof updater === "function" ? updater(prev) : updater
+        return {
+          start: next.start ?? [],
+          end: next.end ?? [],
+        }
+      })
+    },
+    [],
+  )
+
+  const handleColumnOrderChange = React.useCallback(
+    (u: Updater<ColumnOrderState>) => {
+      if (isMountedRef.current) setColumnOrder(u)
+    },
+    [],
+  )
+
+  const handleColumnSizingChange = React.useCallback(
+    (u: Updater<ColumnSizingState>) => {
+      if (isMountedRef.current) setColumnSizing(u)
+    },
+    [],
+  )
+
+  const handleExpandedChange = React.useCallback(
+    (u: Updater<ExpandedState>) => {
+      if (isMountedRef.current) setExpanded(u)
+    },
+    [],
+  )
+
+  const handleGroupingChange = React.useCallback(
+    (u: Updater<GroupingState>) => {
+      if (isMountedRef.current) setGrouping(u)
+    },
+    [],
+  )
+
+  const handlePaginationChange = React.useCallback(
+    (u: Updater<PaginationState>) => {
+      if (isMountedRef.current) setPagination(u)
+    },
+    [],
+  )
+
+  // Fire `onRowSelection` only on user-driven changes — skip the initial mount.
+  const skipInitialRowSelectionRef = React.useRef(true)
+  React.useEffect(() => {
+    if (!isMountedRef.current) return
+    if (skipInitialRowSelectionRef.current) {
+      skipInitialRowSelectionRef.current = false
+      return
+    }
+    if (!onRowSelection) return
+    const selectedRows = Object.keys(rowSelection)
+      .filter(key => rowSelection[key])
+      .map(key => rowIdMap.get(key))
+      .filter((row): row is TData => row !== undefined)
+    onRowSelection(selectedRows)
+  }, [rowSelection, rowIdMap, onRowSelection])
+
+  /**
+   * Auto-apply filterFn based on meta.variant if not explicitly provided
+   * This allows developers to set variant in meta and get the right filterFn automatically
+   */
+  const processedColumns = React.useMemo(() => {
+    return columns.map(col => {
+      // If filterFn is already defined, use it (manual override)
+      if (col.filterFn) return col
+
+      const meta = col.meta ?? {}
+      const variant = meta.variant
+
+      // Auto-apply filterFn based on variant
+      let autoFilterFn: FilterFnOption<DataTableFeatures, TData> | undefined
+      if (
+        variant === FILTER_VARIANTS.RANGE ||
+        variant === FILTER_VARIANTS.NUMBER
+      ) {
+        // For number/range variants, use numberRangeFilter if no explicit filterFn
+        autoFilterFn = "numberRange" as FilterFnOption<DataTableFeatures, TData>
+      } else if (
+        variant === FILTER_VARIANTS.DATE ||
+        variant === FILTER_VARIANTS.DATE_RANGE
+      ) {
+        // For date variants, use dateRangeFilter if no explicit filterFn
+        autoFilterFn = "dateRange" as FilterFnOption<DataTableFeatures, TData>
+      }
+
+      // Only override if we have an auto filterFn and no explicit one
+      if (autoFilterFn) {
+        return {
+          ...col,
+          filterFn: autoFilterFn,
+        }
+      }
+
+      return col
+    })
+  }, [columns])
+
+  // TanStack's `defaultColumn` is per-render-cheaper than mapping columns ourselves.
+  const defaultColumn = React.useMemo<Partial<DataTableColumnDef<TData>>>(
+    () => ({
+      // Follow table-level sorting detection — don't opt every column into
+      // sortable chrome when sorting is off.
+      enableSorting: detectFeatures.enableSorting ?? false,
+      enableHiding: true,
+      filterFn: "extended" as FilterFnOption<DataTableFeatures, TData>,
+      // Override TanStack's internal default (150) so unset `size` stays undefined
+      // — virtualized flex layout uses this to distinguish fixed vs flexible cols.
+      // `column.getSize()` still falls back to 150 internally.
+      size: undefined,
+      // Align mouse-drag floor with the resize handle's keyboard/autosize
+      // clamp (TanStack's built-in default is 20 — too tight for padded cells).
+      ...(detectFeatures.enableColumnResizing
+        ? { minSize: DEFAULT_MIN_COLUMN_SIZE }
+        : {}),
+    }),
+    [detectFeatures.enableColumnResizing, detectFeatures.enableSorting],
+  )
+
+  // Extract controlled-state slices for the tableOptions dep array.
+  const controlledSorting = restState?.sorting ?? sorting
+  const controlledColumnVisibility =
+    restState?.columnVisibility ?? columnVisibility
+  const controlledRowSelection = restState?.rowSelection ?? rowSelection
+  const controlledColumnFilters = restState?.columnFilters ?? columnFilters
+  const controlledGlobalFilter =
+    restState?.globalFilter !== undefined
+      ? restState.globalFilter
+      : globalFilter
+  const controlledColumnPinning = restState?.columnPinning ?? columnPinning
+  const controlledColumnOrder = restState?.columnOrder ?? columnOrder
+  const controlledColumnSizing = restState?.columnSizing ?? columnSizing
+  const controlledExpanded = restState?.expanded ?? expanded
+  const controlledGrouping = restState?.grouping ?? grouping
+  const controlledPagination = restState?.pagination ?? pagination
+
+  // System columns (select, expand) follow the first data column's pinning so
+  // they stay visually attached as the "row header".
+  const finalColumnPinning = React.useMemo(() => {
+    // Use centralized system column IDs from constants
+
+    // Helper to safely extract column ID (handles both id and accessorKey)
+    const getColumnId = (
+      col: DataTableColumnDef<TData>,
+    ): string | undefined => {
+      if (col.id) return col.id
+      // Type-safe check for accessorKey property
+      if ("accessorKey" in col && typeof col.accessorKey === "string") {
+        return col.accessorKey
+      }
+      return undefined
+    }
+
+    // 1. Identify the "First Data Column" (first non-system column)
+    const firstDataCol = columns.find(col => {
+      const id = getColumnId(col)
+      return id && !SYSTEM_COLUMN_ID_LIST.includes(id)
+    })
+
+    if (!firstDataCol) return controlledColumnPinning
+
+    const firstDataColId = getColumnId(firstDataCol)
+    if (!firstDataColId) return controlledColumnPinning
+
+    // 2. Check pinning state of the first data column
+    const isPinnedStart =
+      controlledColumnPinning.start?.includes(firstDataColId)
+    const isPinnedEnd = controlledColumnPinning.end?.includes(firstDataColId)
+
+    // If not fixed to either side, return default (system cols float naturally)
+    if (!isPinnedStart && !isPinnedEnd) {
+      return controlledColumnPinning
+    }
+
+    const start = [...(controlledColumnPinning.start ?? [])]
+    const end = [...(controlledColumnPinning.end ?? [])]
+
+    // 3. Prepare system columns list
+    const systemColsPresent: string[] = []
+    if (hasSelectColumn) systemColsPresent.push(SYSTEM_COLUMN_IDS.SELECT)
+    if (hasExpandColumn) systemColsPresent.push(SYSTEM_COLUMN_IDS.EXPAND)
+
+    // 4. Clean existing lists (remove system cols to avoid duplication)
+    const cleanStart = start.filter(id => !SYSTEM_COLUMN_ID_LIST.includes(id))
+    const cleanEnd = end.filter(id => !SYSTEM_COLUMN_ID_LIST.includes(id))
+
+    // 5. Construct new pinning state
+    if (isPinnedStart) {
+      // Pin start (LTR left): [System, ...Others]
+      return {
+        start: [...systemColsPresent, ...cleanStart],
+        end: cleanEnd,
+      }
+    }
+
+    if (isPinnedEnd) {
+      // Pin end (LTR right): [System, ...Others]
+      // We place system cols *before* others in the end group so they appear
+      // to the immediate left of the end-pinned data columns.
+      return {
+        start: cleanStart,
+        end: [...systemColsPresent, ...cleanEnd],
+      }
+    }
+
+    return controlledColumnPinning
+  }, [controlledColumnPinning, columns, hasSelectColumn, hasExpandColumn])
+
+  // Critical: stable options reference. New object → useTable recreates
+  // the instance → state resets and sorting/filter/expand break.
+  const tableOptions = React.useMemo<TableOptions<DataTableFeatures, TData>>(
+    () => ({
+      ...passthroughTableOptions,
+      features,
+      data,
+      columns: processedColumns as ColumnDef<
+        DataTableFeatures,
+        TData,
+        unknown
+      >[],
+      defaultColumn,
+      state: {
+        ...restState,
+        // Always use our local state as the source of truth
+        // External state (restState) takes precedence only if explicitly provided
+        sorting: controlledSorting,
+        columnVisibility: controlledColumnVisibility,
+        columnPinning: finalColumnPinning,
+        columnOrder: controlledColumnOrder,
+        columnSizing: controlledColumnSizing,
+        rowSelection: controlledRowSelection,
+        columnFilters: controlledColumnFilters,
+        globalFilter: controlledGlobalFilter,
+        expanded: controlledExpanded,
+        grouping: controlledGrouping,
+        pagination: controlledPagination,
+      },
+      enableColumnResizing: detectFeatures.enableColumnResizing,
+      // `onEnd`, not `onChange`: apply the new width once, on pointer release.
+      // In `onChange` every mousemove writes `columnSizing`, which invalidates
+      // the memoized header + every visible (avatar/badge-heavy) body row ~60x
+      // a second — the source of resize lag. `onEnd` keeps widths stable during
+      // the drag; `<ColumnResizePreviewLine>` shows a live guide line instead.
+      columnResizeMode: "onEnd",
+      onColumnSizingChange: onColumnSizingChange ?? handleColumnSizingChange,
+      enableRowSelection: detectFeatures.enableRowSelection,
+      enableFilters: detectFeatures.enableFilters,
+      enableSorting: detectFeatures.enableSorting,
+      enableMultiSort: detectFeatures.enableMultiSort,
+      enableGrouping: detectFeatures.enableGrouping,
+      enableExpanding:
+        detectFeatures.enableExpanding || detectFeatures.enableGrouping,
+      groupedColumnMode: finalConfig.groupedColumnMode ?? "reorder",
+      // When a feature is off, skip its client row model (v8 omitted get*RowModel).
+      // `manual*` still wins for server-side modes when the feature is on.
+      manualSorting:
+        detectFeatures.manualSorting || !detectFeatures.enableSorting,
+      manualPagination:
+        detectFeatures.manualPagination || !detectFeatures.enablePagination,
+      manualFiltering:
+        detectFeatures.manualFiltering || !detectFeatures.enableFilters,
+      manualGrouping: manualGroupingProp ?? !detectFeatures.enableGrouping,
+      manualExpanding:
+        manualExpandingProp ??
+        !(detectFeatures.enableExpanding || detectFeatures.enableGrouping),
+      // Enable auto-reset behaviors by default (standard TanStack Table behavior)
+      // Can be overridden via config
+      autoResetPageIndex: finalConfig.autoResetPageIndex,
+      autoResetExpanded: finalConfig.autoResetExpanded,
+      onGlobalFilterChange: handleGlobalFilterChange,
+      onRowSelectionChange: onRowSelectionChange ?? handleRowSelectionChange,
+      // Default state setters are mount-ref guarded so TanStack's async
+      // auto-reset dispatches don't land on a StrictMode-unmounted fiber.
+      // Consumer-supplied handlers are NOT guarded — caller's responsibility.
+      onSortingChange: onSortingChange ?? handleSortingChange,
+      onColumnFiltersChange: onColumnFiltersChange ?? handleColumnFiltersChange,
+      onColumnVisibilityChange:
+        onColumnVisibilityChange ?? handleColumnVisibilityChange,
+      onColumnPinningChange: onColumnPinningChange ?? handleColumnPinningChange,
+      onColumnOrderChange: onColumnOrderChange ?? handleColumnOrderChange,
+      onExpandedChange: onExpandedChange ?? handleExpandedChange,
+      onGroupingChange: onGroupingChange ?? handleGroupingChange,
+      onPaginationChange: onPaginationChange ?? handlePaginationChange,
+      // filterFns live on `features` (data-table-features.ts) — do not re-register here.
+      // Allow globalFilterFn to be overridden via rest props, otherwise use default
+      globalFilterFn:
+        (restGlobalFilterFn as FilterFn<DataTableFeatures, TData>) ??
+        (globalFilterFn as unknown as FilterFn<DataTableFeatures, TData>),
+      // Use provided getRowId or fallback to checking for 'id' property, then index
+      getRowId:
+        getRowId ??
+        ((originalRow, index) => {
+          // Try to use 'id' property if it exists
+          const rowWithId = originalRow as { id?: string | number }
+          if (rowWithId.id !== undefined && rowWithId.id !== null) {
+            return String(rowWithId.id)
+          }
+          // Fallback to index
+          return String(index)
+        }),
+      pageCount: (() => {
+        if (!detectFeatures.manualPagination) return undefined
+        return finalConfig.pageCount !== undefined
+          ? finalConfig.pageCount
+          : detectFeatures.pageCount !== undefined
+            ? detectFeatures.pageCount
+            : -1
+      })(),
+    }),
+    // Deps are the *destructured* rest props, NOT the whole rest bag — see
+    // destructure-site comment. `passthroughTableOptions` is intentionally
+    // NOT a dep (lift any option that needs to invalidate the memo).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      restState,
+      restGlobalFilterFn,
+      data,
+      processedColumns,
+      defaultColumn,
+      detectFeatures,
+      finalConfig,
+      handleGlobalFilterChange,
+      onRowSelectionChange,
+      handleRowSelectionChange,
+      onSortingChange,
+      handleSortingChange,
+      onColumnFiltersChange,
+      handleColumnFiltersChange,
+      onColumnVisibilityChange,
+      handleColumnVisibilityChange,
+      onColumnPinningChange,
+      handleColumnPinningChange,
+      onColumnOrderChange,
+      handleColumnOrderChange,
+      onColumnSizingChange,
+      handleColumnSizingChange,
+      onExpandedChange,
+      handleExpandedChange,
+      onGroupingChange,
+      handleGroupingChange,
+      onPaginationChange,
+      handlePaginationChange,
+      getRowId,
+      manualGroupingProp,
+      manualExpandingProp,
+      // Use controlled state values - these update when either external or local state changes
+      controlledSorting,
+      controlledColumnVisibility,
+      controlledRowSelection,
+      controlledColumnFilters,
+      controlledGlobalFilter,
+      controlledColumnOrder,
+      controlledColumnSizing,
+      controlledExpanded,
+      controlledGrouping,
+      controlledPagination,
+      // Add column pinning state to dependencies so the table updates when it changes
+      finalColumnPinning,
+    ],
+  )
+
+  // Instance ref is stable across state changes; React Compiler warns about
+  // incompatible-library here — TanStack manages its own memoization (expected).
+
+  const table = useTable<DataTableFeatures, TData>(tableOptions)
+
+  return (
+    <DataTableProvider
+      table={table}
+      columns={processedColumns as DataTableColumnDef<TData>[]}
+      isLoading={isLoading}
+    >
+      <TooltipProvider {...tooltipProviderDelay}>
+        <div className={cn("w-full min-w-0 space-y-4", className)}>
+          {children}
+        </div>
+      </TooltipProvider>
+    </DataTableProvider>
+  )
+}
+
+// Main wrapper component
+export function DataTableRoot<TData extends RowData>({
+  table: externalTable,
+  columns,
+  data,
+  children,
+  className,
+  isLoading,
+  ...rest
+}: TableRootProps<TData>) {
+  // If a table instance is provided, use it directly (no hooks needed)
+  if (externalTable) {
+    return (
+      <DataTableProvider
+        table={externalTable}
+        columns={columns as DataTableColumnDef<TData>[]}
+        isLoading={isLoading}
+      >
+        <TooltipProvider {...tooltipProviderDelay}>
+          <div className={cn("w-full min-w-0 space-y-4", className)}>
+            {children}
+          </div>
+        </TooltipProvider>
+      </DataTableProvider>
+    )
+  }
+
+  // Validate required props for internal table creation
+  if (!columns || !data) {
+    throw new Error(
+      "DataTableRoot: Either provide a 'table' prop or both 'columns' and 'data' props",
+    )
+  }
+
+  // Otherwise, delegate to the internal component that handles hooks
+  return (
+    <DataTableRootInternal
+      columns={columns}
+      data={data}
+      className={className}
+      isLoading={isLoading}
+      {...rest}
+    >
+      {children}
+    </DataTableRootInternal>
+  )
+}
+
+DataTableRoot.displayName = "DataTableRoot"

@@ -1153,7 +1153,8 @@
             "feedback": "Retroalimentación del tutor",
             "requirementsCheck": "Verificación del verificador",
             "notFound": "No hay ninguna finalización del tutor de IA registrada para esta lección."
-          }
+          },
+          "searchPlaceholder": "Buscar estudiantes…"
         },
         "certificates": {
           "title": "Certificados",
@@ -2262,7 +2263,8 @@
           "submitted": "Enviado",
           "noSubmissions": "No se encontraron entregas",
           "unknownStudent": "Estudiante Desconocido",
-          "reviewButton": "Revisar"
+          "reviewButton": "Revisar",
+          "searchPlaceholder": "Buscar por estudiante..."
         }
       },
       "examSubmissions": {
@@ -2674,7 +2676,9 @@
             "platform": "Plataforma"
           },
           "footnote": "El monto descuenta reembolsos. La comisión usa el reparto vigente cuando ocurrió cada venta. Las ventas por confirmar y las reembolsadas por completo no cuentan en ningún saldo.",
-          "fxRate": "1 {currency} = {rate} USD ({source})"
+          "fxRate": "1 {currency} = {rate} USD ({source})",
+          "searchPlaceholder": "Buscar ventas…",
+          "monthFilter": "Mes"
         },
         "status": {
           "successful": "Pagada",
@@ -2723,7 +2727,8 @@
             "method": "Método",
             "paidAt": "Pagado el",
             "stripeRef": "Ref. Stripe"
-          }
+          },
+          "searchPlaceholder": "Buscar por referencia, nota o monto…"
         },
         "empty": {
           "title": "Sin pagos aún",
@@ -2755,7 +2760,9 @@
             "actions": "Acciones"
           },
           "unknownProduct": "Producto desconocido",
-          "viewInvoice": "Ver factura"
+          "viewInvoice": "Ver factura",
+          "searchPlaceholder": "Buscar por n.º de factura, artículo o estado…",
+          "otherStatus": "Otro"
         },
         "empty": {
           "title": "No hay facturas",
@@ -3311,7 +3318,7 @@
           "received": "Pago Recibido",
           "receivedDesc": "Listos para inscribir",
           "completed": "Completados",
-          "completedTotal": "${amount} en total"
+          "completedTotal": "{amount} en total"
         },
         "tabs": {
           "open": "Abiertas ({count})",
@@ -3330,7 +3337,8 @@
             "status": "Estado",
             "invoice": "Factura",
             "date": "Fecha",
-            "actions": "Acciones"
+            "actions": "Acciones",
+            "method": "Método"
           },
           "noRequests": "No se encontraron solicitudes de pago",
           "manage": "Gestionar",
@@ -3338,7 +3346,21 @@
           "id": "ID de solicitud",
           "invoice": "Factura",
           "reported": "Pago reportado",
-          "expired": "Vencida sin pago"
+          "expired": "Vencida sin pago",
+          "searchPlaceholder": "Buscar por estudiante, correo, producto o factura…",
+          "methods": {
+            "stripe": "Stripe",
+            "manual": "Manual",
+            "bank_transfer": "Transferencia Bancaria",
+            "zelle": "Zelle",
+            "pagos_chile": "Pagos Chile",
+            "paypal": "PayPal",
+            "binance": "Binance",
+            "binance_personal": "Binance (personal)",
+            "lemonsqueezy": "Lemon Squeezy",
+            "solana": "Solana",
+            "pago_movil": "Pago Móvil"
+          }
         },
         "status": {
           "pending": "Pendiente",
@@ -3788,11 +3810,18 @@
             "manual": "Manual",
             "bank_transfer": "Transferencia Bancaria",
             "zelle": "Zelle",
-            "pagos_chile": "Pagos Chile"
+            "pagos_chile": "Pagos Chile",
+            "paypal": "PayPal",
+            "binance": "Binance",
+            "binance_personal": "Binance (personal)",
+            "lemonsqueezy": "Lemon Squeezy",
+            "solana": "Solana",
+            "pago_movil": "Pago Móvil"
           },
           "unknown": "Desconocido",
           "notAvailable": "N/A",
-          "empty": "No se encontraron transacciones"
+          "empty": "No se encontraron transacciones",
+          "searchPlaceholder": "Buscar por ID, usuario, método..."
         }
       },
       "enrollments": {
@@ -3816,7 +3845,9 @@
           "unknown": "Desconocido",
           "unknownCourse": "Curso Desconocido",
           "viewCourse": "Ver Curso",
-          "empty": "No se encontraron inscripciones"
+          "empty": "No se encontraron inscripciones",
+          "searchPlaceholder": "Buscar por estudiante, correo o curso...",
+          "statusDisabled": "Deshabilitada"
         }
       },
       "settings": {
@@ -9960,5 +9991,43 @@
       "school_logo": "Logo de la escuela",
       "community_post": "Publicación de la comunidad"
     }
+  },
+  "dataTable": {
+    "columnSort": "Ordenar columna",
+    "sortPriority": "Prioridad de orden (orden en que se ordenan las columnas)",
+    "multiSortTip": "CONSEJO: mantén 'Shift' para ordenar por varias columnas",
+    "clearSort": "Quitar orden",
+    "sortColumn": "Ordenar columna",
+    "sort": {
+      "asc": "A-Z",
+      "desc": "Z-A",
+      "lowToHigh": "De menor a mayor",
+      "highToLow": "De mayor a menor",
+      "oldestFirst": "Más antiguos primero",
+      "newestFirst": "Más recientes primero",
+      "falseFirst": "Falso primero",
+      "trueFirst": "Verdadero primero"
+    },
+    "pagination": "Paginación de la tabla",
+    "itemsPerPage": "Elementos por página",
+    "selectPageSize": "Seleccionar tamaño de página",
+    "zeroItems": "0 elementos",
+    "itemRange": "{start}-{end} de {total} elementos",
+    "pageNumber": "Número de página",
+    "pageOf": "Página {current} de {total}",
+    "ofPages": "de {total, plural, one {# página} other {# páginas}}",
+    "previousPageAria": "Ir a la página anterior, página {page}",
+    "previousPage": "Ir a la página anterior",
+    "nextPageAria": "Ir a la página siguiente, página {page}",
+    "nextPage": "Ir a la página siguiente",
+    "reset": "Restablecer",
+    "search": "Buscar...",
+    "searchTable": "Buscar en la tabla",
+    "clearSearch": "Borrar búsqueda",
+    "clearFilterTitle": "Quitar filtro {title}",
+    "selectedCount": "{count} seleccionados",
+    "noResults": "No se encontraron resultados.",
+    "clearFilters": "Quitar filtros",
+    "columnActions": "Acciones de columna"
   }
 }

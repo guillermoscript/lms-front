@@ -1,9 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getTenantTimeZone } from '@/lib/tenant-timezone'
+import { formatMoney } from '@/lib/payments/format-money'
 import { PaymentRequestsTable } from '@/components/admin/payment-requests-table'
 import { BinancePersonalPendingTable } from '@/components/admin/binance-personal-pending-table'
 import { listPendingBinancePersonalTransactions } from '@/app/actions/admin/binance-personal'
@@ -47,8 +49,11 @@ export default async function PaymentRequestsPage({
     redirect('/dashboard')
   }
 
-  // Fetch all payment requests with related data, filtered by tenant
-  const { data: allRequests } = await supabase
+  // Fetch ALL payment requests with related data, filtered by tenant. Paged and
+  // count-verified: the stat cards and tab counts below are computed from this
+  // list, and PostgREST silently caps a plain select at 1000 rows.
+  const requests = await fetchAllRows('payment_requests', (from, to) =>
+    supabase
     .from('payment_requests')
     .select(`
       *,
@@ -68,11 +73,12 @@ export default async function PaymentRequestsPage({
         price,
         currency
       )
-    `)
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
-
-  const requests = allRequests || []
+    .order('request_id')
+    .range(from, to),
+  )
   const timeZone = await getTenantTimeZone(tenantId)
 
   // Pending binance_personal transactions that need manual admin confirmation (#482)
@@ -150,7 +156,7 @@ export default async function PaymentRequestsPage({
               <p className="mt-2 text-2xl font-bold tracking-tight">{completedCount}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 {t('stats.completedTotal', {
-                  amount: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue)
+                  amount: formatMoney(totalRevenue, 'USD', locale)
                 })}
               </p>
             </CardContent>
@@ -159,7 +165,7 @@ export default async function PaymentRequestsPage({
 
         {/* Tabs for filtering by status */}
         <Tabs defaultValue={initialTab} className="space-y-4">
-          <TabsList>
+          <TabsList className="max-w-full justify-start overflow-x-auto">
             <TabsTrigger value="open">
               {t('tabs.open', { count: openRequests.length })}
             </TabsTrigger>

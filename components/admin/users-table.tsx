@@ -1,21 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatDate } from '@/lib/format-date'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { DataTableRoot } from '@/components/niko-table/core/data-table-root'
+import { DataTable } from '@/components/niko-table/core/data-table'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  DataTableHeader,
+  DataTableBody,
+  DataTableEmptyBody,
+} from '@/components/niko-table/core/data-table-structure'
+import { DataTableToolbarSection } from '@/components/niko-table/components/data-table-toolbar-section'
+import { DataTableSearchFilter } from '@/components/niko-table/components/data-table-search-filter'
+import { DataTableFacetedFilter } from '@/components/niko-table/components/data-table-faceted-filter'
+import { DataTableClearFilter } from '@/components/niko-table/components/data-table-clear-filter'
+import { DataTablePagination } from '@/components/niko-table/components/data-table-pagination'
+import {
+  DataTableColumnHeader,
+} from '@/components/niko-table/components/data-table-column-header'
+import { DataTableColumnTitle } from '@/components/niko-table/components/data-table-column-title'
+import { DataTableColumnSortMenu } from '@/components/niko-table/components/data-table-column-sort'
+import {
+  DataTableEmptyIcon,
+  DataTableEmptyMessage,
+  DataTableEmptyTitle,
+  DataTableEmptyFilteredMessage,
+} from '@/components/niko-table/components/data-table-empty-state'
+import type { DataTableColumnDef } from '@/components/niko-table/types'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,10 +66,32 @@ interface UsersTableProps {
   bannedIds: Set<string>
 }
 
+type UserStatus = 'active' | 'deactivated' | 'banned'
+type UserRole = 'admin' | 'teacher' | 'student' | 'noRoles'
+const ROLE_ORDER: UserRole[] = ['admin', 'teacher', 'student']
+
+interface UserRow {
+  id: string
+  name: string
+  email: string
+  roles: string[]
+  /** Highest role, used by the role facet. */
+  role: UserRole
+  enrollments: number
+  status: UserStatus
+  createdAt: string
+}
+
+const sortHeader = () => (
+  <DataTableColumnHeader>
+    <DataTableColumnTitle />
+    <DataTableColumnSortMenu />
+  </DataTableColumnHeader>
+)
+
 export function UsersTable({ profiles, rolesMap, enrollmentCounts, bannedIds }: UsersTableProps) {
   const t = useTranslations('dashboard.admin.users.table')
   const locale = useLocale()
-  const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<{
     id: string
     name: string
@@ -62,164 +99,194 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts, bannedIds }: 
   } | null>(null)
   const router = useRouter()
 
-  // Filter profiles based on search query
-  const filteredProfiles = profiles.filter(profile => {
-    const searchLower = searchQuery.toLowerCase()
-    return (
-      profile.full_name?.toLowerCase().includes(searchLower) ||
-      profile.email?.toLowerCase().includes(searchLower) ||
-      profile.id.toLowerCase().includes(searchLower)
-    )
-  })
+  const rows = useMemo<UserRow[]>(
+    () =>
+      profiles.map((profile) => {
+        const roles = rolesMap.get(profile.id) || []
+        return {
+          id: profile.id,
+          name: profile.full_name || t('unknown'),
+          email: profile.email,
+          roles,
+          role: ROLE_ORDER.find((r) => roles.includes(r)) ?? 'noRoles',
+          enrollments: enrollmentCounts.get(profile.id) || 0,
+          status: bannedIds.has(profile.id)
+            ? 'banned'
+            : profile.deactivated_at
+              ? 'deactivated'
+              : 'active',
+          createdAt: profile.created_at,
+        }
+      }),
+    [profiles, rolesMap, enrollmentCounts, bannedIds, t],
+  )
 
-  const handleManageRoles = (profile: Profile) => {
-    setSelectedUser({
-      id: profile.id,
-      name: profile.full_name || profile.email,
-      roles: rolesMap.get(profile.id) || []
-    })
-  }
+  const columns = useMemo<DataTableColumnDef<UserRow>[]>(
+    () => [
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: sortHeader,
+        meta: { label: t('headers.user') },
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <Avatar size="sm">
+              <AvatarFallback>{getInitials(row.original.name)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{row.original.name}</p>
+              <p className="text-xs text-muted-foreground">{row.original.id.slice(0, 8)}...</p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'email',
+        accessorKey: 'email',
+        header: sortHeader,
+        meta: { label: t('headers.email') },
+      },
+      {
+        id: 'role',
+        accessorKey: 'role',
+        header: sortHeader,
+        meta: { label: t('headers.roles') },
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.roles.length > 0 ? (
+              row.original.roles.map((role) => (
+                <Badge
+                  key={role}
+                  variant={role === 'admin' ? 'default' : role === 'teacher' ? 'secondary' : 'outline'}
+                >
+                  {t(`roles.${role}`)}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline">{t('roles.noRoles')}</Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'enrollments',
+        accessorKey: 'enrollments',
+        header: sortHeader,
+        meta: { label: t('headers.enrollments'), variant: 'number' },
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: sortHeader,
+        meta: { label: t('headers.status') },
+        cell: ({ row }) =>
+          row.original.status === 'banned' ? (
+            <Badge variant="destructive" data-testid="user-status-banned">
+              {t('status.banned')}
+            </Badge>
+          ) : row.original.status === 'deactivated' ? (
+            <Badge variant="destructive">{t('status.deactivated')}</Badge>
+          ) : (
+            <Badge className="border-success/30 bg-success/10 text-success">
+              {t('status.active')}
+            </Badge>
+          ),
+      },
+      {
+        id: 'createdAt',
+        accessorKey: 'createdAt',
+        header: sortHeader,
+        meta: { label: t('headers.joined'), variant: 'date' },
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{formatDate(row.original.createdAt, locale)}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('headers.actions')}</span>,
+        enableSorting: false,
+        enableHiding: false,
+        size: 160,
+        cell: ({ row }) => {
+          const user = row.original
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link href={`/dashboard/admin/users/${user.id}`} />}
+              >
+                {t('actions.view')}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="ghost" size="icon" aria-label={t('actions.more')}>
+                      <IconDotsVertical className="h-4 w-4" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end">
+                  {user.status !== 'banned' && (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        setSelectedUser({ id: user.id, name: user.name, roles: user.roles })
+                      }
+                    >
+                      <IconSettings className="h-4 w-4" />
+                      {t('actions.roles')}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )
+        },
+      },
+    ],
+    [t, locale],
+  )
+
+  const roleOptions = (['admin', 'teacher', 'student', 'noRoles'] as const).map((r) => ({
+    value: r,
+    label: t(`roles.${r}`),
+  }))
+  const statusOptions = (['active', 'deactivated', 'banned'] as const).map((s) => ({
+    value: s,
+    label: t(`status.${s}`),
+  }))
 
   return (
     <>
-      {/* Search Bar */}
-      <div className="mb-4">
-        <Input
-          type="search"
-          placeholder={t('searchPlaceholder')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-md"
-          aria-label={t('searchPlaceholder')}
-        />
-      </div>
-
-      {/* Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('headers.user')}</TableHead>
-              <TableHead>{t('headers.email')}</TableHead>
-              <TableHead>{t('headers.roles')}</TableHead>
-              <TableHead>{t('headers.enrollments')}</TableHead>
-              <TableHead>{t('headers.status')}</TableHead>
-              <TableHead>{t('headers.joined')}</TableHead>
-              <TableHead className="text-right">{t('headers.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProfiles.length > 0 ? (
-              filteredProfiles.map((profile) => {
-                const userRolesList = rolesMap.get(profile.id) || []
-                const enrollmentCount = enrollmentCounts.get(profile.id) || 0
-                const isDeactivated = !!profile.deactivated_at
-                const isBanned = bannedIds.has(profile.id)
-                const displayName = profile.full_name || t('unknown')
-
-                return (
-                  <TableRow key={profile.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar size="sm">
-                          <AvatarFallback>
-                            {getInitials(profile.full_name || profile.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{displayName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {profile.id.slice(0, 8)}...
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{profile.email}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {userRolesList.length > 0 ? (
-                          userRolesList.map((role) => (
-                            <Badge
-                              key={role}
-                              variant={
-                                role === 'admin'
-                                  ? 'default'
-                                  : role === 'teacher'
-                                    ? 'secondary'
-                                    : 'outline'
-                              }
-                            >
-                              {t(`roles.${role}`)}
-                            </Badge>
-                          ))
-                        ) : (
-                          <Badge variant="outline">{t('roles.noRoles')}</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{enrollmentCount}</TableCell>
-                    <TableCell>
-                      {isBanned ? (
-                        <Badge variant="destructive" data-testid="user-status-banned">
-                          {t('status.banned')}
-                        </Badge>
-                      ) : isDeactivated ? (
-                        <Badge variant="destructive">{t('status.deactivated')}</Badge>
-                      ) : (
-                        <Badge className="border-success/30 bg-success/10 text-success">
-                          {t('status.active')}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(profile.created_at, locale)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/admin/users/${profile.id}`}>
-                          <Button variant="outline" size="sm">
-                            {t('actions.view')}
-                          </Button>
-                        </Link>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={t('actions.more')}
-                              >
-                                <IconDotsVertical className="h-4 w-4" />
-                              </Button>
-                            }
-                          />
-                          <DropdownMenuContent align="end">
-                            {!isBanned && (
-                              <DropdownMenuItem onClick={() => handleManageRoles(profile)}>
-                                <IconSettings className="h-4 w-4" />
-                                {t('actions.roles')}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <IconUsers className="h-8 w-8" />
-                    <p>{t('noUsers')}</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTableRoot
+        data={rows}
+        columns={columns}
+        getRowId={(row) => row.id}
+        config={{ initialPageSize: 25 }}
+      >
+        <DataTableToolbarSection className="mb-4 flex-wrap">
+          <DataTableSearchFilter placeholder={t('searchPlaceholder')} className="max-w-md" />
+          <DataTableFacetedFilter accessorKey="role" title={t('headers.roles')} options={roleOptions} multiple />
+          <DataTableFacetedFilter accessorKey="status" title={t('headers.status')} options={statusOptions} multiple />
+          <DataTableClearFilter />
+        </DataTableToolbarSection>
+        <DataTable>
+          <DataTableHeader />
+          <DataTableBody>
+            <DataTableEmptyBody>
+              <DataTableEmptyIcon>
+                <IconUsers className="h-8 w-8" />
+              </DataTableEmptyIcon>
+              <DataTableEmptyMessage>
+                <DataTableEmptyTitle>{t('noUsers')}</DataTableEmptyTitle>
+              </DataTableEmptyMessage>
+              <DataTableEmptyFilteredMessage>{t('noUsers')}</DataTableEmptyFilteredMessage>
+            </DataTableEmptyBody>
+          </DataTableBody>
+        </DataTable>
+        <DataTablePagination defaultPageSize={25} />
+      </DataTableRoot>
 
       {/* Role Assignment Dialog */}
       {selectedUser && (

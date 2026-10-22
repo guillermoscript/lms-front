@@ -1153,7 +1153,8 @@
             "feedback": "Tutor's feedback",
             "requirementsCheck": "Verifier's check",
             "notFound": "No AI tutor completion on record for this lesson."
-          }
+          },
+          "searchPlaceholder": "Search students…"
         },
         "certificates": {
           "title": "Certificates",
@@ -2262,7 +2263,8 @@
           "submitted": "Submitted",
           "noSubmissions": "No submissions found",
           "unknownStudent": "Unknown Student",
-          "reviewButton": "Review"
+          "reviewButton": "Review",
+          "searchPlaceholder": "Search by student..."
         }
       },
       "examSubmissions": {
@@ -2674,7 +2676,9 @@
             "platform": "Platform"
           },
           "footnote": "Amount is net of refunds. Commission uses the split in effect when each sale happened. Sales to confirm and fully refunded sales do not count toward any balance.",
-          "fxRate": "1 {currency} = {rate} USD ({source})"
+          "fxRate": "1 {currency} = {rate} USD ({source})",
+          "searchPlaceholder": "Search sales…",
+          "monthFilter": "Month"
         },
         "status": {
           "successful": "Paid",
@@ -2723,7 +2727,8 @@
             "method": "Method",
             "paidAt": "Paid at",
             "stripeRef": "Stripe ref"
-          }
+          },
+          "searchPlaceholder": "Search by ref, note or amount…"
         },
         "empty": {
           "title": "No payouts yet",
@@ -2755,7 +2760,9 @@
             "actions": "Actions"
           },
           "unknownProduct": "Unknown product",
-          "viewInvoice": "View invoice"
+          "viewInvoice": "View invoice",
+          "searchPlaceholder": "Search by invoice #, item or status…",
+          "otherStatus": "Other"
         },
         "empty": {
           "title": "No invoices found",
@@ -3330,7 +3337,8 @@
             "date": "Date",
             "status": "Status",
             "invoice": "Invoice",
-            "actions": "Actions"
+            "actions": "Actions",
+            "method": "Method"
           },
           "noRequests": "No payment requests found",
           "review": "Review",
@@ -3338,7 +3346,21 @@
           "id": "Request ID",
           "invoice": "Invoice",
           "reported": "Payment reported",
-          "expired": "Expired unpaid"
+          "expired": "Expired unpaid",
+          "searchPlaceholder": "Search by student, email, product or invoice…",
+          "methods": {
+            "stripe": "Stripe",
+            "manual": "Manual",
+            "bank_transfer": "Bank Transfer",
+            "zelle": "Zelle",
+            "pagos_chile": "Pagos Chile",
+            "paypal": "PayPal",
+            "binance": "Binance",
+            "binance_personal": "Binance (personal)",
+            "lemonsqueezy": "Lemon Squeezy",
+            "solana": "Solana",
+            "pago_movil": "Pago Móvil"
+          }
         },
         "status": {
           "pending": "Pending",
@@ -3788,11 +3810,18 @@
             "manual": "Manual",
             "bank_transfer": "Bank Transfer",
             "zelle": "Zelle",
-            "pagos_chile": "Pagos Chile"
+            "pagos_chile": "Pagos Chile",
+            "paypal": "PayPal",
+            "binance": "Binance",
+            "binance_personal": "Binance (personal)",
+            "lemonsqueezy": "Lemon Squeezy",
+            "solana": "Solana",
+            "pago_movil": "Pago Móvil"
           },
           "unknown": "Unknown",
           "notAvailable": "N/A",
-          "empty": "No transactions found"
+          "empty": "No transactions found",
+          "searchPlaceholder": "Search by ID, user, method..."
         }
       },
       "enrollments": {
@@ -3816,7 +3845,9 @@
           "unknown": "Unknown",
           "unknownCourse": "Unknown Course",
           "viewCourse": "View Course",
-          "empty": "No enrollments found"
+          "empty": "No enrollments found",
+          "searchPlaceholder": "Search by student, email or course...",
+          "statusDisabled": "Disabled"
         }
       },
       "settings": {
@@ -9960,5 +9991,43 @@
       "school_logo": "School logo",
       "community_post": "Community post"
     }
+  },
+  "dataTable": {
+    "columnSort": "Column Sort",
+    "sortPriority": "Sort priority (order in which columns are sorted)",
+    "multiSortTip": "TIP: Hold 'shift' key to enable multi sort",
+    "clearSort": "Clear sort",
+    "sortColumn": "Sort column",
+    "sort": {
+      "asc": "Asc",
+      "desc": "Desc",
+      "lowToHigh": "Low to high",
+      "highToLow": "High to low",
+      "oldestFirst": "Oldest first",
+      "newestFirst": "Newest first",
+      "falseFirst": "False first",
+      "trueFirst": "True first"
+    },
+    "pagination": "Table pagination",
+    "itemsPerPage": "Items per page",
+    "selectPageSize": "Select page size",
+    "zeroItems": "0 items",
+    "itemRange": "{start}-{end} of {total} items",
+    "pageNumber": "Page number",
+    "pageOf": "Page {current} of {total}",
+    "ofPages": "of {total, plural, one {# page} other {# pages}}",
+    "previousPageAria": "Go to previous page, page {page}",
+    "previousPage": "Go to previous page",
+    "nextPageAria": "Go to next page, page {page}",
+    "nextPage": "Go to next page",
+    "reset": "Reset",
+    "search": "Search...",
+    "searchTable": "Search table",
+    "clearSearch": "Clear search",
+    "clearFilterTitle": "Clear {title} filter",
+    "selectedCount": "{count} selected",
+    "noResults": "No results found.",
+    "clearFilters": "Clear filters",
+    "columnActions": "Column actions"
   }
 }

@@ -29,6 +29,8 @@ const eslintConfig = defineConfig([
     // Vendored skill tooling (untracked, bundled/minified — not app code):
     ".agents/**",
     ".claude/**",
+    // Vendored registry source (niko-table), kept close to upstream so it can be re-synced:
+    "components/niko-table/**",
   ]),
   {
     files: ["**/*.{ts,tsx,js,jsx,mjs,mts,cts}"],

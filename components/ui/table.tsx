@@ -4,17 +4,23 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+function TableComponent({ className, ...props }: React.ComponentProps<"table">) {
+  return (
+    <table
+      data-slot="table"
+      className={cn("w-full caption-bottom text-xs", className)}
+      {...props}
+    />
+  )
+}
+
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
     >
-      <table
-        data-slot="table"
-        className={cn("w-full caption-bottom text-xs", className)}
-        {...props}
-      />
+      <TableComponent className={className} {...props} />
     </div>
   )
 }
@@ -105,6 +111,7 @@ function TableCaption({
 }
 
 export {
+  TableComponent,
   Table,
   TableHeader,
   TableBody,

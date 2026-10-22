@@ -1,0 +1,315 @@
+"use client"
+
+/**
+ * niko-table — created by Semir N. (Semkoo, https://github.com/Semkoo) with AI assistance.
+ *
+ * Before reporting anything: please check the changelog first.
+ *  - In-repo: ./CHANGELOG.md
+ *  - Docs site: https://niko-table.com/changelog
+ *
+ * Found a bug or have a fix? Open an issue or PR on GitHub so other
+ * users (and future LLMs reading this code) benefit:
+ * https://github.com/Semkoo/niko-table-registry
+ */
+import * as React from "react"
+
+import type { DataTableInstance, Option } from "../types"
+import { formatLabel } from "../lib/format"
+import { FILTER_VARIANTS } from "../lib/constants"
+import { getFilteredRowsExcludingColumn } from "../lib/filter-rows"
+
+import type { RowData } from "@tanstack/react-table"
+export interface GenerateOptionsConfig {
+  /**
+   * Whether to include counts for each option label
+   * @default true
+   */
+  showCounts?: boolean
+  /**
+   * If true, recompute counts based on the filtered rows; otherwise use all core rows
+   * @default true
+   */
+  dynamicCounts?: boolean
+  /**
+   * If true, only generate options from filtered rows. If false, generate from all rows.
+   * This controls which rows are used to generate the option list itself.
+   * Note: This is separate from dynamicCounts which controls count calculation.
+   * @default true
+   */
+  limitToFilteredRows?: boolean
+  /**
+   * Only generate options for these column ids (if provided)
+   */
+  includeColumns?: string[]
+  /**
+   * Exclude these column ids from option generation
+   */
+  excludeColumns?: string[]
+  /**
+   * Optional cap on number of options per column (after sorting)
+   */
+  limitPerColumn?: number
+  /**
+   * Default merge strategy when a column does not provide meta.mergeStrategy.
+   * Column-level mergeStrategy still takes precedence.
+   */
+  mergeStrategy?: "preserve" | "augment" | "replace"
+}
+
+/**
+ * Generate a map of options for select/multiSelect columns based on table data.
+ * Uses either filtered rows (dynamicCounts) or all core rows.
+ */
+export function useGeneratedOptions<TData extends RowData>(
+  table: DataTableInstance<TData>,
+  config: GenerateOptionsConfig = {},
+): Record<string, Option[]> {
+  const {
+    showCounts = true,
+    dynamicCounts = true,
+    limitToFilteredRows = true,
+    includeColumns,
+    excludeColumns,
+    limitPerColumn,
+    mergeStrategy,
+  } = config
+
+  // Pull state slices to use as memo deps (stable values)
+  const state = table.state
+  const columnFilters = state.columnFilters
+  const globalFilter = state.globalFilter
+
+  // `table.options.columns` in deps so updated `meta.options` (e.g. from
+  // server-side facets) invalidate the memo — `table` ref alone is too stable.
+  const columns = React.useMemo(
+    () => table.getAllColumns(),
+    [table, table.options.columns],
+  )
+
+  // Extract `coreRows` so async-data row-array identity changes drive recompute;
+  // the `table` ref is stable and would otherwise hold stale (empty) results.
+  const coreRows = table.getCoreRowModel().rows
+
+  // Normalize array deps to stable strings for React hook linting
+  const includeKey = includeColumns?.join(",") ?? ""
+  const excludeKey = excludeColumns?.join(",") ?? ""
+
+  // Expensive: walks all columns × all rows (~50-100ms at 1k rows × 5 selects).
+  // Memoize so generation only runs when columns, filters, or config change.
+  const optionsByColumn = React.useMemo(() => {
+    const result: Record<string, Option[]> = {}
+
+    // Note: row selection is done per-column based on overrides
+
+    for (const column of columns) {
+      const meta = column.columnDef.meta ?? {}
+      const variant = meta.variant ?? FILTER_VARIANTS.TEXT
+
+      // Only generate for select-like variants
+      if (
+        variant !== FILTER_VARIANTS.SELECT &&
+        variant !== FILTER_VARIANTS.MULTI_SELECT
+      )
+        continue
+
+      const colId = column.id
+
+      if (includeColumns && !includeColumns.includes(colId)) continue
+      if (excludeColumns && excludeColumns.includes(colId)) continue
+
+      // Respect per-column overrides
+      const colAutoOptions = meta.autoOptions ?? true
+      const colShowCounts = meta.showCounts ?? showCounts
+      const colDynamicCounts = meta.dynamicCounts ?? dynamicCounts
+      const colMerge = meta.mergeStrategy ?? mergeStrategy
+      const colAutoOptionsFormat = meta.autoOptionsFormat ?? true
+      const colFormatOptionLabel = meta.formatOptionLabel
+
+      if (!colAutoOptions) {
+        result[column.id] = meta.options ?? []
+        continue
+      }
+
+      // `limitToFilteredRows` selects rows for option discovery; `dynamicCounts`
+      // selects rows for count computation. Both exclude this column's own
+      // filter. When both are true, compute once and reuse — was a double walk.
+      const filteredRowsExcl =
+        limitToFilteredRows || colDynamicCounts
+          ? getFilteredRowsExcludingColumn(
+              table,
+              coreRows,
+              colId,
+              columnFilters,
+              globalFilter,
+            )
+          : coreRows
+      const optionSourceRows = limitToFilteredRows ? filteredRowsExcl : coreRows
+      const countSourceRows = colDynamicCounts ? filteredRowsExcl : coreRows
+
+      // If we have static options with augment strategy, we use static options and only calculate counts
+      if (meta.options && meta.options.length > 0 && colMerge === "augment") {
+        // Calculate counts from countSourceRows for all static options
+        const countMap = new Map<string, number>()
+        for (const row of countSourceRows) {
+          const raw = row.getValue(colId as string) as unknown
+          const values: unknown[] = Array.isArray(raw) ? raw : [raw]
+          for (const v of values) {
+            if (v === null || v === undefined) continue
+            const str = String(v)
+            if (str.trim() === "") continue
+            countMap.set(str, (countMap.get(str) ?? 0) + 1)
+          }
+        }
+
+        // If limitToFilteredRows is true, we should only return static options that have counts > 0
+        // in the optionSourceRows.
+        let filteredStaticOptions = meta.options
+        if (limitToFilteredRows) {
+          const occurrenceMap = new Map<string, boolean>()
+          for (const row of optionSourceRows) {
+            const raw = row.getValue(colId as string) as unknown
+            const values: unknown[] = Array.isArray(raw) ? raw : [raw]
+            for (const v of values) {
+              if (v == null) continue
+              occurrenceMap.set(String(v), true)
+            }
+          }
+          filteredStaticOptions = meta.options.filter((opt: Option) =>
+            occurrenceMap.has(opt.value),
+          )
+        }
+
+        // Fresh `countMap` always wins. The wrapper component mutates
+        // `meta.options` to inject counts, so on subsequent renders
+        // `opt.count` here is whatever was pinned last render — using it
+        // would freeze counts at their first-render value.
+        // Server-side tables that need true dataset-wide counts should pass
+        // them through the faceted column-header `options` prop instead,
+        // where caller-supplied counts are honored without mutation.
+        result[colId] = filteredStaticOptions.map((opt: Option) => ({
+          ...opt,
+          count: colShowCounts ? (countMap.get(opt.value) ?? 0) : undefined,
+        }))
+        continue
+      }
+
+      // For auto-generated options, discover from optionSourceRows
+      const optionValues = new Set<string>()
+      for (const row of optionSourceRows) {
+        const raw = row.getValue(colId as string) as unknown
+
+        // Support array values (multi-select like arrays on the row)
+        const values: unknown[] = Array.isArray(raw) ? raw : [raw]
+
+        for (const v of values) {
+          if (v === null || v === undefined) continue
+          const str = String(v)
+          if (str.trim() === "") continue
+          optionValues.add(str)
+        }
+      }
+
+      // If we couldn't derive anything, skip (caller may still have static options)
+      if (optionValues.size === 0) {
+        result[colId] = []
+        continue
+      }
+
+      // Compute counts from countSourceRows
+      const counts = new Map<string, number>()
+      for (const row of countSourceRows) {
+        const raw = row.getValue(colId as string) as unknown
+        const values: unknown[] = Array.isArray(raw) ? raw : [raw]
+        for (const v of values) {
+          if (v === null || v === undefined) continue
+          const str = String(v)
+          if (str.trim() === "") continue
+          if (optionValues.has(str)) {
+            counts.set(str, (counts.get(str) ?? 0) + 1)
+          }
+        }
+      }
+
+      const options: Option[] = Array.from(optionValues)
+        .map(value => ({
+          value,
+          label: colFormatOptionLabel
+            ? colFormatOptionLabel(value)
+            : colAutoOptionsFormat
+              ? formatLabel(value)
+              : value,
+          count: colShowCounts ? (counts.get(value) ?? 0) : undefined,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+
+      const finalOptions =
+        typeof limitPerColumn === "number" && limitPerColumn > 0
+          ? options.slice(0, limitPerColumn)
+          : options
+
+      // If static options exist and strategy is preserve, keep them untouched.
+      // Per docs, `preserve` returns user-defined options as-is; counts are only
+      // injected by `augment`. We still respect limitToFilteredRows to hide
+      // options whose value is not present in the current option-source rows.
+      if (
+        meta.options &&
+        meta.options.length > 0 &&
+        (!colMerge || colMerge === "preserve")
+      ) {
+        if (limitToFilteredRows) {
+          const availableOptions = new Set<string>()
+          for (const row of optionSourceRows) {
+            const raw = row.getValue(colId as string) as unknown
+            const values: unknown[] = Array.isArray(raw) ? raw : [raw]
+            for (const v of values) {
+              if (v != null) availableOptions.add(String(v))
+            }
+          }
+          result[colId] = meta.options.filter((opt: Option) =>
+            availableOptions.has(opt.value),
+          )
+        } else {
+          result[colId] = meta.options
+        }
+        continue
+      }
+
+      // Else, replace with generated
+      result[colId] = finalOptions
+    }
+
+    return result
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    columns,
+    coreRows,
+    table,
+    dynamicCounts,
+    showCounts,
+    includeKey,
+    excludeKey,
+    limitPerColumn,
+    mergeStrategy,
+    limitToFilteredRows,
+    // Recompute when filters/global filter change to keep counts in sync
+    columnFilters,
+    globalFilter,
+  ])
+
+  return optionsByColumn
+}
+
+/**
+ * Convenience: generate options only for a specific column id
+ */
+export function useGeneratedOptionsForColumn<TData extends RowData>(
+  table: DataTableInstance<TData>,
+  columnId: string,
+  config?: GenerateOptionsConfig,
+): Option[] {
+  const map = useGeneratedOptions(table, {
+    ...config,
+    includeColumns: [columnId],
+  })
+  return map[columnId] ?? []
+}

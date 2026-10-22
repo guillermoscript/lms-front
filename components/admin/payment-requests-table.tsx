@@ -1,21 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { formatDateTime } from '@/lib/format-date-time'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { IconReceipt } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PAYMENT_REQUEST_STATUS_STYLES } from '@/lib/payments/payment-request-status'
 import { PaymentRequestDialog } from './payment-request-dialog'
+import { DataTableRoot } from '@/components/niko-table/core/data-table-root'
+import { DataTable } from '@/components/niko-table/core/data-table'
+import {
+  DataTableHeader,
+  DataTableBody,
+  DataTableEmptyBody,
+} from '@/components/niko-table/core/data-table-structure'
+import { DataTableToolbarSection } from '@/components/niko-table/components/data-table-toolbar-section'
+import { DataTableSearchFilter } from '@/components/niko-table/components/data-table-search-filter'
+import { DataTableFacetedFilter } from '@/components/niko-table/components/data-table-faceted-filter'
+import { DataTableClearFilter } from '@/components/niko-table/components/data-table-clear-filter'
+import { DataTablePagination } from '@/components/niko-table/components/data-table-pagination'
+import { DataTableColumnHeader } from '@/components/niko-table/components/data-table-column-header'
+import { DataTableColumnTitle } from '@/components/niko-table/components/data-table-column-title'
+import { DataTableColumnSortMenu } from '@/components/niko-table/components/data-table-column-sort'
+import {
+  DataTableEmptyIcon,
+  DataTableEmptyMessage,
+  DataTableEmptyTitle,
+  DataTableEmptyFilteredMessage,
+} from '@/components/niko-table/components/data-table-empty-state'
+import type { DataTableColumnDef } from '@/components/niko-table/types'
 
 interface PaymentRequest {
   request_id: number
@@ -52,9 +67,31 @@ interface PaymentRequest {
   } | null
 }
 
-// Assuming PaymentRequestWithUser is equivalent to PaymentRequest for this context,
-// or that it's defined elsewhere. If not, this type will be undefined.
-type PaymentRequestWithUser = PaymentRequest;
+type PaymentRequestWithUser = PaymentRequest
+
+const STATUSES = ['pending', 'contacted', 'payment_received', 'completed', 'cancelled'] as const
+
+interface RequestRow {
+  id: number
+  student: string
+  email: string
+  product: string
+  amount: number
+  method: string
+  status: string
+  invoice: string
+  createdAt: string
+  /** Hidden column the global search matches against. */
+  searchText: string
+  request: PaymentRequest
+}
+
+const sortHeader = () => (
+  <DataTableColumnHeader>
+    <DataTableColumnTitle />
+    <DataTableColumnSortMenu />
+  </DataTableColumnHeader>
+)
 
 export function PaymentRequestsTable({
   requests,
@@ -65,120 +102,238 @@ export function PaymentRequestsTable({
   timeZone?: string | null
 }) {
   const { locale } = useParams()
-  const dateOptions = { locale: (locale as string) || 'en', timeZone }
   const t = useTranslations('dashboard.admin.paymentRequests')
+  // Tenant-configured methods outside the catalogue fall back to the raw key.
+  const methodLabel = useCallback(
+    (m: string) => (t.has(`table.methods.${m}`) ? t(`table.methods.${m}`) : m),
+    [t],
+  )
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null)
 
-  if (requests.length === 0) {
-    return (
-      <div className="text-center py-12 border rounded-lg">
-        <p className="text-muted-foreground">{t('table.noRequests')}</p>
-      </div>
-    )
-  }
+  const rows = useMemo<RequestRow[]>(
+    () =>
+      requests.map((request) => {
+        const student = request.user?.full_name || request.contact_name
+        const product = request.product?.name || request.plan?.plan_name || ''
+        return {
+          id: request.request_id,
+          student,
+          email: request.contact_email,
+          product,
+          amount: Number(request.payment_amount) || 0,
+          method: request.payment_method ?? '',
+          status: request.status,
+          invoice: request.invoice_number ?? '',
+          createdAt: request.created_at,
+          searchText: [
+            request.request_id,
+            student,
+            request.contact_email,
+            product,
+            request.invoice_number,
+            request.payment_reference,
+          ]
+            .filter(Boolean)
+            .join(' '),
+          request,
+        }
+      }),
+    [requests],
+  )
+
+  const columns = useMemo<DataTableColumnDef<RequestRow>[]>(() => {
+    const dateOptions = { locale: (locale as string) || 'en', timeZone }
+    return [
+      {
+        id: 'searchText',
+        accessorKey: 'searchText',
+        header: () => null,
+        cell: () => null,
+        enableSorting: false,
+        enableHiding: false,
+        meta: { label: 'search' },
+      },
+      {
+        id: 'id',
+        accessorKey: 'id',
+        header: sortHeader,
+        meta: { label: t('table.headers.id') },
+        cell: ({ row }) => (
+          <span className="font-mono text-sm">#{row.original.id}</span>
+        ),
+      },
+      {
+        id: 'student',
+        accessorKey: 'student',
+        header: sortHeader,
+        meta: { label: t('table.headers.student') },
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">{row.original.student}</div>
+            <div className="text-sm text-muted-foreground">{row.original.email}</div>
+          </div>
+        ),
+      },
+      {
+        id: 'product',
+        accessorKey: 'product',
+        header: sortHeader,
+        meta: { label: t('table.headers.product') },
+        cell: ({ row }) => (
+          <div className="max-w-xs truncate">{row.original.product || '—'}</div>
+        ),
+      },
+      {
+        id: 'method',
+        accessorKey: 'method',
+        header: sortHeader,
+        meta: { label: t('table.headers.method') },
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.method ? methodLabel(row.original.method) : '—'}</span>
+        ),
+      },
+      {
+        id: 'amount',
+        accessorKey: 'amount',
+        header: sortHeader,
+        meta: { label: t('table.headers.amount'), variant: 'number' },
+        cell: ({ row }) => {
+          const { request } = row.original
+          return (
+            <div className="font-medium tabular-nums">
+              {request.payment_currency
+                ? new Intl.NumberFormat(locale as string, {
+                    style: 'currency',
+                    currency: request.payment_currency.toUpperCase(),
+                  }).format(request.payment_amount ?? 0)
+                : '—'}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: sortHeader,
+        meta: { label: t('table.headers.status') },
+        cell: ({ row }) => {
+          const { request } = row.original
+          return (
+            <div className="space-y-1">
+              <Badge
+                variant="outline"
+                className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
+              >
+                {t(`status.${request.status}`)}
+              </Badge>
+              {/* The queue's whole job is "who is waiting on me". A
+                  reported reference is the row to work next; a lapsed one
+                  is the row to stop looking at (#802). */}
+              {request.payment_reported_at && (
+                <div className="text-xs font-medium text-brand-text">
+                  {t('table.reported')}
+                  {request.payment_reference && (
+                    <span className="ml-1 font-mono text-muted-foreground">
+                      {request.payment_reference}
+                    </span>
+                  )}
+                </div>
+              )}
+              {request.expired_at && (
+                <div className="text-xs text-muted-foreground">{t('table.expired')}</div>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'invoice',
+        accessorKey: 'invoice',
+        header: sortHeader,
+        meta: { label: t('table.headers.invoice') },
+        cell: ({ row }) =>
+          row.original.invoice ? (
+            <span className="font-mono text-xs">{row.original.invoice}</span>
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          ),
+      },
+      {
+        id: 'createdAt',
+        accessorKey: 'createdAt',
+        header: sortHeader,
+        meta: { label: t('table.headers.date'), variant: 'date' },
+        cell: ({ row }) => (
+          <>
+            <div className="text-sm" suppressHydrationWarning>
+              {formatDateTime(row.original.createdAt, { ...dateOptions, precision: 'date' })}
+            </div>
+            <div className="text-xs text-muted-foreground" suppressHydrationWarning>
+              {formatDateTime(row.original.createdAt, { ...dateOptions, precision: 'time' })}
+            </div>
+          </>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('table.headers.actions')}</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedRequest(row.original.request)}
+          >
+            {t('table.manage')}
+          </Button>
+        ),
+      },
+    ]
+  }, [t, locale, timeZone, methodLabel])
+
+  const statusOptions = STATUSES.map((s) => ({ value: s, label: t(`status.${s}`) }))
+  const methodOptions = useMemo(
+    () =>
+      Array.from(new Set(rows.map((r) => r.method).filter(Boolean)))
+        .sort()
+        .map((m) => ({ value: m, label: methodLabel(m) })),
+    [rows, methodLabel],
+  )
 
   return (
     <>
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('table.headers.id')}</TableHead>
-              <TableHead>{t('table.headers.student')}</TableHead>
-              <TableHead>{t('table.headers.product')}</TableHead>
-              <TableHead>{t('table.headers.amount')}</TableHead>
-              <TableHead>{t('table.headers.status')}</TableHead>
-              <TableHead>{t('table.headers.invoice')}</TableHead>
-              <TableHead>{t('table.headers.date')}</TableHead>
-              <TableHead>{t('table.headers.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requests.map((request) => (
-              <TableRow key={request.request_id}>
-                <TableCell className="font-mono text-sm">
-                  #{request.request_id}
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{request.user?.full_name || request.contact_name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {request.contact_email}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="max-w-xs truncate">
-                    {request.product?.name || request.plan?.plan_name || '—'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium tabular-nums">
-                    {request.payment_currency
-                      ? new Intl.NumberFormat(locale as string, {
-                          style: 'currency',
-                          currency: request.payment_currency.toUpperCase(),
-                        }).format(request.payment_amount ?? 0)
-                      : '—'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <Badge
-                      variant="outline"
-                      className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
-                    >
-                      {t(`status.${request.status}`)}
-                    </Badge>
-                    {/* The queue's whole job is "who is waiting on me". A
-                        reported reference is the row to work next; a lapsed one
-                        is the row to stop looking at (#802). */}
-                    {request.payment_reported_at && (
-                      <div className="text-xs font-medium text-brand-text">
-                        {t('table.reported')}
-                        {request.payment_reference && (
-                          <span className="ml-1 font-mono text-muted-foreground">
-                            {request.payment_reference}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {request.expired_at && (
-                      <div className="text-xs text-muted-foreground">{t('table.expired')}</div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {request.invoice_number ? (
-                    <span className="font-mono text-xs">
-                      {request.invoice_number}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm" suppressHydrationWarning>
-                    {formatDateTime(request.created_at, { ...dateOptions, precision: 'date' })}
-                  </div>
-                  <div className="text-xs text-muted-foreground" suppressHydrationWarning>
-                    {formatDateTime(request.created_at, { ...dateOptions, precision: 'time' })}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedRequest(request)}
-                  >
-                    {t('table.manage')}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTableRoot
+        data={rows}
+        columns={columns}
+        getRowId={(row) => String(row.id)}
+        config={{ initialPageSize: 25 }}
+        initialState={{ columnVisibility: { searchText: false } }}
+      >
+        <DataTableToolbarSection className="mb-4 flex-wrap">
+          <DataTableSearchFilter placeholder={t('table.searchPlaceholder')} className="max-w-md" />
+          <DataTableFacetedFilter accessorKey="status" title={t('table.headers.status')} options={statusOptions} multiple />
+          {methodOptions.length > 0 && (
+            <DataTableFacetedFilter accessorKey="method" title={t('table.headers.method')} options={methodOptions} multiple />
+          )}
+          <DataTableClearFilter />
+        </DataTableToolbarSection>
+        <DataTable>
+          <DataTableHeader />
+          <DataTableBody>
+            <DataTableEmptyBody>
+              <DataTableEmptyIcon>
+                <IconReceipt className="h-8 w-8" />
+              </DataTableEmptyIcon>
+              <DataTableEmptyMessage>
+                <DataTableEmptyTitle>{t('table.noRequests')}</DataTableEmptyTitle>
+              </DataTableEmptyMessage>
+              <DataTableEmptyFilteredMessage>{t('table.noRequests')}</DataTableEmptyFilteredMessage>
+            </DataTableEmptyBody>
+          </DataTableBody>
+        </DataTable>
+        <DataTablePagination defaultPageSize={25} />
+      </DataTableRoot>
 
       {selectedRequest && (
         <PaymentRequestDialog
