@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { PAGE_BUILDER_MANIFEST, pageCatalog } from '@lms/core'
 import { AI_ANNOTATIONS, SHARED_FIELDS_KEY } from '@/lib/puck/ai-annotations'
 
-const PROMPT_DOC_BUDGET = 6500
+// 6500 -> 6700: HeroBlock gained surface, pattern and card fields (dark grid hero with a chat card).
+const PROMPT_DOC_BUDGET = 6700
 
 describe('pageCatalog: vocabulary', () => {
   it('excludes structural/primitive blocks from the AI but still knows them', () => {

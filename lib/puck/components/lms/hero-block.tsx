@@ -1,5 +1,6 @@
 import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
+import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
@@ -15,6 +16,12 @@ export type HeroBlockProps = {
   alignment: 'left' | 'center' | 'right'
   overlayOpacity: number
   minHeight: string
+  /** `brand` paints the accent (default); `theme` / `inverse` paint the school's own surface tokens. */
+  surface: 'brand' | 'theme' | 'inverse'
+  pattern: 'none' | 'grid' | 'dots'
+  /** Optional terminal/chat card beside the copy; shown when `cardLines` is not empty. */
+  cardTitle: string
+  cardLines: { kind: 'prompt' | 'reply' | 'note'; text: string }[]
 }
 
 const minHeightClasses: Record<string, string> = {
@@ -35,6 +42,46 @@ const alignmentJustifyClasses: Record<string, string> = {
   left: 'justify-start',
   center: 'justify-center',
   right: 'justify-end',
+}
+
+const surfaceClasses: Record<string, string> = {
+  theme: 'bg-background text-foreground',
+  inverse: 'bg-foreground text-background',
+}
+
+// Ink for the secondary button and card accents when the surface is a theme token, not the accent.
+const surfaceInk: Record<string, string> = {
+  theme: 'var(--foreground)',
+  inverse: 'var(--background)',
+}
+
+const cardLineClasses: Record<string, string> = {
+  prompt: 'text-muted-foreground',
+  reply: 'text-[var(--block-accent)]',
+  note: 'text-muted-foreground/70',
+}
+
+/** Faint grid / dot lattice drawn in the current text colour, so it reads on any surface. */
+function patternStyle(pattern: string): CSSProperties | undefined {
+  const line = 'color-mix(in srgb, currentColor 9%, transparent)'
+  const mask = 'radial-gradient(ellipse at 70% 40%, #000 20%, transparent 75%)'
+  if (pattern === 'grid') {
+    return {
+      backgroundImage: `linear-gradient(${line} 1px, transparent 1px), linear-gradient(90deg, ${line} 1px, transparent 1px)`,
+      backgroundSize: '48px 48px',
+      maskImage: mask,
+      WebkitMaskImage: mask,
+    }
+  }
+  if (pattern === 'dots') {
+    return {
+      backgroundImage: `radial-gradient(${line} 1.5px, transparent 1.5px)`,
+      backgroundSize: '24px 24px',
+      maskImage: mask,
+      WebkitMaskImage: mask,
+    }
+  }
+  return undefined
 }
 
 export const HeroBlock: ComponentConfig<HeroBlockProps> = {
@@ -69,6 +116,42 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
         { label: 'Full Screen', value: '100vh' },
       ],
     },
+    surface: {
+      type: 'select',
+      label: 'Surface',
+      options: [
+        { label: 'Brand color', value: 'brand' },
+        { label: 'Theme surface', value: 'theme' },
+        { label: 'Inverse', value: 'inverse' },
+      ],
+    },
+    pattern: {
+      type: 'select',
+      label: 'Background Pattern',
+      options: [
+        { label: 'None', value: 'none' },
+        { label: 'Grid', value: 'grid' },
+        { label: 'Dots', value: 'dots' },
+      ],
+    },
+    cardTitle: { type: 'text', label: 'Card Title (terminal/chat)' },
+    cardLines: {
+      type: 'array',
+      label: 'Card Lines',
+      arrayFields: {
+        kind: {
+          type: 'select',
+          label: 'Kind',
+          options: [
+            { label: 'Prompt / input', value: 'prompt' },
+            { label: 'Reply / result', value: 'reply' },
+            { label: 'Note', value: 'note' },
+          ],
+        },
+        text: { type: 'textarea', label: 'Text' },
+      },
+      defaultItemProps: { kind: 'prompt', text: '' },
+    },
   },
   defaultProps: {
     title: 'Welcome to Our Academy',
@@ -82,27 +165,51 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
     alignment: 'center',
     overlayOpacity: 50,
     minHeight: '500px',
+    surface: 'brand',
+    pattern: 'none',
+    cardTitle: '',
+    cardLines: [],
   },
   render: ({
     title, subtitle, primaryCtaLabel, primaryCtaHref,
     secondaryCtaLabel, secondaryCtaHref, backgroundImage, backgroundColor,
-    alignment, overlayOpacity, minHeight,
+    alignment, overlayOpacity, minHeight, surface = 'brand', pattern = 'none',
+    cardTitle = '', cardLines = [],
   }) => {
+    const themed = surface !== 'brand' && !backgroundImage
+    const lines = (cardLines ?? []).filter((l) => l?.text)
+    const hasCard = lines.length > 0
+    const ink = themed ? surfaceInk[surface] : undefined
+    const patternCss = backgroundImage ? undefined : patternStyle(pattern)
     return (
       <section
         className={cn(
           'relative flex items-center px-6 py-16',
           minHeightClasses[minHeight] || 'min-h-[500px]',
-          backgroundImage ? 'bg-cover bg-center' : 'bg-[var(--block-accent)]',
+          backgroundImage ? 'bg-cover bg-center' : themed ? surfaceClasses[surface] : 'bg-[var(--block-accent)]',
           // #569: only the accent-painted branch has a --block-accent-foreground to read.
-          backgroundImage ? 'text-primary-foreground' : 'text-[var(--block-accent-foreground)]'
+          backgroundImage
+            ? 'text-primary-foreground'
+            : themed
+              ? ''
+              : 'text-[var(--block-accent-foreground)]',
+          patternCss && 'overflow-hidden'
         )}
         style={
           backgroundImage
             ? { backgroundImage: `url(${backgroundImage})` }
-            : accentVars(backgroundColor)
+            : themed
+              ? ({
+                  ...accentVars(backgroundColor),
+                  // --block-accent stays the brand (accentVars); ink reads from the surface token.
+                  '--block-accent-foreground': ink,
+                } as CSSProperties)
+              : accentVars(backgroundColor)
         }
       >
+        {patternCss && (
+          <div className="absolute inset-0 pointer-events-none" aria-hidden="true" style={patternCss} />
+        )}
         {backgroundImage && overlayOpacity > 0 && (
           <div
             className="absolute inset-0 pointer-events-none"
@@ -113,9 +220,10 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
         <div
           className={cn(
             'relative mx-auto w-full max-w-7xl',
-            alignmentTextClasses[alignment]
+            hasCard && 'grid items-center gap-12 lg:grid-cols-2'
           )}
         >
+        <div className={alignmentTextClasses[alignment]}>
           <h1
             className={cn(
               'text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 break-words',
@@ -137,7 +245,7 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
           <div className={cn('flex gap-4 flex-wrap', alignmentJustifyClasses[alignment])}>
             {primaryCtaLabel && (
               <ButtonLink href={primaryCtaHref} size="lg"
-                  variant="secondary"
+                  variant={themed ? 'default' : 'secondary'}
                   className="h-12 px-8 text-base font-semibold"
                 >
                   {primaryCtaLabel}
@@ -158,6 +266,24 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
                 </ButtonLink>
             )}
           </div>
+        </div>
+        {hasCard && (
+          <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+              <span aria-hidden="true" className="size-2.5 rounded-full bg-muted-foreground/40" />
+              <span aria-hidden="true" className="size-2.5 rounded-full bg-muted-foreground/40" />
+              <span aria-hidden="true" className="size-2.5 rounded-full bg-[var(--block-accent)]" />
+              {cardTitle && <span className="ml-2 font-mono text-xs text-muted-foreground">{cardTitle}</span>}
+            </div>
+            <div className="space-y-3 p-5 font-mono text-sm leading-relaxed">
+              {lines.map((l, i) => (
+                <p key={i} className={cn('whitespace-pre-wrap break-words', cardLineClasses[l.kind] ?? cardLineClasses.prompt)}>
+                  {l.text}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
         </div>
       </section>
     )
