@@ -35,6 +35,7 @@ import {
   IconVideo,
   IconChevronRight,
   IconChartBar,
+  IconLayout,
   IconMessages,
 } from '@tabler/icons-react'
 import { ShareButton } from '@/components/teacher/share-button'
@@ -340,6 +341,24 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                   >
                     <IconMessages className="h-3.5 w-3.5" />
                     {tc('title')}
+                  </Button>
+                )}
+                {/* The landing builder is admin-only; it opens this course's page or creates one. */}
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    nativeButton={false}
+                    render={
+                      <Link
+                        href={`/dashboard/admin/landing-page?newForCourse=${course.course_id}`}
+                        data-testid="course-landing-page-link"
+                      />
+                    }
+                  >
+                    <IconLayout className="h-3.5 w-3.5" />
+                    {t('landingPage')}
                   </Button>
                 )}
                 <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">

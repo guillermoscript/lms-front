@@ -1278,6 +1278,7 @@
             "description": "Configure course details, pricing, visibility, and other settings."
           }
         },
+        "landingPage": "Landing page",
         "analytics": "Analytics",
         "bulk": {
           "selectItem": "Select {title}",
