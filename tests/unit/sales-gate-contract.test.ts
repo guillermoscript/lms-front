@@ -320,9 +320,11 @@ describe('fee sales gate contract (#929)', () => {
     ]) {
       expect(where, f).toContain(f)
     }
-    // 5 transactions inserts + grant_free_subscription + grant_free_entitlement
+    // 3 transactions inserts (the mock-checkout `enrollUser` was removed: a paid
+    // sale now only lands via a provider webhook or a staff-confirmed request)
+    // + grant_free_subscription + grant_free_entitlement
     // + 3 self_enroll_subscription_course call sites.
-    expect(sites.length).toBeGreaterThanOrEqual(10)
+    expect(sites.length).toBeGreaterThanOrEqual(8)
   })
 
   it('the manual checkout page shows the neutral notice to a blocked school (no form)', () => {

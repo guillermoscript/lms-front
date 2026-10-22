@@ -66,7 +66,7 @@ The product payment system is a good template; plans/subscriptions are mid-migra
 | Subscription cancel | `app/actions/admin/subscriptions.ts` | ✅ provider-aware (PR #330) |
 | Stripe webhook | `app/api/stripe/webhook/route.ts` | ⚠️ lookup fixed to `provider_subscription_id` (PR #330), but still a **Stripe-only file**; routes by Stripe event strings |
 | Manual / offline | `app/actions/payment-requests.ts` | ✅ provider-agnostic for products *and* plans |
-| Checkout (student) | `app/[locale]/(public)/checkout/*` | ⚠️ card tab = Stripe-ish + `mock_test`; offline tab = payment request. No generic "provider checkout session" |
+| Checkout (student) | `app/[locale]/(public)/checkout/*` | ⚠️ card tab = Stripe PaymentElement only (the `mock_test` action was removed); offline tab = payment request. No generic "provider checkout session" |
 | Enrollment / access | `enroll_user` / `handle_new_subscription` RPC + `entitlements` | ✅ single path for all providers (transaction insert → trigger → RPC) |
 
 ### The real coupling points still left

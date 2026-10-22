@@ -56,15 +56,13 @@
  * this file owns is the proof that the flip → trigger → entitlement chain runs
  * AT ALL for binance_personal, for every course the product maps to.
  *
- * AMBIGUITY IS NOT WHAT IT SOUNDS LIKE. Two transfers that both match do NOT
- * make a reconcile ambiguous — `lib/payments/binance-personal-reconcile.ts:161`
- * simply takes the first candidate. Ambiguity is a property of the LEDGER, not
- * of the history: it happens when rule 1 (note carries the payment code) finds
- * nothing, an exact-amount transfer exists, and MORE THAN ONE pending
- * binance_personal transaction in that tenant shares the amount — so no transfer
- * can be attributed to one buyer. The case below therefore seeds two colliding
- * pending transactions and two note-less exact-amount transfers; asserting on
- * two transfers alone would assert something false.
+ * AMBIGUITY IS NOT WHAT IT SOUNDS LIKE. Two transfers that both match (by note
+ * code) do NOT make a reconcile ambiguous — it simply takes the first candidate.
+ * `ambiguous` means rule 1 (note carries the payment code) found nothing while
+ * an exact-amount transfer exists: an amount alone never settles (the transfer
+ * could be unrelated), so the transaction stays pending for admin confirmation.
+ * The case below seeds two colliding pending transactions and two note-less
+ * exact-amount transfers.
  *
  * THE FIXTURE IS SPEC-OWNED, not seeded. This spec owns two tenants: the school
  * being paid (`qa-binance-personal`) and a second one that exists only to own

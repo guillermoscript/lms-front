@@ -124,8 +124,12 @@ export async function POST(req: NextRequest) {
   const connectedAccountId = event.account
   const tenantId = await resolveTenantFromStripeAccount(connectedAccountId)
 
+  // A Connect event we cannot map to a school must not be processed: every
+  // handler below skips its tenant ownership check when `tenantId` is null.
+  // Platform-level events carry no `account` and are unaffected.
   if (connectedAccountId && !tenantId) {
-    console.warn(`Received event from unknown Stripe account: ${connectedAccountId}`)
+    console.warn(`Rejected event from unknown Stripe account: ${connectedAccountId}`)
+    return NextResponse.json({ error: 'Unknown connected account' }, { status: 400 })
   }
 
   // Handle the event

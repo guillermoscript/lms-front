@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { enrollUser, enrollFree, subscribeFree } from '@/app/[locale]/(public)/checkout/actions';
+import { enrollFree, subscribeFree } from '@/app/[locale]/(public)/checkout/actions';
 import { StripePaymentForm } from '@/components/public/stripe-payment-form';
 import { createPaymentRequest } from '@/app/actions/payment-requests';
 import { useRouter } from 'next/navigation';
@@ -76,7 +76,6 @@ export function CheckoutForm({
     feeIncluded = false,
 }: CheckoutFormProps) {
     const [isPending, startTransition] = useTransition();
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'offline'>('card');
     const [offlineData, setOfflineData] = useState({
         name: userName || '',
         email: userEmail || '',
@@ -283,8 +282,8 @@ export function CheckoutForm({
         };
     };
 
-    // Real provider checkout (Lemon Squeezy redirect / Solana QR). Returns true
-    // if it handled the flow, false to fall back to the inline/mock path.
+    // Real provider checkout (redirect / Solana QR / transfer instructions).
+    // Returns true when it handled the flow.
     const startProviderCheckout = async (): Promise<boolean> => {
         if (!isRedirectProvider && !isQrProvider && !isInstructionsProvider) return false;
 
@@ -459,43 +458,39 @@ export function CheckoutForm({
                     return;
                 }
 
-                if (paymentMethod === 'card') {
-                    // Lemon Squeezy / Solana go through the real provider checkout;
-                    // everything else uses the existing inline (mock) enrollment.
-                    if (isRedirectProvider || isQrProvider || isInstructionsProvider) {
-                        const handled = await startProviderCheckout();
-                        if (handled) return; // redirect leaves the page / QR or instructions keep loading
-                    }
-                    const result = await enrollUser(courseId, planId, 'mock_test');
-                    toast.success(t('toasts.paymentSuccess'));
-                    router.push(`/checkout/success?transactionId=${result.transaction_id}`);
+                // Redirect / QR / instructions providers run their real checkout
+                // session; the form never settles a paid purchase by itself.
+                if (isRedirectProvider || isQrProvider || isInstructionsProvider) {
+                    const handled = await startProviderCheckout();
+                    if (handled) return; // redirect leaves the page / QR or instructions keep loading
+                    throw new Error(t('payment.cardUnavailable'));
+                }
+
+                // Offline payment — works for both products and plans
+                if (productId) {
+                    const { error } = await createPaymentRequest({
+                        productId,
+                        contactName: offlineData.name,
+                        contactEmail: offlineData.email,
+                        contactPhone: offlineData.phone,
+                        message: offlineData.message
+                    });
+                    if (error) throw new Error(error);
+                    toast.success(t('toasts.requestSent'));
+                    router.push('/dashboard/student/payments');
+                } else if (planId) {
+                    const { error } = await createPaymentRequest({
+                        planId: parseInt(planId),
+                        contactName: offlineData.name,
+                        contactEmail: offlineData.email,
+                        contactPhone: offlineData.phone,
+                        message: offlineData.message
+                    });
+                    if (error) throw new Error(error);
+                    toast.success(t('toasts.requestSent'));
+                    router.push('/dashboard/student/payments');
                 } else {
-                    // Offline payment — works for both products and plans
-                    if (productId) {
-                        const { error } = await createPaymentRequest({
-                            productId,
-                            contactName: offlineData.name,
-                            contactEmail: offlineData.email,
-                            contactPhone: offlineData.phone,
-                            message: offlineData.message
-                        });
-                        if (error) throw new Error(error);
-                        toast.success(t('toasts.requestSent'));
-                        router.push('/dashboard/student/payments');
-                    } else if (planId) {
-                        const { error } = await createPaymentRequest({
-                            planId: parseInt(planId),
-                            contactName: offlineData.name,
-                            contactEmail: offlineData.email,
-                            contactPhone: offlineData.phone,
-                            message: offlineData.message
-                        });
-                        if (error) throw new Error(error);
-                        toast.success(t('toasts.requestSent'));
-                        router.push('/dashboard/student/payments');
-                    } else {
-                        throw new Error("No product or plan to process");
-                    }
+                    throw new Error("No product or plan to process");
                 }
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
@@ -863,15 +858,13 @@ export function CheckoutForm({
     }
 
     // ─── Paid checkout ───
-    // Stripe uses a real PaymentElement (webhook grants enrollment). The mock
-    // "Pay & Enroll (Test)" button is a dev-only sandbox escape hatch — never
-    // shown in production, and never for redirect/QR/manual providers (those
-    // return earlier or use the offline tab).
+    // A paid purchase only completes through a real flow: Stripe's
+    // PaymentElement (webhook grants access), a redirect/QR/instructions
+    // provider (returned earlier) or an offline payment request that staff
+    // confirm. There is no client-reachable "mock" payment.
     const isStripe = paymentProvider === 'stripe';
-    const allowSandbox = process.env.NODE_ENV !== 'production' && paymentProvider !== 'manual';
 
-    // Card payment panel: real Stripe form, an unavailable notice, or (in dev)
-    // just the sandbox button below it.
+    // Card payment panel: the real Stripe form, or an unavailable notice.
     const cardPanel = (
         <div className="space-y-4">
             {isStripe ? (
@@ -881,27 +874,10 @@ export function CheckoutForm({
                     price={price}
                     hasManualFallback={showOfflineTab}
                 />
-            ) : !allowSandbox ? (
+            ) : (
                 <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
                     {t('payment.cardUnavailable')}
                 </p>
-            ) : null}
-
-            {allowSandbox && (
-                <div className="space-y-2">
-                    <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={handleEnroll}
-                        disabled={isPending}
-                    >
-                        {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isPending ? t('payment.processing') : t('payment.sandboxButton')}
-                    </Button>
-                    <p className="text-center text-[11px] text-muted-foreground">
-                        {t('payment.sandboxHint')}
-                    </p>
-                </div>
             )}
         </div>
     );
@@ -962,7 +938,7 @@ export function CheckoutForm({
             {/* Payment methods */}
             <div className="px-6 py-6 sm:px-8">
                 {showOfflineTab ? (
-                    <Tabs defaultValue="card" onValueChange={(v) => v && setPaymentMethod(v as 'card' | 'offline')}>
+                    <Tabs defaultValue="card">
                         <TabsList className="w-full">
                             <TabsTrigger value="card" className="flex-1 gap-1.5">
                                 <IconCreditCard className="h-3.5 w-3.5" />

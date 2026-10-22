@@ -179,8 +179,8 @@ describe('getPaymentCredentialsKey', () => {
 
 /**
  * Fluent Supabase-admin fake. Two query shapes reach it:
- *  - the rule-2 collision count: `.select(cols, { count })...eq()...` awaited
- *    (never calls maybeSingle) → resolves `{ count, error }`.
+ *  - a bare awaited query chain (never calls maybeSingle) → `{ count, error }`;
+ *    the reconciler must NOT issue one any more (`countQueries` stays 0).
  *  - the status-guarded flip: `.update()...select().maybeSingle()` → resolves
  *    the next queued `{ data, error }` (default: a flipped row).
  */
@@ -256,7 +256,7 @@ describe('reconcileBinancePersonalTransaction', () => {
       transfer({ orderId: 'ORD-A', note: 'order 482 thanks', amount: 30 }),
     ])
     expect(result).toEqual({ status: 'confirmed', orderId: 'ORD-A' })
-    expect(calls.countQueries).toBe(0) // rule 1 never needs the collision count
+    expect(calls.countQueries).toBe(0)
     expect(calls.updates[0]).toMatchObject({
       status: 'successful',
       provider_charge_id: 'ORD-A',
@@ -286,23 +286,22 @@ describe('reconcileBinancePersonalTransaction', () => {
     expect(calls.updates).toHaveLength(0)
   })
 
-  it('rule 2: exact amount + exactly one pending → confirmed', async () => {
+  it('exact amount without the note code never settles, even with a single pending', async () => {
     const { admin, calls } = makeAdmin({ count: 1 })
     const result = await reconcileBinancePersonalTransaction(admin, tx(), [
       transfer({ orderId: 'ORD-EX', amount: 25, note: '' }),
     ])
-    expect(result).toEqual({ status: 'confirmed', orderId: 'ORD-EX' })
-    expect(calls.countQueries).toBe(1)
-    expect(calls.updates[0]).toMatchObject({ provider_charge_id: 'ORD-EX' })
+    expect(result).toEqual({ status: 'ambiguous' })
+    expect(calls.countQueries).toBe(0)
+    expect(calls.updates).toHaveLength(0)
   })
 
-  it('rule 2 ambiguity: exact amount but two pendings → ambiguous, no update', async () => {
-    const { admin, calls } = makeAdmin({ count: 2 })
+  it('exact amount with someone else\'s code stays pending for admin review', async () => {
+    const { admin, calls } = makeAdmin({ count: 1 })
     const result = await reconcileBinancePersonalTransaction(admin, tx(), [
-      transfer({ orderId: 'ORD-EX', amount: 25, note: '' }),
+      transfer({ orderId: 'ORD-EX', amount: 25, note: 'order 999' }),
     ])
     expect(result).toEqual({ status: 'ambiguous' })
-    expect(calls.countQueries).toBe(1)
     expect(calls.updates).toHaveLength(0)
   })
 
@@ -341,14 +340,6 @@ describe('reconcileBinancePersonalTransaction', () => {
     ])
     expect(result).toEqual({ status: 'not_found' })
     expect(calls.updates).toHaveLength(0)
-  })
-
-  it('surfaces a collision-count query error as error', async () => {
-    const { admin } = makeAdmin({ count: 0, countError: { message: 'boom' } })
-    const result = await reconcileBinancePersonalTransaction(admin, tx(), [
-      transfer({ orderId: 'ORD-EX', amount: 25, note: '' }),
-    ])
-    expect(result).toMatchObject({ status: 'error' })
   })
 })
 
