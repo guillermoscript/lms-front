@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,7 +22,7 @@ import type { Data } from '@measured/puck'
 import type { LandingData } from '@/lib/puck/types'
 import { deepCloneWithFreshIds, type PuckTemplate, type TemplateBindings } from '@/lib/puck/templates'
 import { translateTemplateString } from '@lms/core/src/page-builder/template-i18n'
-import { schoolBindingsFromSettings } from '@/lib/puck/templates/school-bindings'
+import { schoolBindingsFromSettings, slugFromTitle } from '@/lib/puck/templates/school-bindings'
 import { LandingPickerProviders } from '@/lib/puck/utils/landing-pickers-context'
 import dynamic from 'next/dynamic'
 
@@ -75,6 +75,16 @@ interface Props {
   templates: PuckTemplate[]
   brandingSettings: Record<string, unknown>
   landingData: LandingData
+  /** Arrived from a course's "Landing page" button (`?newForCourse=`): open or create its page. */
+  courseIntent?: CourseLandingIntent | null
+}
+
+export interface CourseLandingIntent {
+  courseId: string
+  title: string
+  isFree: boolean
+  /** A page that already binds this course: opened instead of creating a duplicate. */
+  existingPageId: string | null
 }
 
 // The builder is available on every plan; free tenants are capped at one page.
@@ -97,7 +107,23 @@ function pageUrl(slug: string): string {
   return slug === 'home' ? '/' : `/p/${slug}`
 }
 
-export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = false, tenantId, templates, brandingSettings, landingData }: Props) {
+// `home` is the homepage; the rest mirror RESERVED_SLUGS in app/actions/admin/landing-pages.ts.
+const NON_COURSE_SLUGS = new Set(['home', 'api', 'dashboard', 'admin', 'auth', 'login', 'signup', 'register'])
+
+/**
+ * A course page slug: `base`, or `base-2`, `base-3`… when another page already uses it (slugs
+ * are unique per school). A title that lands on the homepage or a reserved path gets `-course`.
+ */
+function uniqueSlug(title: string, pages: LandingPage[]): string {
+  const fromTitle = slugFromTitle(title) || 'course'
+  const base = NON_COURSE_SLUGS.has(fromTitle) ? `${fromTitle}-course` : fromTitle
+  const taken = new Set(pages.map(p => p.slug))
+  let slug = base
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`
+  return slug
+}
+
+export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = false, tenantId, templates, brandingSettings, landingData, courseIntent = null }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
   const locale = useLocale() === 'es' ? 'es' : 'en'
@@ -111,7 +137,9 @@ export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = f
     setPages(initialPages)
   }
 
-  const [editingPage, setEditingPage] = useState<LandingPage | null>(null)
+  const [editingPage, setEditingPage] = useState<LandingPage | null>(() =>
+    courseIntent?.existingPageId ? (initialPages.find(p => p.id === courseIntent.existingPageId) ?? null) : null
+  )
   // The description a page was started from ("describe your page"): the editor's chat sends it.
   const [initialPrompt, setInitialPrompt] = useState<string | undefined>(undefined)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
@@ -231,6 +259,35 @@ export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = f
       }
     })
   }
+
+  // A course with no page yet: create it from the course template once, then drop the query
+  // param (without a server round trip, which would refetch the data the editor needs) so a
+  // reload or "back" never creates a second page. Deferred a tick: Strict Mode's mount/unmount
+  // cancels the first timer, and the ref stops any later re-run.
+  const courseIntentHandled = useRef(false)
+  useEffect(() => {
+    if (!courseIntent || courseIntentHandled.current) return
+    const timer = setTimeout(() => {
+      courseIntentHandled.current = true
+      window.history.replaceState(null, '', window.location.pathname)
+      if (courseIntent.existingPageId) return
+      if (atFreePageLimit) {
+        toast.error(t('freeLimit.title'))
+        return
+      }
+      const tpl = templates.find(x => x.id === (courseIntent.isFree ? 'free-course-lead' : 'course-landing'))
+      if (!tpl) {
+        toast.error(t('errors.createFailed'))
+        return
+      }
+      // Named after the course ("<title> Page"), not the template, so course pages stay apart.
+      const slug = uniqueSlug(courseIntent.title, pages)
+      void handleCreateFromTemplate(tpl.puck_data, courseIntent.title, slug, { courseId: courseIntent.courseId })
+    }, 0)
+    return () => clearTimeout(timer)
+    // Runs once per arrival (courseIntent is a server prop, stable until the next navigation).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseIntent])
 
   // ── Puck Editor mode ──
   if (editingPage) {

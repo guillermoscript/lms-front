@@ -1278,6 +1278,7 @@
             "description": "Configura los detalles del curso, precios, visibilidad y otros ajustes."
           }
         },
+        "landingPage": "Página de venta",
         "analytics": "Analíticas",
         "bulk": {
           "selectItem": "Seleccionar {title}",
