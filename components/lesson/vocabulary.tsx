@@ -1,5 +1,6 @@
 'use client'
 
+import { SafeImage } from '@/components/shared/safe-image'
 import { useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { IconVolume, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react'
@@ -60,7 +61,7 @@ export function Vocabulary({
     >
       {image && (
         <div className="shrink-0">
-          <img
+          <SafeImage
             src={image}
             alt={word}
             className="size-20 rounded-md object-cover"

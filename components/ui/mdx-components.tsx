@@ -1,3 +1,4 @@
+import { SafeImage } from '@/components/shared/safe-image'
 import React from 'react';
 import * as UI from './index';
 
@@ -41,8 +42,7 @@ export const mdxComponents = {
     <blockquote className="mt-6 border-l-2 pl-6 italic" {...props} />
   ),
   img: ({ className, alt, ...props }: React.ComponentProps<"img">) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img className="rounded-md border" alt={alt} {...props} />
+    <SafeImage className="rounded-md border max-w-full h-auto" alt={alt} {...props} />
   ),
   hr: ({ ...props }: React.ComponentProps<"hr">) => (
     <hr className="my-4 md:my-8" {...props} />
