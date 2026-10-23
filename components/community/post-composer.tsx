@@ -1,5 +1,6 @@
 'use client'
 
+import { SafeImage } from '@/components/shared/safe-image'
 import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -230,7 +231,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
               className="relative group/media rounded-lg border bg-muted/30 overflow-hidden"
             >
               {media.type === 'image' ? (
-                <img
+                <SafeImage
                   src={media.url}
                   alt={media.name}
                   className="h-20 w-20 object-cover"

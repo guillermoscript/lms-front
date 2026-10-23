@@ -5,6 +5,22 @@ import { resolveDeploymentId } from "./lib/build/deployment-id";
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
+function supabaseImagePatterns(): NonNullable<NonNullable<NextConfig['images']>['remotePatterns']> {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!raw) return []
+  try {
+    const u = new URL(raw)
+    return [{
+      protocol: u.protocol.replace(':', '') as 'http' | 'https',
+      hostname: u.hostname,
+      ...(u.port ? { port: u.port } : {}),
+      pathname: '/storage/v1/object/public/**',
+    }]
+  } catch {
+    return []
+  }
+}
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   // Version-skew protection (#679). Rolling deploys leave browsers holding the
@@ -22,6 +38,13 @@ const nextConfig: NextConfig = {
   // Allow the local tenant domains so the app is interactive under automation.
   allowedDevOrigins: ['lvh.me', '*.lvh.me', 'localhost'],
   transpilePackages: ['@lms/core'],
+  // next/image refuses any remote host that is not listed here, so course
+  // thumbnails (Supabase public storage) rendered as broken images. Local
+  // Supabase is on 127.0.0.1, which the optimizer blocks unless allowed.
+  images: {
+    remotePatterns: supabaseImagePatterns(),
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
+  },
   // Types are checked by `npm run typecheck` (CI's `verify` job, which deploy
   // waits on), not here. The project's checker needs ~4 GB of heap — Node's
   // default limit — and inside the build's type-check worker a cold run kept

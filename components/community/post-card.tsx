@@ -1,5 +1,6 @@
 'use client'
 
+import { SafeImage } from '@/components/shared/safe-image'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -365,7 +366,7 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
                   rel="noopener noreferrer"
                   className="block rounded-lg overflow-hidden border"
                 >
-                  <img
+                  <SafeImage
                     src={media.url}
                     alt={media.name}
                     className="max-h-60 object-cover"
