@@ -19,6 +19,7 @@ import {
     Lock,
 } from "lucide-react";
 import { CourseCover } from '@/components/public/course-cover';
+import { CourseTrailer } from '@/components/public/course-trailer';
 import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -140,13 +141,13 @@ export default async function CourseDetailsPage(props: {
     const admin = createAdminClient();
     const exercisesPromise = admin
         .from('exercises')
-        .select('id, lesson_id')
+        .select('id, lesson_id, title')
         .eq('course_id', courseId)
         .eq('tenant_id', tenantId)
         .eq('status', 'published');
     const examsPromise = admin
         .from('exams')
-        .select('exam_id, title, duration')
+        .select('exam_id, title, duration, image')
         .eq('course_id', courseId)
         .eq('tenant_id', tenantId)
         .eq('status', 'published')
@@ -222,6 +223,7 @@ export default async function CourseDetailsPage(props: {
 
     const lessons: Lesson[] = lessonRows ?? [];
     const totalLessons = lessons.length;
+    const lessonTitleById = new Map<number, string>(lessons.map((l) => [l.id, l.title]));
 
     // Curriculum facts, all counted from real rows (nothing invented).
     const exercisesByLesson = new Map<number, number>();
@@ -412,11 +414,20 @@ export default async function CourseDetailsPage(props: {
                 <aside className="mt-8 lg:mt-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:pt-10">
                     <div className="lg:sticky lg:top-6">
                         <Card className="shadow-xl overflow-hidden">
-                            <CourseCover
-                                title={course.title}
-                                thumbnailUrl={course.thumbnail_url}
-                                category={course.category?.name}
-                            />
+                            {course.trailer_url ? (
+                                <CourseTrailer
+                                    title={course.title}
+                                    trailerUrl={course.trailer_url}
+                                    thumbnailUrl={course.thumbnail_url}
+                                    category={course.category?.name}
+                                />
+                            ) : (
+                                <CourseCover
+                                    title={course.title}
+                                    thumbnailUrl={course.thumbnail_url}
+                                    category={course.category?.name}
+                                />
+                            )}
 
                             <CardContent className="p-6 space-y-5">
                                 <div className="text-3xl font-bold">{priceDisplay}</div>
@@ -642,10 +653,32 @@ export default async function CourseDetailsPage(props: {
                                         </li>
                                     );
                                 })}
+                                {(exerciseRows ?? []).map((exercise) => (
+                                    <li key={`exercise-${exercise.id}`} className="flex items-start gap-4 px-4 py-3.5">
+                                        <div className="relative flex aspect-video w-24 sm:w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 text-brand-text">
+                                            <Code2 className="h-6 w-6 opacity-70" aria-hidden="true" />
+                                            <span className="absolute left-1 top-1 rounded bg-background/85 px-1.5 py-[3px] text-[10px] font-bold leading-none text-foreground">
+                                                {t('sections.content.kind.exercise')}
+                                            </span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-sm font-semibold leading-snug text-foreground">{exercise.title}</div>
+                                            {exercise.lesson_id != null && lessonTitleById.get(exercise.lesson_id) ? (
+                                                <div className="mt-1.5 text-xs font-medium text-muted-foreground">
+                                                    {lessonTitleById.get(exercise.lesson_id)}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </li>
+                                ))}
                                 {exams.map((exam) => (
                                     <li key={`exam-${exam.exam_id}`} className="flex items-start gap-4 px-4 py-3.5">
                                         <div className="relative flex aspect-video w-24 sm:w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-tint text-brand-text">
-                                            <Award className="h-6 w-6 opacity-70" aria-hidden="true" />
+                                            {exam.image ? (
+                                                <img src={exam.image} alt="" width={224} height={126} loading="lazy" className="h-full w-full object-cover" />
+                                            ) : (
+                                                <Award className="h-6 w-6 opacity-70" aria-hidden="true" />
+                                            )}
                                             <span className="absolute left-1 top-1 rounded bg-background/85 px-1.5 py-[3px] text-[10px] font-bold leading-none text-foreground">
                                                 {t('sections.content.kind.exam')}
                                             </span>

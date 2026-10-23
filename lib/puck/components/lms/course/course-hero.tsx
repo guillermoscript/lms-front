@@ -11,6 +11,7 @@ import {
   sectionOuterProps,
   sectionInnerProps,
 } from '../../../utils/section-spacing'
+import { CourseTrailer } from '@/components/public/course-trailer'
 import { CoursePickerSingleField } from '../course-picker-single-field'
 import { resolveCourseBinding } from './binding'
 import { AuthorAvatar, BindingNotice, Stars } from './course-ui'
@@ -138,11 +139,19 @@ export const CourseHero: ComponentConfig<CourseHeroProps> = {
       </div>
     )
 
-    const image = course.image ? (
-      <div className={cn('overflow-hidden rounded-card border border-border bg-muted', centered && 'mx-auto w-full max-w-3xl')}>
-        <img src={course.image} alt="" className="aspect-video w-full object-cover" />
-      </div>
-    ) : null
+    // A trailer turns the cover into a "Watch trailer" button (even with no cover:
+    // the player falls back to the video's own poster).
+    const trailer = details?.trailer ?? null
+    const image =
+      course.image || trailer ? (
+        <div className={cn('overflow-hidden rounded-card border border-border bg-muted', centered && 'mx-auto w-full max-w-3xl')}>
+          {trailer ? (
+            <CourseTrailer title={course.title} trailerUrl={trailer} thumbnailUrl={course.image} />
+          ) : (
+            <img src={course.image ?? ''} alt="" className="aspect-video w-full object-cover" />
+          )}
+        </div>
+      ) : null
 
     return (
       <div {...sectionOuterProps(props)}>

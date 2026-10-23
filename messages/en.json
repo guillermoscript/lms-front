@@ -1387,7 +1387,10 @@
           "cancel": "Cancel",
           "update": "Update Course",
           "create": "Create Course"
-        }
+        },
+        "trailerLabel": "Trailer / intro video",
+        "trailerPlaceholder": "https://www.youtube.com/watch?v=...",
+        "trailerHint": "YouTube, Vimeo, Loom… visitors can watch it on the public course page before enrolling"
       },
       "courseDelete": {
         "triggerButton": "Delete Course",
@@ -1457,7 +1460,11 @@
         "removeOption": "Remove option",
         "dragQuestion": "Drag to reorder question",
         "publishSuccess": "Exam published",
-        "draftSaved": "Draft saved"
+        "draftSaved": "Draft saved",
+        "imageLabel": "Cover image",
+        "uploadImage": "Choose image",
+        "removeImage": "Remove image",
+        "imageHint": "Shown on the public course page (16:9 recommended)"
       },
       "versionHistory": {
         "trigger": "History",
@@ -5894,7 +5901,8 @@
         "kind": {
           "video": "Video",
           "reading": "Reading",
-          "exam": "Exam"
+          "exam": "Exam",
+          "exercise": "Exercise"
         },
         "lessonExercises": "{count, plural, one {# exercise} other {# exercises}}",
         "lessonResources": "{count, plural, one {# resource} other {# resources}}",
@@ -5943,6 +5951,10 @@
       "signUpBody": "Create an account to keep going — it takes a moment.",
       "signUpCta": "Create your account",
       "haveAccount": "Already have an account? Log in"
+    },
+    "trailer": {
+      "watch": "Watch trailer",
+      "title": "Trailer: {title}"
     }
   },
   "pricing": {

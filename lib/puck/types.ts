@@ -54,6 +54,8 @@ export interface LandingAuthor {
 // Base course fields + the extras the course blocks need. Resolved only for the
 // ids a page actually references (lib/puck/utils/collect-bound-ids.ts).
 export interface LandingCourseDetails extends LandingCourse {
+  // Trailer / intro video link (courses.trailer_url); the hero plays it over the cover.
+  trailer?: string | null
   objectives: string[]
   lessons: LandingLesson[]
   lessonCount: number
