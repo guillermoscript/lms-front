@@ -284,7 +284,9 @@
       "accountSubtitle": "Update your personal information",
       "preferencesTitle": "Preferences",
       "preferencesSubtitle": "Personal settings for how the dashboard behaves",
-      "manageTokens": "Manage API tokens"
+      "manageTokens": "Manage API tokens",
+      "profileTitle": "Profile",
+      "profileSubtitle": "Update your personal details and account preferences."
     },
     "student": {
       "aiAssistant": {

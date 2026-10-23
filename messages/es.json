@@ -284,7 +284,9 @@
       "accountSubtitle": "Actualiza tu información personal",
       "preferencesTitle": "Preferencias",
       "preferencesSubtitle": "Ajustes personales sobre el comportamiento del panel",
-      "manageTokens": "Administrar tokens de API"
+      "manageTokens": "Administrar tokens de API",
+      "profileTitle": "Perfil",
+      "profileSubtitle": "Actualiza tus datos personales y preferencias de cuenta."
     },
     "student": {
       "aiAssistant": {
