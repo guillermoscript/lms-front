@@ -4510,6 +4510,18 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
           "type": "text",
           "label": "Heading"
         },
+        "subtitle": {
+          "type": "textarea",
+          "label": "Subtitle"
+        },
+        "contactLabel": {
+          "type": "text",
+          "label": "Contact Link Label"
+        },
+        "contactHref": {
+          "type": "text",
+          "label": "Contact Link URL"
+        },
         "items": {
           "type": "array",
           "label": "Questions",
@@ -4709,6 +4721,9 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
         "anchorId": "",
         "hideOn": "none",
         "heading": "Frequently Asked Questions",
+        "subtitle": "",
+        "contactLabel": "",
+        "contactHref": "/p/contact",
         "items": [
           {
             "question": "What is the refund policy?",

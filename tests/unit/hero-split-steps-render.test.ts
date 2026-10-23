@@ -29,3 +29,16 @@ describe('landing blocks', () => {
     expect(out).not.toContain('>sparkles<')
   })
 })
+
+import { FaqSplit } from '@/lib/puck/components/lms/faq-split'
+describe('FaqSplit', () => {
+  it('renders an accordion with the first answer open and a contact link', () => {
+    const out = html(FaqSplit, {
+      contactLabel: 'Escríbenos', contactHref: '/p/contacto',
+      items: [{ question: 'Q1', answer: 'A1' }, { question: 'Q2', answer: 'A2' }],
+    })
+    expect(out).toContain('<details')
+    expect(out).toMatch(/<details[^>]*open/)
+    expect(out).toContain('href="/p/contacto"')
+  })
+})
