@@ -24,6 +24,7 @@ export interface LandingPage {
   tenant_id: string
   name: string      // mapped from title
   slug: string
+  kind: 'page' | 'header' | 'footer'
   puck_data: Data
   is_active: boolean // mapped from is_published
   status: 'draft' | 'published' // derived from is_published
@@ -50,6 +51,7 @@ function mapRow(row: Record<string, unknown>): LandingPage {
     tenant_id: row.tenant_id as string,
     name: row.title as string,
     slug: row.slug as string,
+    kind: ((row.kind as string | undefined) ?? 'page') as LandingPage['kind'],
     puck_data: row.puck_data as Data,
     is_active: row.is_published as boolean,
     status: (row.is_published as boolean) ? 'published' : 'draft',
@@ -103,6 +105,7 @@ async function checkFreePlanPageLimit(
     .from('landing_pages')
     .select('page_id', { count: 'exact', head: true })
     .eq('tenant_id', tenantId)
+    .eq('kind', 'page')
   if ((count ?? 0) >= FREE_PLAN_PAGE_LIMIT) {
     return 'The free plan includes 1 landing page. Upgrade your plan to create more pages.'
   }
@@ -521,6 +524,75 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
       .single()
     if (error) throw error
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
+    return { success: true, data: mapRow(data) }
+  } catch (err) {
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
+  }
+}
+
+
+// ─── Site header & footer (global template parts) ────────────────────────────
+
+const PART_SLUG = { header: '_header', footer: '_footer' } as const
+const PART_TITLE = { header: 'Site header', footer: 'Site footer' } as const
+
+/**
+ * The school's global header or footer row, created (published) on first use. It starts from
+ * the Header/Footer block of the published home page when there is one, so the site looks the
+ * same the moment it exists; otherwise from a minimal block named after the school.
+ */
+export async function ensureSitePart(kind: 'header' | 'footer'): Promise<ActionResult<LandingPage>> {
+  try {
+    await verifyAdminAccess()
+    const tenantId = await getCurrentTenantId()
+    const adminClient = createAdminClient()
+
+    const { data: existing } = await adminClient
+      .from('landing_pages')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('kind', kind)
+      .maybeSingle()
+    if (existing) return { success: true, data: mapRow(existing) }
+
+    const type = kind === 'header' ? 'Header' : 'Footer'
+    const { data: home } = await adminClient
+      .from('landing_pages')
+      .select('puck_data')
+      .eq('tenant_id', tenantId)
+      .eq('kind', 'page')
+      .eq('slug', 'home')
+      .maybeSingle()
+    const homeBlocks = ((home?.puck_data as { content?: { type?: string; props?: Record<string, unknown> }[] } | null)?.content ?? [])
+    const fromHome = homeBlocks.find((b) => b?.type === type)
+
+    let props: Record<string, unknown>
+    if (fromHome?.props) {
+      props = { ...fromHome.props }
+    } else {
+      const { data: tenant } = await adminClient.from('tenants').select('name').eq('id', tenantId).single()
+      const name = tenant?.name ?? 'Academy'
+      props = kind === 'header'
+        ? { logo: '', logoText: name, navLinks: [{ label: 'Cursos', href: '/courses' }], ctaLabel: '', ctaHref: '', showLogin: true, showLanguageSwitcher: false, sticky: true, transparent: false }
+        : { description: '', columns: [], socialLinks: [], copyright: `© ${new Date().getFullYear()} ${name}` }
+    }
+    props.id = `${type}-${kind}`
+
+    const { data, error } = await adminClient
+      .from('landing_pages')
+      .insert({
+        tenant_id: tenantId,
+        title: PART_TITLE[kind],
+        slug: PART_SLUG[kind],
+        kind,
+        puck_data: { root: { props: {} }, content: [{ type, props }], zones: {} },
+        is_published: true,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
+    revalidatePath('/[locale]', 'layout')
     return { success: true, data: mapRow(data) }
   } catch (err) {
     return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>

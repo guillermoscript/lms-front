@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
+import { getGlobalParts } from '@/lib/puck/utils/global-parts-server'
 import { getLandingData } from '@/lib/puck/utils/landing-data'
 import { readRootMeta } from '@/lib/puck/utils/root-meta'
 import { ogImageUrl } from '@/lib/seo'
@@ -27,6 +28,7 @@ async function getPageData(slug: string) {
     .select('puck_data, title')
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
+    .eq('kind', 'page')
     .eq('is_published', true)
     .maybeSingle()
 
@@ -71,5 +73,6 @@ export default async function CustomPage({ params }: PageProps) {
   if (!result) notFound()
 
   const landingData = await getLandingData(result.tenantId, { puckData: result.page.puck_data })
-  return <PuckPageRenderer data={result.page.puck_data as unknown as Data} landingData={landingData} />
+  const globalParts = await getGlobalParts(result.tenantId)
+  return <PuckPageRenderer data={result.page.puck_data as unknown as Data} landingData={landingData} globalParts={globalParts} />
 }

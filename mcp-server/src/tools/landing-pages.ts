@@ -168,6 +168,7 @@ async function loadPage(session: LmsSession, pageId: string): Promise<PageRow | 
     .select(PAGE_COLUMNS)
     .eq("page_id", pageId)
     .eq("tenant_id", session.getTenantId())
+    .eq("kind", "page")
     .maybeSingle();
   if (error) throw new Error(`Fetching landing page: ${error.message}`);
   return (data as PageRow | null) ?? null;
@@ -534,6 +535,7 @@ export function registerLandingPageTools(server: LmsServer, options: LandingTool
             .from("landing_pages")
             .select("page_id, title, slug, is_published")
             .eq("tenant_id", session.getTenantId())
+            .eq("kind", "page")
             .order("created_at", { ascending: false }),
         ]);
         if (pagesRes.error) throw new Error(`Listing landing pages: ${pagesRes.error.message}`);
@@ -616,6 +618,7 @@ export function registerLandingPageTools(server: LmsServer, options: LandingTool
           .from("landing_pages")
           .select(PAGE_COLUMNS)
           .eq("tenant_id", session.getTenantId())
+          .eq("kind", "page")
           .order("created_at", { ascending: false });
         if (error) return errorResult(`Listing landing pages: ${error.message}`);
 

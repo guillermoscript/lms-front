@@ -421,7 +421,8 @@ export async function freePlanPageCapError(session: LmsSession): Promise<string 
   const { count, error } = await client
     .from("landing_pages")
     .select("page_id", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .eq("kind", "page");
   if (error) throw new Error(`Counting landing pages: ${error.message}`);
   if ((count ?? 0) >= FREE_PLAN_PAGE_LIMIT) {
     return "The free plan includes 1 landing page and this school already has it. Edit that page with lms_patch_landing_page, or upgrade the plan to create more pages.";

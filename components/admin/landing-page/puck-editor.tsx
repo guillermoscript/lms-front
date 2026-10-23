@@ -67,6 +67,8 @@ interface Props {
   aiEnabled?: boolean
   /** A first message for the AI chat ("describe your page"): the panel opens and sends it once. */
   initialPrompt?: string
+  /** Editing the school-wide header or footer: the palette is that one block and the AI chat is off. */
+  partKind?: 'header' | 'footer'
   /** Leave the editor; `latest` is the row after the last successful save/publish. */
   onBack: (latest: LandingPage | null) => void
 }
@@ -287,15 +289,26 @@ export function PuckEditor({
   initialUpdatedAt,
   brandingSettings,
   landingData,
-  aiEnabled = true,
+  aiEnabled: aiEnabledProp = true,
   initialPrompt,
+  partKind,
   onBack,
 }: Props) {
   const t = useTranslations('puck')
+  const aiEnabled = aiEnabledProp && !partKind
   const tp = useTranslations('pageArchitect.panel.editor')
   const locale: 'en' | 'es' = useLocale() === 'es' ? 'es' : 'en'
   // Blocks dragged in by hand get their default copy in the page's language (#944).
-  const config = useMemo(() => createPuckConfig(t, locale) as Config, [t, locale])
+  const config = useMemo(() => {
+    const full = createPuckConfig(t, locale) as Config
+    if (!partKind) return full
+    const type = partKind === 'header' ? 'Header' : 'Footer'
+    return {
+      ...full,
+      components: { [type]: full.components[type] },
+      categories: { navigation: { ...full.categories?.navigation, components: [type] } },
+    } as Config
+  }, [t, locale, partKind])
 
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(pageStatus)
