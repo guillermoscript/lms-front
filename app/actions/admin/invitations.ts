@@ -87,9 +87,9 @@ export async function getSchoolJoinUrl() {
 
   const { data: tenant } = await adminClient
     .from('tenants')
-    .select('slug')
+    .select('slug, domain')
     .eq('id', tenantId)
     .single()
 
-  return buildJoinUrl(tenant?.slug)
+  return buildJoinUrl(tenant?.slug, tenant?.domain)
 }
