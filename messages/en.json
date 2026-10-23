@@ -2924,6 +2924,77 @@
             "description": "Create and manage courses from the Content Management section."
           },
           "replay": "Replay tour"
+        },
+        "header": {
+          "title": "Welcome back, {name}",
+          "titleFallback": "Welcome back",
+          "newCourse": "New course"
+        },
+        "attention": {
+          "title": "Needs attention",
+          "clear": "All clear — nothing needs you right now",
+          "error": "Some items couldn't be loaded. Reload to try again.",
+          "paymentRequests": "{count, plural, one {# payment request to review} other {# payment requests to review}}",
+          "paymentRequestsAction": "Review",
+          "examSubmissions": "{count, plural, one {# exam waiting for your review} other {# exams waiting for your review}}",
+          "examSubmissionsAction": "Grade",
+          "pastDue": "{count, plural, one {# subscription past due} other {# subscriptions past due}}",
+          "pastDueAction": "Check",
+          "failedPayments": "{count, plural, one {# failed payment in the last 30 days} other {# failed payments in the last 30 days}}",
+          "failedPaymentsAction": "Inspect",
+          "flags": "{count, plural, one {# community report to moderate} other {# community reports to moderate}}",
+          "flagsAction": "Moderate",
+          "questions": "{count, plural, one {# unanswered community question} other {# unanswered community questions}}",
+          "questionsAction": "Answer"
+        },
+        "performance": {
+          "title": "Last 30 days",
+          "revenue": "Revenue",
+          "chartLabel": "Daily revenue, last 30 days",
+          "error": "Revenue couldn't be loaded.",
+          "statsError": "Some figures couldn't be loaded.",
+          "partial": "Only the {count} most recent sales were counted, so this figure may be incomplete.",
+          "delta": {
+            "change": "{value} vs previous 30 days",
+            "new": "New vs previous 30 days"
+          },
+          "newStudents": "New students",
+          "members": "Members",
+          "courses": "Courses",
+          "coursesDetail": "{count} published",
+          "activeSubscriptions": "Active subscriptions",
+          "empty": {
+            "connect": "Connect payments to start earning",
+            "connectAction": "Connect payments",
+            "publish": "Publish a course to start selling",
+            "publishAction": "Go to courses",
+            "share": "No sales yet — share your school"
+          }
+        },
+        "activity": {
+          "title": "Recent activity",
+          "enrolled": "{name} enrolled in {course}",
+          "paid": "{name} paid {amount}",
+          "joined": "{name} joined",
+          "someone": "Someone",
+          "aCourse": "a course",
+          "empty": "Nothing yet. Share your join link to bring in your first students.",
+          "error": "Recent activity couldn't be loaded."
+        },
+        "share": {
+          "title": "Share your school",
+          "description": "Send this link so people can join your school.",
+          "copy": "Copy link",
+          "copied": "Copied",
+          "whatsapp": "WhatsApp",
+          "viewSite": "View public site"
+        },
+        "drafts": {
+          "waiting": "{count, plural, one {# draft course waiting} other {# draft courses waiting}}",
+          "action": "Finish drafts"
+        },
+        "planFooter": {
+          "unlimited": "{plan} · Unlimited"
         }
       },
       "billing": {

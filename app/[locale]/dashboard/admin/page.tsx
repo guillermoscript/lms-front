@@ -3,33 +3,40 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  IconUsers,
-  IconBook,
-  IconCurrencyDollar,
-  IconReceipt,
-  IconCrown,
-  IconArrowUpRight,
-  IconUserPlus,
-} from '@tabler/icons-react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { UsageMeter } from '@/components/admin/usage-meter'
-import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import { CourseArchitectCta } from '@/components/teacher/course-architect/course-architect-cta'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
-import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 import { AiKeyBanner } from '@/components/admin/ai/ai-key-banner'
 import { getTenantAiEnabled } from '@/lib/ai/ui-flags'
+import { computeDelta, foldRevenueWindows } from '@/lib/admin/dashboard-metrics'
+import { DashboardHeader } from '@/components/admin/dashboard/dashboard-header'
+import { NeedsAttention, type AttentionItem } from '@/components/admin/dashboard/needs-attention'
+import { Performance, type MetricRow } from '@/components/admin/dashboard/performance'
+import { ActivityFeed, type ActivityEvent } from '@/components/admin/dashboard/activity-feed'
+import { ShareSchool } from '@/components/admin/dashboard/share-school'
+import { DraftsNudge } from '@/components/admin/dashboard/drafts-nudge'
+import { PlanFooter } from '@/components/admin/dashboard/plan-footer'
+
+const DAY_MS = 86_400_000
+/**
+ * Revenue is folded in JS from the last 60 days of sales. PostgREST caps a
+ * response at 1000 rows by default, so the cap is explicit: if it is hit, the
+ * page says the figure may be incomplete instead of showing a wrong total.
+ */
+const REVENUE_ROW_CAP = 5000
+const ACTIVITY_PER_SOURCE = 6
+const ACTIVITY_MAX = 10
+
+/** Logs a failed query (never swallow it) and hands the result back. */
+function checked<T extends { error: { message: string } | null }>(label: string, res: T): T {
+  if (res.error) console.error(`[admin-dashboard] ${label} failed:`, res.error.message)
+  return res
+}
 
 export default async function AdminDashboardPage({
   params,
@@ -38,8 +45,6 @@ export default async function AdminDashboardPage({
 }) {
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.main')
-  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const dateLocale = locale === 'es' ? es : enUS
   const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
@@ -50,29 +55,49 @@ export default async function AdminDashboardPage({
   // Get tenant context for all queries
   const tenantId = await getCurrentTenantId()
 
-  // Get platform statistics — ALL queries scoped to current tenant
+  const now = new Date()
+  const iso = (msAgo: number) => new Date(now.getTime() - msAgo).toISOString()
+  const d30 = iso(30 * DAY_MS)
+  const d60 = iso(60 * DAY_MS)
+
+  // Every query is scoped to the current tenant and runs in this one round.
+  // `exam_submissions`, `community_*` and `payment_requests` all carry tenant_id.
   const [
-    { count: totalUsers },
-    { count: totalCourses },
-    { count: publishedCourses },
-    { data: firstCourseRows },
-    { data: readyCourseRows },
-    { count: publishedLessons },
-    { count: totalEnrollments },
-    { count: totalTransactions },
-    { count: pendingPaymentRequests },
-    { count: activeSubscriptions },
-    { data: recentTransactions },
-    { data: recentTenantUsers },
+    members,
+    totalCoursesRes,
+    publishedCoursesRes,
+    draftCoursesRes,
+    firstCourseRes,
+    readyCourseRes,
+    publishedLessonsRes,
+    activeSubsRes,
+    studentsRes,
+    newStudentsRes,
+    prevStudentsRes,
+    revenueRes,
+    lifetimeSalesRes,
+    recentSalesRes,
+    recentEnrollRes,
+    recentMembersRes,
+    payReqRes,
+    examRes,
+    pastDueRes,
+    failedRes,
+    flagsRes,
+    questionsRes,
+    settingsRes,
+    tenantRes,
+    myProfileRes,
     uiState,
+    joinUrl,
+    aiEnabled,
   ] = await Promise.all([
     supabase.from('tenant_users').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase
-      .from('courses')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('status', 'published'),
+    supabase.from('courses').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('status', 'published').is('deleted_at', null),
+    supabase.from('courses').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('status', 'draft').is('deleted_at', null),
     // The oldest course with its lesson count: where the "first course" step
     // sends the owner next (quick create, or that course's lesson editor).
     supabase
@@ -94,99 +119,207 @@ export default async function AdminDashboardPage({
       .eq('lessons.status', 'published')
       .order('created_at', { ascending: true })
       .limit(1),
-    // Any published lesson at all — the second sub-step. A creator who
-    // publishes the lesson before the course still sees that half ticked.
+    // Any published lesson at all — the second sub-step.
     supabase
       .from('lessons')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('status', 'published'),
-    supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase
-      .from('payment_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .in('status', ['pending', 'contacted', 'payment_received']),
-    supabase
-      .from('subscriptions')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('subscription_status', 'active'),
-    supabase
-      .from('transactions')
-      .select('transaction_id, amount, status, transaction_date, user_id')
-      .eq('tenant_id', tenantId)
-      .order('transaction_date', { ascending: false })
-      .limit(5),
-    supabase
-      .from('tenant_users')
-      .select('user_id, created_at, profiles(id, full_name)')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(5),
-    getUiState(userId),
-  ])
-
-  // Supabase infers the profiles(...) embed as an array even though the FK
-  // makes it a single row — narrow it to what the query actually returns.
-  const recentUsers = (recentTenantUsers || []) as unknown as Array<{
-    user_id: string
-    created_at: string
-    profiles: { id: string; full_name: string | null } | null
-  }>
-
-  // Batch-fetch user profiles for transactions (avoids N+1)
-  const transactionUserIds = [...new Set((recentTransactions || []).map(t => t.user_id).filter(Boolean))]
-  const { data: transactionProfiles } = transactionUserIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name').in('id', transactionUserIds)
-    : { data: [] }
-  const profileMap = new Map((transactionProfiles || []).map(p => [p.id, p]))
-  const transactionsWithUsers = (recentTransactions || []).map(t => ({
-    ...t,
-    user: profileMap.get(t.user_id) || null,
-  }))
-
-  // Parallelize post-stats queries
-  const adminClient = createAdminClient()
-  const [
-    { data: successfulTransactions },
-    { data: tenant },
-    { count: studentCount },
-    { data: onboardingSettings },
-  ] = await Promise.all([
-    supabase.from('transactions').select('amount, refunded_amount')
-      .eq('tenant_id', tenantId).eq('status', 'successful'),
-    adminClient.from('tenants').select('plan, stripe_account_id, billing_mode')
-      .eq('id', tenantId).single(),
-    adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
+    supabase.from('subscriptions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('subscription_status', 'active'),
+    supabase.from('tenant_users').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
+    // `tenant_users` stamps membership with `joined_at` (it has no created_at).
+    supabase.from('tenant_users').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active').gte('joined_at', d30),
+    supabase.from('tenant_users').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active')
+      .gte('joined_at', d60).lt('joined_at', d30),
+    supabase.from('transactions').select('amount, refunded_amount, transaction_date')
+      .eq('tenant_id', tenantId).eq('status', 'successful').gte('transaction_date', d60)
+      .order('transaction_date', { ascending: false }).limit(REVENUE_ROW_CAP),
+    supabase.from('transactions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('status', 'successful'),
+    supabase.from('transactions').select('transaction_id, amount, transaction_date, user_id')
+      .eq('tenant_id', tenantId).eq('status', 'successful')
+      .order('transaction_date', { ascending: false }).limit(ACTIVITY_PER_SOURCE),
+    supabase.from('enrollments').select('enrollment_id, user_id, course_id, enrollment_date')
+      .eq('tenant_id', tenantId).not('enrollment_date', 'is', null)
+      .order('enrollment_date', { ascending: false }).limit(ACTIVITY_PER_SOURCE),
+    supabase.from('tenant_users').select('user_id, joined_at, role')
+      .eq('tenant_id', tenantId).eq('status', 'active').not('joined_at', 'is', null)
+      .order('joined_at', { ascending: false }).limit(ACTIVITY_PER_SOURCE),
+    // Needs attention — head counts only.
+    supabase.from('payment_requests').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).in('status', ['pending', 'contacted', 'payment_received']),
+    supabase.from('exam_submissions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).or('review_status.eq.pending_teacher_review,requires_attention.eq.true'),
+    supabase.from('subscriptions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('subscription_status', 'past_due'),
+    supabase.from('transactions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('status', 'failed').gte('transaction_date', d30),
+    supabase.from('community_flags').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('status', 'pending'),
+    supabase.from('community_posts').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('post_type', 'question').is('accepted_comment_id', null).eq('is_hidden', false),
     supabase.from('tenant_settings').select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
       .in('setting_key', ['site_name', 'theme_preset', 'logo_url', 'manual_payment_instructions']),
+    supabase.from('tenants').select('plan, stripe_account_id, billing_mode').eq('id', tenantId).single(),
+    supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle(),
+    getUiState(userId),
+    getSchoolJoinUrl(),
+    getTenantAiEnabled(),
   ])
 
-  // Net of refunds (#547). A PARTIALLY refunded sale stays 'successful' and
-  // carries the slice in `refunded_amount`, so summing `amount` alone would
-  // count money the school gave back. Only a FULL refund leaves this filter.
-  const totalRevenue =
-    successfulTransactions?.reduce((sum, t) => sum + netOfRefunds(t.amount || 0, t.refunded_amount), 0) || 0
+  const totalUsers = checked('members count', members).count
+  const totalCourses = checked('courses count', totalCoursesRes).count
+  const publishedCourses = checked('published courses count', publishedCoursesRes).count
+  const draftCourses = checked('draft courses count', draftCoursesRes).count
+  const firstCourseRows = checked('first course', firstCourseRes).data
+  const readyCourseRows = checked('ready course', readyCourseRes).data
+  const publishedLessons = checked('published lessons count', publishedLessonsRes).count
+  const activeSubscriptions = checked('active subscriptions count', activeSubsRes).count
+  const studentCount = checked('students count', studentsRes).count
+  const newStudents = checked('new students count', newStudentsRes)
+  const prevStudents = checked('previous students count', prevStudentsRes)
+  const revenueQuery = checked('revenue window', revenueRes)
+  const lifetimeSales = checked('lifetime sales count', lifetimeSalesRes).count
+  const tenant = checked('tenant', tenantRes).data
+  const settingsRows = checked('tenant settings', settingsRes).data
+  checked('own profile', myProfileRes)
 
-  // platformPlan depends on tenant.plan -- must be sequential
+  // --- Revenue + metrics -------------------------------------------------
+  const revenueRows = revenueQuery.data ?? []
+  const truncated = revenueRows.length >= REVENUE_ROW_CAP
+  const windows = foldRevenueWindows(revenueRows, now, 30)
+  const revenue = {
+    current: revenueQuery.error ? null : windows.current,
+    previous: windows.previous,
+    delta: computeDelta(windows.current, windows.previous),
+    series: windows.series,
+    truncated,
+    rowCap: REVENUE_ROW_CAP,
+    lifetimeSales: lifetimeSales ?? 0,
+  }
+
+  const metrics: MetricRow[] = [
+    {
+      key: 'newStudents',
+      value: newStudents.error ? null : (newStudents.count ?? 0),
+      delta: newStudents.error || prevStudents.error
+        ? undefined
+        : computeDelta(newStudents.count ?? 0, prevStudents.count ?? 0),
+      href: '/dashboard/admin/users',
+      testId: 'admin-stat-new-students',
+    },
+    {
+      key: 'members',
+      value: members.error ? null : (totalUsers ?? 0),
+      href: '/dashboard/admin/users',
+      testId: 'admin-stat-users',
+    },
+    {
+      key: 'courses',
+      value: totalCoursesRes.error ? null : (totalCourses ?? 0),
+      detail: publishedCoursesRes.error ? undefined : t('performance.coursesDetail', { count: publishedCourses ?? 0 }),
+      href: '/dashboard/admin/courses',
+      testId: 'admin-stat-courses',
+    },
+    {
+      key: 'activeSubscriptions',
+      value: activeSubsRes.error ? null : (activeSubscriptions ?? 0),
+      href: '/dashboard/admin/subscriptions',
+      testId: 'admin-stat-subscriptions',
+    },
+  ]
+
+  // --- Needs attention ---------------------------------------------------
+  const attentionSources: Array<{ item: AttentionItem; label: string; res: { error: { message: string } | null; count: number | null } }> = [
+    { label: 'payment requests', res: payReqRes, item: { key: 'paymentRequests', count: 0, href: '/dashboard/admin/payment-requests', testId: 'admin-stat-pending-payments' } },
+    // No school-wide submissions list exists; the teacher course list is the entry point.
+    { label: 'exam submissions', res: examRes, item: { key: 'examSubmissions', count: 0, href: '/dashboard/teacher/courses' } },
+    { label: 'past due subscriptions', res: pastDueRes, item: { key: 'pastDue', count: 0, href: '/dashboard/admin/subscriptions' } },
+    { label: 'failed payments', res: failedRes, item: { key: 'failedPayments', count: 0, href: '/dashboard/admin/transactions' } },
+    { label: 'community flags', res: flagsRes, item: { key: 'flags', count: 0, href: '/dashboard/admin/community/moderation' } },
+    { label: 'unanswered questions', res: questionsRes, item: { key: 'questions', count: 0, href: '/dashboard/admin/community' } },
+  ]
+  const attentionItems = attentionSources.map(({ item, res, label }) => ({
+    ...item,
+    count: checked(label, res).count ?? 0,
+  }))
+  const attentionError = attentionSources.some((s) => s.res.error)
+
+  // --- Second round: names (profiles) + course titles + plan -------------
+  const recentSales = checked('recent sales', recentSalesRes).data ?? []
+  const recentEnrollments = checked('recent enrollments', recentEnrollRes).data ?? []
+  const recentMembers = checked('recent members', recentMembersRes).data ?? []
+
+  const profileIds = [
+    ...new Set(
+      [userId, ...recentSales.map((r) => r.user_id), ...recentEnrollments.map((r) => r.user_id), ...recentMembers.map((r) => r.user_id)].filter(
+        (id): id is string => Boolean(id),
+      ),
+    ),
+  ]
+  const courseIds = [...new Set(recentEnrollments.map((r) => r.course_id))]
   const planSlug = tenant?.plan || 'free'
-  const { data: platformPlan } = await adminClient
-    .from('platform_plans')
-    .select('name, limits')
-    .eq('slug', planSlug)
-    .eq('is_active', true)
-    .single()
-  const planLimits = (platformPlan?.limits as { max_courses?: number; max_students?: number }) || { max_courses: 5, max_students: 50 }
 
-  const settingsByKey = new Map(
-    (onboardingSettings || []).map(s => [s.setting_key, s.setting_value])
+  const [profilesRes, courseTitlesRes, planRes] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').in('id', profileIds),
+    courseIds.length > 0
+      ? supabase.from('courses').select('course_id, title').eq('tenant_id', tenantId).in('course_id', courseIds)
+      : Promise.resolve({ data: [] as Array<{ course_id: number; title: string }>, error: null }),
+    supabase.from('platform_plans').select('name, limits').eq('slug', planSlug).eq('is_active', true).single(),
+  ])
+  const profiles = checked('activity profiles', profilesRes)
+  const courseTitles = checked('activity course titles', courseTitlesRes)
+  const platformPlan = checked('platform plan', planRes).data
+
+  const nameById = new Map((profiles.data ?? []).map((p) => [p.id, p.full_name as string | null]))
+  const titleById = new Map((courseTitles.data ?? []).map((c) => [c.course_id, c.title]))
+  const firstName = nameById.get(userId)?.trim().split(/\s+/)[0] || null
+
+  const activityError = Boolean(
+    recentSalesRes.error || recentEnrollRes.error || recentMembersRes.error || profilesRes.error || courseTitlesRes.error,
   )
-  const currentSettings = { site_name: settingsByKey.get('site_name') }
+  const events: ActivityEvent[] = [
+    ...recentEnrollments.map((r): ActivityEvent => ({
+      id: `e-${r.enrollment_id}`,
+      kind: 'enrolled',
+      at: r.enrollment_date as string,
+      name: nameById.get(r.user_id) ?? null,
+      course: titleById.get(r.course_id) ?? null,
+    })),
+    ...recentSales.map((r): ActivityEvent => ({
+      id: `t-${r.transaction_id}`,
+      kind: 'paid',
+      at: r.transaction_date,
+      name: r.user_id ? (nameById.get(r.user_id) ?? null) : null,
+      amount: r.amount,
+    })),
+    ...recentMembers.map((r): ActivityEvent => ({
+      id: `m-${r.user_id}`,
+      kind: 'joined',
+      at: r.joined_at as string,
+      name: nameById.get(r.user_id) ?? null,
+    })),
+  ]
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    .slice(0, ACTIVITY_MAX)
+
+  // --- Onboarding inputs -------------------------------------------------
+  const billingMode = normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode)
+  // A missing key (or the internal billing mode) means unlimited, as in lib/billing/plan-limits.ts.
+  // No plan row at all falls back to the Free defaults.
+  const planLimits = platformPlan
+    ? (platformPlan.limits as { max_courses?: number; max_students?: number } | null)
+    : { max_courses: 5, max_students: 50 }
+  const unlimitedByMode = billingMode === 'internal'
+
+  const settingsByKey = new Map((settingsRows || []).map(s => [s.setting_key, s.setting_value]))
+  const siteNameValue = (settingsByKey.get('site_name') as { value?: unknown } | undefined)?.value
+  const schoolName = typeof siteNameValue === 'string' && siteNameValue.trim() ? siteNameValue.trim() : null
   const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
   const isStripeConnected = Boolean(tenant?.stripe_account_id)
   const hasConfiguredPayments = isStripeConnected || settingsByKey.has('manual_payment_instructions')
@@ -203,56 +336,17 @@ export default async function AdminDashboardPage({
     : firstCourseLessonCount === 0
       ? `/dashboard/teacher/courses/${firstCourse.course_id}/lessons/new?from=new-course`
       : `/dashboard/teacher/courses/${firstCourse.course_id}`
-  // BYOK: no provider key yet means every AI feature answers "not configured".
-  const [joinUrl, aiEnabled] = await Promise.all([getSchoolJoinUrl(), getTenantAiEnabled()])
 
-  const stats = [
-    {
-      title: t('stats.totalUsers'),
-      value: totalUsers || 0,
-      testId: 'admin-stat-users',
-      icon: IconUsers,
-      link: '/dashboard/admin/users',
-    },
-    {
-      title: t('stats.activeSubscriptions'),
-      value: activeSubscriptions || 0,
-      testId: 'admin-stat-subscriptions',
-      icon: IconCrown,
-      link: '/dashboard/admin/subscriptions',
-    },
-    {
-      title: t('stats.totalCourses'),
-      value: totalCourses || 0,
-      testId: 'admin-stat-courses',
-      subtitle: t('stats.published', { count: publishedCourses || 0 }),
-      icon: IconBook,
-      link: '/dashboard/admin/courses',
-    },
-    {
-      title: t('stats.pendingPayments'),
-      value: pendingPaymentRequests || 0,
-      testId: 'admin-stat-pending-payments',
-      icon: IconReceipt,
-      link: '/dashboard/admin/payment-requests',
-    },
-    {
-      title: t('stats.totalRevenue'),
-      value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue),
-      testId: 'admin-stat-revenue',
-      subtitle: t('stats.transactions', { count: totalTransactions || 0 }),
-      icon: IconCurrencyDollar,
-      link: '/dashboard/admin/transactions',
-    },
-  ]
+  let siteUrl = '/'
+  try {
+    siteUrl = new URL(joinUrl).origin
+  } catch {
+    // Relative or malformed join URL: fall back to this site's root.
+  }
 
   return (
     <div className="space-y-6 p-6 lg:p-8" data-testid="admin-dashboard">
-      <AdminBreadcrumb
-        items={[
-          { label: tBreadcrumbs('admin') },
-        ]}
-      />
+      <DashboardHeader firstName={firstName} schoolName={schoolName} />
 
       {/* Guided Tour (client component) */}
       <AdminDashboardTour
@@ -264,6 +358,9 @@ export default async function AdminDashboardPage({
       {!aiEnabled && <AiKeyBanner />}
 
       {(totalCourses ?? 0) === 0 && <AiSetupGate><CourseArchitectCta /></AiSetupGate>}
+
+      {/* Open work comes first: it is the reason an admin opens this page */}
+      <NeedsAttention items={attentionItems} hadError={attentionError} />
 
       {/* Getting Started Checklist — prominent for new users */}
       <div data-tour="admin-checklist">
@@ -346,7 +443,7 @@ export default async function AdminDashboardPage({
             label: t('onboarding.configureSchool'),
             description: t('onboarding.configureSchoolDesc'),
             href: '/dashboard/admin/settings',
-            completed: Boolean((currentSettings?.site_name as { value?: unknown } | undefined)?.value),
+            completed: Boolean(siteNameValue),
             timeHint: t('onboarding.configureSchoolTime'),
           },
         ]}
@@ -364,188 +461,36 @@ export default async function AdminDashboardPage({
       />
       </div>
 
-      {/* Plan & Usage — compact inline bar */}
-      <div data-tour="admin-plan" className="flex flex-col gap-4 rounded-xl bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">
-            {platformPlan?.name || 'Free'} {t('plan.label')}
-          </span>
-          <Badge
-            variant={planSlug === 'free' ? 'secondary' : 'default'}
-            className="text-[10px] uppercase tracking-wider"
-          >
-            {planSlug === 'free' ? t('plan.current') : t('plan.active')}
-          </Badge>
-        </div>
-        <div className="flex flex-1 items-center gap-6 sm:max-w-sm">
-          <UsageMeter
-            label={t('plan.courses')}
-            current={totalCourses || 0}
-            limit={planLimits.max_courses ?? 5}
+      <div className="grid gap-8 lg:grid-cols-12">
+        <div className="space-y-8 lg:col-span-8">
+          <Performance
+            locale={locale}
+            revenue={revenue}
+            metrics={metrics}
+            hasConfiguredPayments={hasConfiguredPayments}
+            hasPublishedCourse={hasPublishedCourse}
           />
-          <UsageMeter
-            label={t('plan.students')}
-            current={studentCount || 0}
-            limit={planLimits.max_students ?? 50}
-          />
+          <ActivityFeed locale={locale} events={events} hadError={activityError} />
         </div>
-        {subscriptionLifecycleApplies(normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode)) && (
-          <Link href="/dashboard/admin/billing/upgrade">
-            <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
-              {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
-              <IconArrowUpRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        )}
+        <aside className="space-y-4 lg:col-span-4">
+          <ShareSchool
+            joinUrl={joinUrl}
+            siteUrl={siteUrl}
+            whatsappText={t('onboarding.inviteWhatsAppMessage', { url: joinUrl })}
+          />
+          <DraftsNudge count={draftCourses ?? 0} />
+        </aside>
       </div>
 
-      {/* Stats Grid — clean, no color noise */}
-      <div data-tour="admin-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid="admin-stats-grid">
-        {stats.map((stat) => (
-          <Link key={stat.title} href={stat.link} className="group">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <stat.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-                </div>
-                <p className="mt-3 text-2xl font-bold tracking-tight" data-testid={stat.testId}>
-                  {stat.value}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {stat.title}
-                </p>
-                {stat.subtitle && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {stat.subtitle}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      {/* Recent Activity Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Users */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <IconUserPlus className="h-4 w-4 text-muted-foreground" />
-                <span>{t('recentActivity.users')}</span>
-              </div>
-              <Link href="/dashboard/admin/users">
-                <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
-                  {t('recentActivity.viewAll')}
-                  <IconArrowUpRight className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              {recentUsers.length > 0 ? (
-                recentUsers.map((tu) => (
-                  <div
-                    key={tu.user_id}
-                    className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-brand-text">
-                        {(tu.profiles?.full_name || '?').charAt(0).toUpperCase()}
-                      </div>
-                      <p className="text-sm font-medium">{tu.profiles?.full_name || t('recentActivity.unknown')}</p>
-                    </div>
-                    <p className="text-[11px] tabular-nums text-muted-foreground">
-                      {format(new Date(tu.created_at), 'MMM d', { locale: dateLocale })}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                    <IconUsers className="h-5 w-5 text-muted-foreground/60" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('recentActivity.noUsers')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <IconCurrencyDollar className="h-4 w-4 text-muted-foreground" />
-                <span>{t('recentActivity.transactions')}</span>
-              </div>
-              <Link href="/dashboard/admin/transactions">
-                <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
-                  {t('recentActivity.viewAll')}
-                  <IconArrowUpRight className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              {transactionsWithUsers && transactionsWithUsers.length > 0 ? (
-                transactionsWithUsers.map((transaction) => (
-                  <div
-                    key={transaction.transaction_id}
-                    className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
-                        {transaction.user?.full_name || t('recentActivity.unknown')}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground tabular-nums">
-                        {new Date(transaction.transaction_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="ml-4 text-right">
-                      <p className="text-sm font-semibold tabular-nums">
-                        {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
-                      </p>
-                      <Badge
-                        variant={
-                          transaction.status === 'successful'
-                            ? 'default'
-                            : transaction.status === 'pending'
-                              ? 'secondary'
-                              : 'destructive'
-                        }
-                        className={`text-[9px] ${transaction.status === 'successful'
-                          ? 'bg-success/10 text-success border-success/30'
-                          : transaction.status === 'pending'
-                            ? 'bg-warning/10 text-warning border-warning/30'
-                            : ''
-                          }`}
-                      >
-                        {t(`recentActivity.status.${transaction.status}`)}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                    <IconCurrencyDollar className="h-5 w-5 text-muted-foreground/60" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('recentActivity.noTransactions')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <PlanFooter
+        planName={platformPlan?.name || 'Free'}
+        planSlug={planSlug}
+        courses={totalCourses || 0}
+        students={studentCount || 0}
+        maxCourses={unlimitedByMode ? -1 : (planLimits?.max_courses ?? -1)}
+        maxStudents={unlimitedByMode ? -1 : (planLimits?.max_students ?? -1)}
+        lifecycleApplies={subscriptionLifecycleApplies(billingMode)}
+      />
     </div>
   )
 }

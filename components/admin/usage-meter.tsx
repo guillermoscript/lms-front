@@ -21,7 +21,7 @@ export function UsageMeter({ label, current, limit, className }: UsageMeterProps
 
   return (
     <div className={cn('min-w-0 space-y-2.5', className)}>
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between gap-2 text-sm">
         <span className="truncate text-muted-foreground">{label}</span>
         <span className={cn(
           'shrink-0 font-medium tabular-nums',

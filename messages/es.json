@@ -2924,6 +2924,77 @@
             "description": "Crea y gestiona cursos desde la sección de Gestión de Contenido."
           },
           "replay": "Repetir recorrido"
+        },
+        "header": {
+          "title": "Bienvenido de nuevo, {name}",
+          "titleFallback": "Bienvenido de nuevo",
+          "newCourse": "Nuevo curso"
+        },
+        "attention": {
+          "title": "Requiere atención",
+          "clear": "Todo en orden — nada te necesita ahora mismo",
+          "error": "No se pudieron cargar algunos elementos. Recarga para reintentar.",
+          "paymentRequests": "{count, plural, one {# solicitud de pago por revisar} other {# solicitudes de pago por revisar}}",
+          "paymentRequestsAction": "Revisar",
+          "examSubmissions": "{count, plural, one {# examen esperando tu revisión} other {# exámenes esperando tu revisión}}",
+          "examSubmissionsAction": "Calificar",
+          "pastDue": "{count, plural, one {# suscripción vencida} other {# suscripciones vencidas}}",
+          "pastDueAction": "Ver",
+          "failedPayments": "{count, plural, one {# pago fallido en los últimos 30 días} other {# pagos fallidos en los últimos 30 días}}",
+          "failedPaymentsAction": "Revisar",
+          "flags": "{count, plural, one {# reporte de la comunidad por moderar} other {# reportes de la comunidad por moderar}}",
+          "flagsAction": "Moderar",
+          "questions": "{count, plural, one {# pregunta de la comunidad sin responder} other {# preguntas de la comunidad sin responder}}",
+          "questionsAction": "Responder"
+        },
+        "performance": {
+          "title": "Últimos 30 días",
+          "revenue": "Ingresos",
+          "chartLabel": "Ingresos diarios, últimos 30 días",
+          "error": "No se pudieron cargar los ingresos.",
+          "statsError": "No se pudieron cargar algunas cifras.",
+          "partial": "Solo se contaron las {count} ventas más recientes, así que esta cifra puede estar incompleta.",
+          "delta": {
+            "change": "{value} vs los 30 días anteriores",
+            "new": "Nuevo vs los 30 días anteriores"
+          },
+          "newStudents": "Estudiantes nuevos",
+          "members": "Miembros",
+          "courses": "Cursos",
+          "coursesDetail": "{count} publicados",
+          "activeSubscriptions": "Suscripciones activas",
+          "empty": {
+            "connect": "Conecta los pagos para empezar a ganar",
+            "connectAction": "Conectar pagos",
+            "publish": "Publica un curso para empezar a vender",
+            "publishAction": "Ir a cursos",
+            "share": "Aún no hay ventas — comparte tu escuela"
+          }
+        },
+        "activity": {
+          "title": "Actividad reciente",
+          "enrolled": "{name} se inscribió en {course}",
+          "paid": "{name} pagó {amount}",
+          "joined": "{name} se unió",
+          "someone": "Alguien",
+          "aCourse": "un curso",
+          "empty": "Todavía nada. Comparte tu enlace para atraer a tus primeros estudiantes.",
+          "error": "No se pudo cargar la actividad reciente."
+        },
+        "share": {
+          "title": "Comparte tu escuela",
+          "description": "Envía este enlace para que se unan a tu escuela.",
+          "copy": "Copiar enlace",
+          "copied": "Copiado",
+          "whatsapp": "WhatsApp",
+          "viewSite": "Ver sitio público"
+        },
+        "drafts": {
+          "waiting": "{count, plural, one {# curso en borrador pendiente} other {# cursos en borrador pendientes}}",
+          "action": "Terminar borradores"
+        },
+        "planFooter": {
+          "unlimited": "{plan} · Ilimitado"
         }
       },
       "billing": {
