@@ -1,4 +1,5 @@
 import type { ComponentConfig } from '@measured/puck'
+import { safeHref } from '../../utils/safe-href'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
@@ -14,6 +15,9 @@ type FaqItem = {
 
 export type FaqSplitProps = {
   heading: string
+  subtitle: string
+  contactLabel: string
+  contactHref: string
   items: FaqItem[]
 } & SectionSpacingProps
 
@@ -27,6 +31,9 @@ export const FaqSplit: ComponentConfig<FaqSplitProps> = {
   label: 'FAQ Split',
   fields: {
     heading: { type: 'text', label: 'Heading' },
+    subtitle: { type: 'textarea', label: 'Subtitle' },
+    contactLabel: { type: 'text', label: 'Contact Link Label' },
+    contactHref: { type: 'text', label: 'Contact Link URL' },
     items: {
       type: 'array',
       label: 'Questions',
@@ -41,6 +48,9 @@ export const FaqSplit: ComponentConfig<FaqSplitProps> = {
   defaultProps: {
     ...sectionSpacingDefaults,
     heading: 'Frequently Asked Questions',
+    subtitle: '',
+    contactLabel: '',
+    contactHref: '/p/contact',
     items: [
       {
         question: 'What is the refund policy?',
@@ -59,23 +69,45 @@ export const FaqSplit: ComponentConfig<FaqSplitProps> = {
       },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, items }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, subtitle, contactLabel, contactHref, items }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
+    const list = items ?? []
     return (
       <div {...sectionOuterProps(spacing)}>
         <div {...sectionInnerProps(spacing)}>
-          <div className="grid gap-y-12 lg:[grid-template-columns:1fr_auto] lg:gap-x-16">
-            {heading && (
-              <div className="text-center lg:text-left">
-                <h2 className="mb-4 text-3xl font-semibold md:text-4xl">{heading}</h2>
-              </div>
-            )}
-            <div className="divide-y divide-dashed sm:mx-auto sm:max-w-lg lg:mx-0">
-              {items.map((faq, i) => (
-                <div key={i} className={i === 0 ? 'pb-6' : 'py-6'}>
-                  <h3 className="font-medium">{faq.question}</h3>
-                  <p className="text-muted-foreground mt-4 whitespace-pre-line">{faq.answer}</p>
-                </div>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16">
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              {heading && (
+                <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-4xl">{heading}</h2>
+              )}
+              {subtitle && <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{subtitle}</p>}
+              {contactLabel && (
+                <a
+                  href={safeHref(contactHref)}
+                  className="mt-6 inline-block font-medium underline underline-offset-4 hover:text-muted-foreground"
+                >
+                  {contactLabel}
+                </a>
+              )}
+            </div>
+            <div className="divide-y divide-border border-y border-border">
+              {list.map((faq, i) => (
+                <details key={i} className="group" open={i === 0}>
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-lg font-medium [&::-webkit-details-marker]:hidden">
+                    <span className="break-words">{faq.question}</span>
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 text-muted-foreground transition-transform duration-200 group-open:rotate-45 motion-reduce:transition-none"
+                    >
+                      <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <p className="pb-6 pr-10 leading-relaxed text-muted-foreground whitespace-pre-line text-pretty">
+                    {faq.answer}
+                  </p>
+                </details>
               ))}
             </div>
           </div>
