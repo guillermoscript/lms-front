@@ -28,10 +28,10 @@ export const rootMetaFields: Fields<RootMetaProps> = {
   ogImage: { type: 'text', label: 'Share Image URL' },
   globalParts: {
     type: 'radio',
-    label: 'Site header & footer',
+    label: 'Site header and footer',
     options: [
-      { label: 'Use the site header & footer', value: 'show' },
-      { label: 'Use this page’s own', value: 'hide' },
+      { label: 'Use the site header and footer', value: 'show' },
+      { label: 'Use this page own header and footer', value: 'hide' },
     ],
   },
 }

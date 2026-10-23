@@ -7961,7 +7961,10 @@
       "Minimum Rating": "Valoración mínima",
       "Max Reviews": "Máximo de reseñas",
       "Pinned Plans": "Planes fijados",
-      "Only the picked courses": "Solo los cursos elegidos"
+      "Only the picked courses": "Solo los cursos elegidos",
+      "Site header and footer": "Header y footer del sitio",
+      "Use the site header and footer": "Usar el header y footer del sitio",
+      "Use this page own header and footer": "Usar el header y footer propios de esta página"
     },
     "render": {
       "logIn": "Iniciar sesión",

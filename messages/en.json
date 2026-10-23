@@ -7961,7 +7961,10 @@
       "Minimum Rating": "Minimum Rating",
       "Max Reviews": "Max Reviews",
       "Pinned Plans": "Pinned Plans",
-      "Only the picked courses": "Only the picked courses"
+      "Only the picked courses": "Only the picked courses",
+      "Site header and footer": "Site header and footer",
+      "Use the site header and footer": "Use the site header and footer",
+      "Use this page own header and footer": "Use this page’s own header and footer"
     },
     "render": {
       "logIn": "Log in",
