@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
+import { BlockIcon } from '../../utils/block-icon'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type FeatureItem = {
@@ -32,11 +33,11 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
       type: 'array',
       label: 'Features',
       arrayFields: {
-        icon: { type: 'text', label: 'Icon (emoji)' },
+        icon: { type: 'text', label: 'Icon (name or emoji)' },
         title: { type: 'text', label: 'Title' },
         description: { type: 'textarea', label: 'Description' },
       },
-      defaultItemProps: { icon: '⭐', title: 'Feature', description: 'Description' },
+      defaultItemProps: { icon: 'star', title: 'Feature', description: 'Description' },
     },
     columns: {
       type: 'select',
@@ -54,9 +55,9 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
     title: 'Why Choose Us',
     subtitle: 'Everything you need to succeed in your learning journey.',
     items: [
-      { icon: '🎓', title: 'Expert Instructors', description: 'Learn from industry professionals with years of experience.' },
-      { icon: '📚', title: 'Structured Courses', description: 'Well-organized curriculum designed for effective learning.' },
-      { icon: '🏆', title: 'Certificates', description: 'Earn verifiable certificates upon course completion.' },
+      { icon: 'graduation', title: 'Expert Instructors', description: 'Learn from industry professionals with years of experience.' },
+      { icon: 'book', title: 'Structured Courses', description: 'Well-organized curriculum designed for effective learning.' },
+      { icon: 'trophy', title: 'Certificates', description: 'Earn verifiable certificates upon course completion.' },
     ],
     columns: '3',
     accentColor: '',
@@ -69,29 +70,24 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
     return (
       <div {...sectionOuterProps(spacing)}>
         <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
-          <div className="text-center">
+          <div className="max-w-2xl">
             {title && (
-              <h2 className="text-3xl font-bold text-foreground mb-3">{title}</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-balance text-foreground md:text-4xl">{title}</h2>
             )}
             {subtitle && (
-              <p className="text-lg text-muted-foreground max-w-[640px] mx-auto mb-10 leading-relaxed">
-                {subtitle}
-              </p>
+              <p className="mt-4 text-lg text-muted-foreground leading-relaxed">{subtitle}</p>
             )}
-            <div className={cn('grid gap-8', columnClasses[columns])}>
-              {items.map((item, i) => (
-                <div
-                  key={i}
-                  className="group text-center p-8 rounded-card border border-border bg-card transition-colors motion-reduce:transition-none duration-300   hover:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
-                >
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--block-accent)_10%,transparent)] text-3xl transition-colors duration-300 group-hover:bg-[color-mix(in_srgb,var(--block-accent)_16%,transparent)]">
-                    <span aria-hidden="true" className="inline-block transition-transform motion-reduce:transition-none duration-300">{item.icon}</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2 break-words">{item.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed text-[0.9375rem] break-words">{item.description}</p>
+          </div>
+          <div className={cn('grid gap-x-8 gap-y-10', title || subtitle ? 'mt-12' : '', columnClasses[columns])}>
+            {items.map((item, i) => (
+              <div key={i} className="border-t border-border pt-6">
+                <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--block-accent)_12%,transparent)] text-xl text-[var(--block-accent)]">
+                  <BlockIcon name={item.icon} className="size-5" />
                 </div>
-              ))}
-            </div>
+                <h3 className="mb-2 text-lg font-semibold text-foreground break-words">{item.title}</h3>
+                <p className="text-muted-foreground leading-relaxed break-words">{item.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

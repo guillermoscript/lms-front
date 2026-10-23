@@ -1,4 +1,5 @@
 import type { ComponentConfig } from '@measured/puck'
+import { BlockIcon } from '../../utils/block-icon'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
@@ -13,6 +14,7 @@ export type ContentFeatureProps = {
   imageUrl: string
   imageAlt: string
   imagePosition: 'left' | 'right'
+  bullets: string
   quote: string
   quoteAuthor: string
 } & SectionSpacingProps
@@ -39,6 +41,7 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
         { label: 'Right', value: 'right' },
       ],
     },
+    bullets: { type: 'textarea', label: 'Bullets (one per line)' },
     quote: { type: 'textarea', label: 'Pull Quote' },
     quoteAuthor: { type: 'text', label: 'Quote Author' },
     ...sectionSpacingFields,
@@ -50,9 +53,9 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
     imageUrl: 'https://placehold.co/1207x929/e2e8f0/64748b?text=Feature',
     imageAlt: 'Product feature illustration',
     imagePosition: 'left',
-    quote:
-      'Switching to this platform cut our course setup time in half and our completion rates went up.',
-    quoteAuthor: 'Jane Doe, Course Creator',
+    bullets: '',
+    quote: '',
+    quoteAuthor: '',
   },
   render: ({
     paddingY,
@@ -68,52 +71,63 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
     imageUrl,
     imageAlt,
     imagePosition,
+    bullets,
     quote,
     quoteAuthor,
   }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
+    const points = (bullets ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
     const image = imageUrl ? (
-      <div className="relative mb-6 sm:mb-0">
-        <div className="aspect-76/59 relative rounded-card bg-gradient-to-b from-muted to-transparent p-px">
-          <img src={imageUrl} alt={imageAlt} className="rounded-card" loading="lazy" />
-        </div>
+      <div className="overflow-hidden rounded-card border border-border">
+        <img src={imageUrl} alt={imageAlt} className="aspect-[4/3] w-full object-cover" loading="lazy" />
       </div>
     ) : null
 
     const textCol = (
-      <div className="relative space-y-4">
-        {body && <p className="text-muted-foreground whitespace-pre-line">{body}</p>}
+      <div className="space-y-5">
+        {heading && (
+          <h2 className="text-3xl font-semibold tracking-tight text-balance break-words md:text-4xl">
+            {heading}
+          </h2>
+        )}
+        {body && (
+          <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-line text-pretty">{body}</p>
+        )}
+        {points.length > 0 && (
+          <ul className="space-y-3 pt-1">
+            {points.map((p, i) => (
+              <li key={i} className="flex gap-3">
+                <BlockIcon name="check" className="mt-1 size-4 shrink-0 text-[var(--block-accent,var(--primary))]" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         {quote && (
-          <div className="pt-6">
-            <blockquote className="border-l-4 pl-4">
-              <p>{quote}</p>
-              {quoteAuthor && <cite className="mt-6 block font-medium">{quoteAuthor}</cite>}
-            </blockquote>
-          </div>
+          <blockquote className="border-l-2 border-border pl-4 pt-1">
+            <p>{quote}</p>
+            {quoteAuthor && <cite className="mt-3 block text-sm font-medium not-italic">{quoteAuthor}</cite>}
+          </blockquote>
         )}
       </div>
     )
 
+    const left = imagePosition === 'left'
     return (
       <div {...sectionOuterProps(spacing)}>
         <div {...sectionInnerProps(spacing)}>
-          <div className="space-y-8 md:space-y-16">
-            {heading && (
-              <h2 className="relative z-10 max-w-xl text-4xl font-medium lg:text-5xl">{heading}</h2>
+          <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12 lg:gap-20">
+            {left ? (
+              <>
+                {image && <div className="order-2 md:order-1">{image}</div>}
+                <div className="order-1 md:order-2">{textCol}</div>
+              </>
+            ) : (
+              <>
+                {textCol}
+                {image}
+              </>
             )}
-            <div className="grid gap-6 sm:grid-cols-2 md:gap-12 lg:gap-24">
-              {imagePosition === 'left' ? (
-                <>
-                  {image}
-                  {textCol}
-                </>
-              ) : (
-                <>
-                  {textCol}
-                  {image}
-                </>
-              )}
-            </div>
           </div>
         </div>
       </div>
