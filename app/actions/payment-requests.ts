@@ -123,7 +123,7 @@ async function emailPaymentInstructions(params: {
 
     const [{ data: authUser }, { data: tenant }, brand, timeZone, locale] = await Promise.all([
       adminClient.auth.admin.getUserById(studentUserId),
-      adminClient.from('tenants').select('name, slug').eq('id', tenantId).single(),
+      adminClient.from('tenants').select('name, slug, domain').eq('id', tenantId).single(),
       getSchoolBrand(tenantId),
       getTenantTimeZone(tenantId),
       // The school's own UI language — the closest thing to the reader's that
@@ -144,7 +144,7 @@ async function emailPaymentInstructions(params: {
       deadlineLabel: params.deadline
         ? formatDateTime(params.deadline, { locale, timeZone })
         : null,
-      requestUrl: `${await getTenantSiteUrl(tenant?.slug || 'app')}/dashboard/student/payments/${requestId}`,
+      requestUrl: `${await getTenantSiteUrl(tenant?.slug || 'app', tenant?.domain)}/dashboard/student/payments/${requestId}`,
       locale,
       brand,
     })

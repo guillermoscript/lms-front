@@ -28,11 +28,12 @@ export interface IssueInvitationResult {
 }
 
 /**
- * `https://<slug>.<platform domain>/join-school` in production; scheme and
- * port from the current request otherwise (#673).
+ * `https://<slug>.<platform domain>/join-school` in production, or the school's
+ * own domain when it has one; scheme and port from the current request
+ * otherwise (#673).
  */
-export async function buildJoinUrl(slug?: string | null): Promise<string> {
-  return `${await getTenantSiteUrl(slug || 'app')}/join-school`
+export async function buildJoinUrl(slug?: string | null, domain?: string | null): Promise<string> {
+  return `${await getTenantSiteUrl(slug || 'app', domain)}/join-school`
 }
 
 /**
@@ -99,8 +100,8 @@ export async function issueInvitation({
     return { ok: false, error: 'Failed to create invitation', emailSent: false, joinUrl: '' }
   }
 
-  const { data: tenant } = await admin.from('tenants').select('name, slug').eq('id', tenantId).single()
-  const joinUrl = withInviteToken(await buildJoinUrl(tenant?.slug), token)
+  const { data: tenant } = await admin.from('tenants').select('name, slug, domain').eq('id', tenantId).single()
+  const joinUrl = withInviteToken(await buildJoinUrl(tenant?.slug, tenant?.domain), token)
 
   // The invitation row exists either way; what the caller learns is whether
   // the email really went out, never a guess.
