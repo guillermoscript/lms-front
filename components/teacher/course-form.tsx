@@ -33,6 +33,7 @@ interface CourseFormProps {
     title: string
     description: string | null
     thumbnail_url: string | null
+    trailer_url?: string | null
     category_id: number | null
     status: 'draft' | 'published' | 'archived'
     learning_objectives: string[] | null
@@ -56,6 +57,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     title: initialData?.title || '',
     description: initialData?.description || '',
     thumbnail_url: initialData?.thumbnail_url || '',
+    trailer_url: initialData?.trailer_url || '',
     category_id: initialData?.category_id?.toString() || '',
     status: initialData?.status || 'draft',
     learning_objectives: (initialData?.learning_objectives ?? []).join('\n'),
@@ -92,6 +94,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
         title: formData.title,
         description: formData.description || null,
         thumbnail_url: formData.thumbnail_url || null,
+        trailer_url: formData.trailer_url.trim() || null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         status: formData.status as 'draft' | 'published' | 'archived',
         learning_objectives: formData.learning_objectives
@@ -281,6 +284,20 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
             <p className="text-xs text-muted-foreground">
               {t('thumbnailHint')}
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="trailer_url">{t('trailerLabel')}</Label>
+            <Input
+              id="trailer_url"
+              type="url"
+              value={formData.trailer_url}
+              onChange={(e) =>
+                setFormData({ ...formData, trailer_url: e.target.value })
+              }
+              placeholder={t('trailerPlaceholder')}
+            />
+            <p className="text-xs text-muted-foreground">{t('trailerHint')}</p>
           </div>
 
           <div className="space-y-2">

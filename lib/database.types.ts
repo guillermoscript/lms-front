@@ -1732,6 +1732,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           updated_at: string | null
+          trailer_url: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -1751,6 +1752,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           updated_at?: string | null
+          trailer_url?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -1770,6 +1772,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           updated_at?: string | null
+          trailer_url?: string | null
         }
         Relationships: [
           {
@@ -2404,6 +2407,7 @@ export type Database = {
           tenant_id: string
           title: string
           updated_at: string | null
+          image: string | null
         }
         Insert: {
           course_id: number
@@ -2418,6 +2422,7 @@ export type Database = {
           tenant_id?: string
           title: string
           updated_at?: string | null
+          image?: string | null
         }
         Update: {
           course_id?: number
@@ -2432,6 +2437,7 @@ export type Database = {
           tenant_id?: string
           title?: string
           updated_at?: string | null
+          image?: string | null
         }
         Relationships: [
           {

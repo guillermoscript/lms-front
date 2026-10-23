@@ -22,6 +22,7 @@ export interface ExamQuestionData {
 export interface ExamFormData {
   title: string
   description: string
+  image?: string | null
   duration: number
   sequence: number
   publish: boolean
@@ -101,6 +102,7 @@ export async function createExam(courseId: number, data: ExamFormData) {
         tenant_id: ctx.tenantId,
         title: data.title.trim(),
         description: data.description || null,
+        image: data.image?.trim() || null,
         duration: data.duration,
         sequence: data.sequence,
         status: data.publish ? 'published' : 'draft',
@@ -154,6 +156,7 @@ export async function updateExam(courseId: number, examId: number, data: ExamFor
       .update({
         title: data.title.trim(),
         description: data.description || null,
+        image: data.image?.trim() || null,
         duration: data.duration,
         sequence: data.sequence,
         status: data.publish ? 'published' : 'draft',

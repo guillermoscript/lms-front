@@ -1387,7 +1387,10 @@
           "cancel": "Cancelar",
           "update": "Actualizar Curso",
           "create": "Crear Curso"
-        }
+        },
+        "trailerLabel": "Tráiler / video de introducción",
+        "trailerPlaceholder": "https://www.youtube.com/watch?v=...",
+        "trailerHint": "YouTube, Vimeo, Loom… los visitantes lo verán en la página pública del curso antes de inscribirse"
       },
       "courseDelete": {
         "triggerButton": "Eliminar Curso",
@@ -1457,7 +1460,11 @@
         "removeOption": "Eliminar opción",
         "dragQuestion": "Arrastrar para reordenar pregunta",
         "publishSuccess": "Examen publicado",
-        "draftSaved": "Borrador guardado"
+        "draftSaved": "Borrador guardado",
+        "imageLabel": "Imagen de portada",
+        "uploadImage": "Elegir imagen",
+        "removeImage": "Quitar imagen",
+        "imageHint": "Se muestra en la página pública del curso (se recomienda 16:9)"
       },
       "versionHistory": {
         "trigger": "Historial",
@@ -5894,7 +5901,8 @@
         "kind": {
           "video": "Video",
           "reading": "Lectura",
-          "exam": "Examen"
+          "exam": "Examen",
+          "exercise": "Ejercicio"
         },
         "lessonExercises": "{count, plural, one {# ejercicio} other {# ejercicios}}",
         "lessonResources": "{count, plural, one {# recurso} other {# recursos}}",
@@ -5943,6 +5951,10 @@
       "signUpBody": "Crea una cuenta para seguir: toma un momento.",
       "signUpCta": "Crea tu cuenta",
       "haveAccount": "¿Ya tienes cuenta? Inicia sesión"
+    },
+    "trailer": {
+      "watch": "Ver tráiler",
+      "title": "Tráiler: {title}"
     }
   },
   "pricing": {

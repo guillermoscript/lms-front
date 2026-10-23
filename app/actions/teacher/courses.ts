@@ -22,6 +22,7 @@ export interface CourseFormData {
   title: string
   description?: string | null
   thumbnail_url?: string | null
+  trailer_url?: string | null
   category_id?: number | null
   status?: 'draft' | 'published' | 'archived'
   learning_objectives?: string[] | null
@@ -154,6 +155,7 @@ export async function createCourse(courseData: CourseFormData) {
       title: courseData.title,
       description: courseData.description || null,
       thumbnail_url: courseData.thumbnail_url || null,
+      trailer_url: courseData.trailer_url?.trim() || null,
       category_id: courseData.category_id || null,
       author_id: user.id,
       tenant_id: tenantId,
@@ -256,6 +258,7 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
       title: courseData.title,
       description: courseData.description || null,
       thumbnail_url: courseData.thumbnail_url || null,
+      trailer_url: courseData.trailer_url?.trim() || null,
       category_id: courseData.category_id || null,
       status: courseData.status || undefined,
       learning_objectives: sanitizeObjectives(courseData.learning_objectives),
