@@ -39,6 +39,8 @@ import { AnimatedStats } from './components/lms/animated-stats'
 import { FaqSplit } from './components/lms/faq-split'
 import { CtaBanner } from './components/lms/cta-banner'
 import { ContentFeature } from './components/lms/content-feature'
+import { HeroSplit } from './components/lms/hero-split'
+import { StepsBlock } from './components/lms/steps-block'
 import { Banner } from './components/lms/banner'
 import { TeamGrid } from './components/lms/team-grid'
 import { ImageGallery } from './components/lms/image-gallery'
@@ -95,6 +97,8 @@ const componentDefinitions = {
   FaqSplit,
   CtaBanner,
   ContentFeature,
+  HeroSplit,
+  StepsBlock,
   Banner,
   TeamGrid,
   ImageGallery,
@@ -145,6 +149,8 @@ const categoryDefinitions = {
       'FaqSplit',
       'CtaBanner',
       'ContentFeature',
+      'HeroSplit',
+      'StepsBlock',
       'Banner',
       'TeamGrid',
       'ImageGallery',
