@@ -52,7 +52,7 @@ export function UserNav({ user }: UserNavProps) {
           <DropdownMenuSeparator />
         </DropdownMenuGroup>
         <DropdownMenuGroup>
-          <DropdownMenuItem className="rounded-lg mx-1 cursor-pointer gap-2 focus:bg-accent text-muted-foreground focus:text-accent-foreground" render={<Link href="/dashboard/settings" />}>
+          <DropdownMenuItem className="rounded-lg mx-1 cursor-pointer gap-2 focus:bg-accent text-muted-foreground focus:text-accent-foreground" render={<Link href="/dashboard/profile" />}>
             <IconUser className="h-4 w-4" />
             <span>{t('profile')}</span>
           </DropdownMenuItem>

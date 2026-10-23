@@ -62,6 +62,7 @@ export async function updateProfile(formData: FormData): Promise<UpdateProfileRe
 
     revalidatePath('/[locale]/dashboard/student/profile', 'page');
     revalidatePath('/[locale]/dashboard/settings', 'page');
+    revalidatePath('/[locale]/dashboard/profile', 'page');
     return { success: true };
 }
 
