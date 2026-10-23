@@ -15,6 +15,36 @@ import {
 } from "../format.js";
 import { propsSchema as lessonPreviewPropsSchema } from "../../views/lesson-preview/schema.js";
 
+// Mirror of `structuredRequirementsSchema` in lib/ai/lesson-requirements.ts
+// (the main app's teacher form, prompt assembler and completion verifier read
+// the same shape). Keep the two in sync.
+const structuredRequirementsInput = z.object({
+  level: z.string().min(1).describe("Student level, e.g. 'principiante, no técnico'"),
+  scenario: z.string().min(1).describe("Situation the tutor sets up for the student"),
+  tutor_role: z.string().min(1).describe("Who the tutor plays"),
+  requirements: z
+    .array(
+      z.object({
+        id: z.string().min(1).describe("Stable id, e.g. 'pedido'"),
+        text: z.string().min(1).describe("What the student must show, in their own messages"),
+      })
+    )
+    .min(1)
+    .describe("Ordered requirements; the tutor reports progress per id and the verifier checks each one"),
+  closing_phase: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe("Final phase owed once every requirement is met (recap, final rewrite…)"),
+  min_student_turns: z
+    .number()
+    .int()
+    .min(0)
+    .default(4)
+    .describe("Minimum student messages before completion is allowed (0 allows a one-shot)"),
+});
+
 export function registerLessonTools(server: LmsServer) {
   server.tool(
     {
@@ -487,7 +517,7 @@ export function registerLessonTools(server: LmsServer) {
     {
       name: "lms_upsert_lesson_ai_task",
       description:
-        "Create or update the AI task (instructions + system prompt) for a lesson.",
+        "Create or update the AI task for a lesson: student-facing instructions, tutor system prompt, and/or structured requirements (level, scenario, tutor role, ordered requirements, closing phase, min turns). With structured requirements the platform assembles the tutor prompt and shows a progress bar; the system prompt is then ignored. Fields you omit keep their current value.",
       schema: z.object({
         lesson_id: z.number().describe("The lesson ID"),
         task_instructions: z
@@ -500,6 +530,12 @@ export function registerLessonTools(server: LmsServer) {
           .string()
           .optional()
           .describe("System prompt / persona for the AI tutor"),
+        requirements: structuredRequirementsInput
+          .nullable()
+          .optional()
+          .describe(
+            "Structured template. Omit to keep the current one; null switches the lesson back to free-text mode."
+          ),
       }),
       annotations: {
         readOnlyHint: false,
@@ -508,7 +544,7 @@ export function registerLessonTools(server: LmsServer) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, task_instructions, system_prompt }, ctx) => {
+    async ({ lesson_id, task_instructions, system_prompt, requirements }, ctx) => {
       let session: LmsSession;
       try {
         session = LmsSession.fromContext(ctx);
@@ -516,30 +552,36 @@ export function registerLessonTools(server: LmsServer) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
       try {
-        if (!task_instructions && !system_prompt) {
+        if (!task_instructions && !system_prompt && requirements === undefined) {
           return errorResult(
-            "At least one of task_instructions or system_prompt must be provided."
+            "Provide at least one of task_instructions, system_prompt or requirements."
           );
         }
 
         await session.verifyLessonOwnership(lesson_id);
         const supabase = session.getClient();
 
-        // The RPC overwrites every column, so carry the structured requirements
-        // over (this tool never edits them).
-        const { data: existing } = await supabase
-          .from("lessons_ai_tasks")
-          .select("requirements")
-          .eq("lesson_id", lesson_id)
-          .maybeSingle();
+        // The RPC overwrites every column, so carry over whatever this call
+        // does not set (system_prompt is only readable through its own RPC).
+        const [existingRes, promptRes] = await Promise.all([
+          supabase
+            .from("lessons_ai_tasks")
+            .select("task_instructions, requirements")
+            .eq("lesson_id", lesson_id)
+            .maybeSingle(),
+          supabase.rpc("get_lesson_ai_system_prompt", { _lesson_id: lesson_id }),
+        ]);
+        const existing = existingRes.data;
+        const existingPrompt = (promptRes.data as string | null) ?? null;
 
         const { data: taskId, error } = await supabase.rpc(
           "upsert_lesson_ai_task",
           {
             _lesson_id: lesson_id,
-            _task_instructions: task_instructions ?? null,
-            _system_prompt: system_prompt ?? null,
-            _requirements: existing?.requirements ?? null,
+            _task_instructions: task_instructions ?? existing?.task_instructions ?? null,
+            _system_prompt: system_prompt ?? existingPrompt,
+            _requirements:
+              requirements === undefined ? existing?.requirements ?? null : requirements,
           }
         );
 
