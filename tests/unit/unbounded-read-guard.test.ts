@@ -84,7 +84,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   // gap: tenant- or platform-wide sweeps, #533 class, not in #548's scope
   'app/[locale]/dashboard/admin/analytics/page.tsx::transactions': 'gap #540 — tenant-wide, summed',
   'app/[locale]/dashboard/admin/analytics/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
-  'app/[locale]/dashboard/admin/page.tsx::transactions': 'gap #540 — tenant-wide, summed',
   'app/[locale]/dashboard/admin/courses/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/[locale]/dashboard/admin/enrollments/page.tsx::enrollments': 'gap #540 — tenant-wide listing',
   'app/[locale]/dashboard/admin/users/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',

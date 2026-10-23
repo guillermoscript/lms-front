@@ -258,6 +258,8 @@ describe('refund-aware money sums (#547 §1)', () => {
         if (SUMS_AMOUNT.test(source)) seen.push(file)
       }
     }
-    expect(seen.length).toBeGreaterThanOrEqual(3)
+    // 2, not 3: the admin dashboard's fold moved to lib/admin/dashboard-metrics.ts
+    // (netOfRefunds, unit-tested), so its page no longer sums in place.
+    expect(seen.length).toBeGreaterThanOrEqual(2)
   })
 })
