@@ -11,7 +11,7 @@ export async function GET(req: Request, { params }: Params) {
   const [{ data: run }, { data: results }] = await Promise.all([
     ctx.supabase
       .from('ai_eval_runs')
-      .select('id, target_id, status, summary, model_ids, error, created_at, started_at, finished_at, version_id, ai_config_versions(version_no)')
+      .select('id, target_type, target_id, status, summary, model_ids, error, created_at, started_at, finished_at, version_id, ai_config_versions(version_no)')
       .eq('id', ctx.row.id)
       .eq('tenant_id', ctx.tenantId)
       .single(),

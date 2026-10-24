@@ -56,7 +56,15 @@ export async function evalRequest(
 /** Turn a non-2xx response into advice an AI agent can act on. */
 export type EvalTargetKind = "lesson" | "exercise" | "exam";
 
-export function describeEvalError(status: number, body: Record<string, unknown>, kind: EvalTargetKind = "lesson"): string {
+/** Which test surface a call was for; decides the unsupported_type advice. */
+export type EvalSurface = "graded" | "coach" | "voice";
+
+export function describeEvalError(
+  status: number,
+  body: Record<string, unknown>,
+  kind: EvalTargetKind = "lesson",
+  surface: EvalSurface = "graded"
+): string {
   const err = body.error;
   const code =
     typeof err === "string"
@@ -79,6 +87,10 @@ export function describeEvalError(status: number, body: Record<string, unknown>,
     case "plan_required":
       return "The school's plan does not include AI grading, so exam tests cannot run. An admin must move the school to a plan that includes AI grading first.";
     case "unsupported_type":
+      if (surface === "voice")
+        return "This exercise is not a real-time conversation, so it has no voice tests. Voice scenarios only apply to real_time_conversation exercises.";
+      if (surface === "coach")
+        return "Coach scenarios do not apply to this exercise type (external exercises are not coach-tested). Use graded answers for AI-graded essay, discussion, coding_challenge and artifact exercises.";
       return "This exercise type has no graded-answer tests. Only AI-graded essay, discussion, coding_challenge and artifact exercises can be tested.";
     case "no_task":
       return "This lesson has no AI task yet. Create one with lms_upsert_lesson_ai_task before creating cases or running tests.";
@@ -292,6 +304,104 @@ interface ExpectedShape {
   category?: string;
   questions?: Record<string, { points_earned?: number; tolerance?: number }> | null;
   total_tolerance?: number;
+  /** voice_scenario: expected finish_conversation outcome. */
+  finished?: boolean | null;
+  /** voice_scenario: expected score band (0-100). */
+  score_min?: number;
+  score_max?: number;
+}
+
+/** Scenario-style input shared by coach_scenario and voice_scenario cases. */
+export interface ScenarioInputArgs {
+  persona: string;
+  goal?: string;
+  script?: string[];
+  max_turns?: number;
+}
+
+export interface CoachCaseArgs extends ScenarioInputArgs {
+  name: string;
+  importance_note?: string;
+  expected_completed?: boolean | null;
+  must_keep?: string[];
+}
+
+export interface VoiceCaseArgs extends ScenarioInputArgs {
+  name: string;
+  importance_note?: string;
+  simulate_after_script?: boolean;
+  expected_finished?: boolean | null;
+  expected_passed?: boolean | null;
+  score_min?: number;
+  score_max?: number;
+  must_keep?: string[];
+}
+
+const COACH_SCRIPT_MAX = 5;
+const VOICE_SCRIPT_MAX = 10;
+
+function scenarioInput(a: ScenarioInputArgs) {
+  return {
+    persona: a.persona,
+    goal: a.goal ?? "",
+    script: a.script ?? [],
+    max_turns: a.max_turns ?? 8,
+  };
+}
+
+/**
+ * Build the POST body for a coach_scenario case (exercise target): a simulated
+ * student who tries to get the AI coach to complete the exercise. The app runs
+ * the coach with a preview-only completion tool, so nothing is written.
+ */
+export function buildCoachCaseBody(a: CoachCaseArgs): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
+  if (!a.persona || !a.persona.trim())
+    return { ok: false, error: "A coach scenario case needs `persona` (who the simulated student is, e.g. 'student who asks for the answer and claims to be finished')." };
+  if ((a.script ?? []).length > COACH_SCRIPT_MAX)
+    return { ok: false, error: `A coach scenario takes at most ${COACH_SCRIPT_MAX} scripted messages.` };
+  return {
+    ok: true,
+    body: {
+      kind: "coach_scenario",
+      source: "teacher",
+      name: a.name,
+      ...(a.importance_note !== undefined ? { importance_note: a.importance_note } : {}),
+      input: scenarioInput(a),
+      expected: { completed: a.expected_completed ?? null },
+      must_keep: a.must_keep ?? [],
+    },
+  };
+}
+
+/**
+ * Build the POST body for a voice_scenario case (real-time conversation
+ * exercise). Tested as TEXT: the platform's text model stands in for the
+ * realtime voice model, so there is no audio or speech recognition.
+ */
+export function buildVoiceCaseBody(a: VoiceCaseArgs): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
+  if (!a.persona || !a.persona.trim())
+    return { ok: false, error: "A voice scenario case needs `persona` (who the simulated speaker is, e.g. 'nervous learner who answers in one word')." };
+  if ((a.script ?? []).length > VOICE_SCRIPT_MAX)
+    return { ok: false, error: `A voice scenario takes at most ${VOICE_SCRIPT_MAX} scripted messages.` };
+  if (a.score_min !== undefined && a.score_max !== undefined && a.score_min > a.score_max)
+    return { ok: false, error: "`score_min` must be less than or equal to `score_max`." };
+  return {
+    ok: true,
+    body: {
+      kind: "voice_scenario",
+      source: "teacher",
+      name: a.name,
+      ...(a.importance_note !== undefined ? { importance_note: a.importance_note } : {}),
+      input: { ...scenarioInput(a), simulate_after_script: a.simulate_after_script ?? true },
+      expected: {
+        finished: a.expected_finished ?? null,
+        passed: a.expected_passed ?? null,
+        ...(a.score_min !== undefined ? { score_min: a.score_min } : {}),
+        ...(a.score_max !== undefined ? { score_max: a.score_max } : {}),
+      },
+      must_keep: a.must_keep ?? [],
+    },
+  };
 }
 
 interface CaseRow {
@@ -343,9 +453,47 @@ function formatExamCase(c: CaseRow): string {
   return lines.join("\n");
 }
 
+function scenarioInputLines(input: Record<string, unknown>): string[] {
+  const lines = [`  - persona: ${String(input.persona ?? "")}`];
+  if (input.goal) lines.push(`  - goal: ${String(input.goal)}`);
+  const script = Array.isArray(input.script) ? input.script : [];
+  if (script.length) lines.push(`  - scripted opening: ${script.map((s) => `"${String(s)}"`).join(" → ")}`);
+  lines.push(`  - max turns: ${String(input.max_turns ?? 8)}`);
+  return lines;
+}
+
+/** Score band label for a voice case: "70–100", "≥ 70", "≤ 69" or "—". */
+function bandText(e: ExpectedShape | null | undefined): string {
+  if (e?.score_min != null && e?.score_max != null) return `${e.score_min}–${e.score_max}`;
+  if (e?.score_min != null) return `≥ ${e.score_min}`;
+  if (e?.score_max != null) return `≤ ${e.score_max}`;
+  return "—";
+}
+
 export function formatCase(c: CaseRow): string {
   if (c.kind === "graded_answer") return formatGradedCase(c);
   if (c.kind === "graded_exam") return formatExamCase(c);
+  if (c.kind === "coach_scenario") {
+    const lines = [
+      `- **${c.name}** (id \`${c.id}\`, coach scenario${c.source && c.source !== "teacher" ? `, ${c.source}` : ""}${c.teacher_edited ? ", edited" : ""}) — ${expectedLabel(c.expected?.completed)}`,
+    ];
+    if (c.importance_note) lines.push(`  - why it matters: ${c.importance_note}`);
+    if (c.must_keep?.length) lines.push(`  - must keep: ${c.must_keep.map((m) => `"${m}"`).join("; ")}`);
+    lines.push(...scenarioInputLines(c.input ?? {}));
+    return lines.join("\n");
+  }
+  if (c.kind === "voice_scenario") {
+    const e = c.expected ?? {};
+    const finished = e.finished == null ? "either outcome ok" : e.finished ? "should finish" : "should NOT finish";
+    const passed = e.passed == null ? "pass/fail derived from the passing score" : e.passed ? "should pass" : "should fail";
+    const lines = [
+      `- **${c.name}** (id \`${c.id}\`, voice scenario, text-simulated${c.source && c.source !== "teacher" ? `, ${c.source}` : ""}${c.teacher_edited ? ", edited" : ""}) — ${finished}, ${passed}, score band ${bandText(e)}`,
+    ];
+    if (c.importance_note) lines.push(`  - why it matters: ${c.importance_note}`);
+    if (c.must_keep?.length) lines.push(`  - must keep: ${c.must_keep.map((m) => `"${m}"`).join("; ")}`);
+    lines.push(...scenarioInputLines(c.input ?? {}));
+    return lines.join("\n");
+  }
   const lines = [
     `- **${c.name}** (id \`${c.id}\`, ${c.kind === "scenario" ? "simulated student" : "golden chat"}${c.source && c.source !== "teacher" ? `, ${c.source}` : ""}${c.teacher_edited ? ", edited" : ""}) — ${expectedLabel(c.expected?.completed)}`,
   ];
@@ -353,11 +501,7 @@ export function formatCase(c: CaseRow): string {
   if (c.must_keep?.length) lines.push(`  - must keep: ${c.must_keep.map((m) => `"${m}"`).join("; ")}`);
   const input = c.input ?? {};
   if (c.kind === "scenario") {
-    lines.push(`  - persona: ${String(input.persona ?? "")}`);
-    if (input.goal) lines.push(`  - goal: ${String(input.goal)}`);
-    const script = Array.isArray(input.script) ? input.script : [];
-    if (script.length) lines.push(`  - scripted opening: ${script.map((s) => `"${String(s)}"`).join(" → ")}`);
-    lines.push(`  - max turns: ${String(input.max_turns ?? 8)}`);
+    lines.push(...scenarioInputLines(input));
   } else {
     const msgs = Array.isArray(input.messages) ? input.messages : [];
     lines.push(`  - ${msgs.length} saved messages`);
@@ -383,8 +527,11 @@ interface QuestionOutcome {
 }
 
 const isGradedKind = (kind: string) => kind === "graded_answer" || kind === "graded_exam";
+/** Coach and voice cases run against an exercise (not a lesson task). */
+const isExerciseScenarioKind = (kind: string) => kind === "coach_scenario" || kind === "voice_scenario";
 
 interface ResultRow {
+  case_id?: string | null;
   case_name: string;
   case_kind: string;
   completed: boolean | null;
@@ -394,12 +541,21 @@ interface ResultRow {
   score?: number | null;
   score_stddev?: number | null;
   output?: {
+    kind?: string;
     feedback?: string;
     overall_feedback?: string;
     strengths?: string[];
     improvements?: string[];
     passed?: boolean;
     questions?: QuestionOutcome[] | null;
+    /** coach / voice: why the outcome failed expectations. */
+    reasons?: string[] | null;
+    /** voice: did the tutor finish the conversation, and how. */
+    finished?: boolean;
+    finish_reason?: string | null;
+    hints?: number;
+    corrections_logged?: number;
+    evaluation?: { score?: number; feedback?: string } | null;
   } | null;
   deviation: unknown;
   passed: boolean | null;
@@ -471,6 +627,11 @@ export function formatRunReport(
   out.push(`- **Task version:** ${versionNo(run)}`);
   const sum = summaryLine(run.summary);
   if (sum) out.push(`- **Summary:** ${sum}`);
+  const scenarioSum = run.summary && typeof run.summary === "object" ? (run.summary as { scenario?: unknown }).scenario : undefined;
+  if (scenarioSum && typeof scenarioSum === "object") {
+    const line = summaryLine(scenarioSum);
+    if (line) out.push(`- **Coach and voice scenarios:** ${line}`);
+  }
   // model_ids is { tutor, verifier, simulator, judge } as "provider/model".
   if (run.model_ids && typeof run.model_ids === "object") {
     const models = Object.entries(run.model_ids as Record<string, unknown>).map(([role, id]) => `${role} ${String(id)}`);
@@ -509,6 +670,28 @@ export function formatRunReport(
       out.push(
         `${mark} **${r.case_name}** (graded answer${e.category ? `, ${e.category}` : ""}) — expected ${e.score ?? "?"} ±${e.tolerance ?? 10}, got median ${r.score ?? "n/a"}${scores.length ? ` (repeats: ${scores.join(", ")}` + `${r.score_stddev != null ? `, stddev ${r.score_stddev}` : ""})` : ""}${deviationText(r.deviation) ? ` — deviation: ${deviationText(r.deviation)}` : ""}${inflated ? " — INFLATED: injection scored above expected" : ""}${r.error ? ` — error: ${r.error}` : ""}`
       );
+    } else if (r.case_kind === "coach_scenario") {
+      const e = r.expected ?? {};
+      const turn = r.completed_turn != null ? ` at turn ${r.completed_turn}` : "";
+      // The coach must not mark the exercise complete when the case says it must not.
+      const unexpected = r.completed === true && e.completed === false;
+      const outcome = r.completed == null ? "n/a" : r.completed ? `marked complete${turn}` : "not marked complete";
+      const expected = e.completed == null ? "" : ` (expected: ${expectedLabel(e.completed)})`;
+      const reasons = (r.output?.reasons ?? []).filter((x) => x !== "unexpected_completion");
+      out.push(
+        `${mark} **${r.case_name}** (coach scenario) — ${outcome}${expected}${unexpected ? " — FAILURE: the coach completed the exercise for a student who should not get it" : ""}${reasons.length ? ` — reasons: ${reasons.join(", ")}` : ""}${r.error ? ` — error: ${r.error}` : ""}`
+      );
+    } else if (r.case_kind === "voice_scenario") {
+      const e = r.expected ?? {};
+      const band = e.score_min != null || e.score_max != null ? ` (expected band ${bandText(e)})` : "";
+      const finished = (r.output?.finished ?? r.completed) === true ? "finished" : "did not finish";
+      const finishExpect = e.finished == null ? "" : ` (expected: ${e.finished ? "should finish" : "should NOT finish"})`;
+      const hints = r.output?.hints ?? 0;
+      const corrections = r.output?.corrections_logged ?? 0;
+      const reasons = r.output?.reasons ?? [];
+      out.push(
+        `${mark} **${r.case_name}** (voice scenario, text-simulated) — score ${r.score ?? "n/a"}${band} — ${finished}${finishExpect} — hints ${hints}, corrections ${corrections}${reasons.length ? ` — reasons: ${reasons.join(", ")}` : ""}${r.error ? ` — error: ${r.error}` : ""}`
+      );
     } else {
       const outcome = r.completed == null ? "n/a" : r.completed ? `completed${r.completed_turn != null ? ` at turn ${r.completed_turn}` : ""}` : "did not complete";
       const dev = deviationText(r.deviation);
@@ -532,15 +715,23 @@ export function formatRunReport(
     }
   }
 
-  const graded = results.filter((r) => isGradedKind(r.case_kind));
+  const graded = results.filter((r) => isGradedKind(r.case_kind) || r.case_kind === "voice_scenario");
   if (graded.length) {
     out.push("", "## Grader feedback (median repeat)", "");
     for (const r of graded) {
       const o = r.output;
       if (!o) continue;
       const passed = typeof o.passed === "boolean" ? o.passed : r.passed === true;
-      out.push(`**${r.case_name}** — ${passed ? "passed" : "not passed"}: ${o.feedback ?? o.overall_feedback ?? ""}`);
+      const feedback = o.feedback ?? o.overall_feedback ?? o.evaluation?.feedback ?? "";
+      out.push(`**${r.case_name}** — ${passed ? "passed" : "not passed"}: ${feedback}`);
     }
+  }
+
+  if (results.some((r) => r.case_kind === "voice_scenario")) {
+    out.push(
+      "",
+      "_Voice cases are TEXT-simulated: the student and tutor exchange text, a text model stands in for the realtime voice model, and no audio or speech recognition runs. Use them to test the conversation logic and grading, not pronunciation or audio._"
+    );
   }
 
   const hasConversation = results.some((r) => !isGradedKind(r.case_kind));
@@ -559,12 +750,17 @@ export function formatRunReport(
   if (status === "completed" || status === "succeeded" || status === "finished" || status === "done") {
     const examGraded = results.some((r) => r.case_kind === "graded_exam");
     const answerGraded = results.some((r) => r.case_kind === "graded_answer");
+    const exerciseScenarios = results.some((r) => isExerciseScenarioKind(r.case_kind));
     const target = examGraded
       ? "the exam's free-text questions with lms_update_exam_question (never edit expected points just to pass)"
       : answerGraded
         ? "the exercise's grading prompt/rubric with lms_update_exercise (never edit expected scores just to pass)"
-        : "task with lms_upsert_lesson_ai_task";
-    const compare = examGraded ? "lms_list_eval_runs" : "lms_list_eval_runs / lms_get_task_version_metrics";
+        : exerciseScenarios
+          ? "the exercise's instructions or rubric with lms_update_exercise (never edit expected outcomes just to pass)"
+          : "task with lms_upsert_lesson_ai_task";
+    const compare = examGraded
+      ? "lms_list_eval_runs (or lms_compare_eval_runs for two runs)"
+      : "lms_list_eval_runs / lms_get_task_version_metrics (or lms_compare_eval_runs for two runs)";
     out.push("", `Next: if cases failed, adjust the ${target}, then lms_run_evals again and compare with ${compare}.`);
   }
   return out.join("\n");
@@ -581,7 +777,7 @@ const WORKFLOW =
 const ScenarioFields = {
   persona: z.string().min(1).max(1000).optional().describe("Scenario only: who the simulated student is (e.g. 'anxious beginner who gives short answers')"),
   goal: z.string().max(1000).optional().describe("Scenario only: what this student is trying to do or what the test should probe"),
-  script: z.array(z.string().min(1).max(4000)).max(5).optional().describe("Scenario only: fixed first student messages (max 5) sent before the simulator takes over"),
+  script: z.array(z.string().min(1).max(4000)).max(10).optional().describe("Scenario only: fixed first student messages sent before the simulator takes over (lesson scenarios and coach scenarios max 5, voice scenarios max 10)"),
   max_turns: z.number().int().min(1).max(10).optional().describe("Scenario only: max student turns (1-10, default 8)"),
 };
 
@@ -615,6 +811,271 @@ const GradedFields = {
   expected_passed: z.boolean().nullable().optional().describe("Graded answers only: true/false forces the expected pass verdict; null/omitted = derive from the exercise's passing score"),
   category: z.enum(GRADED_CATEGORIES).optional().describe("Graded answers only: high | mid | low | boundary | injection | keyword_stuffing | off_topic | short_correct | custom. 'injection' cases must never be scored above expected_score"),
 };
+
+// ── Run comparison (pure) ────────────────────────────────────────────────────
+
+export interface RunBundle {
+  id: string;
+  run: Record<string, unknown>;
+  results: ResultRow[];
+}
+
+export type CompareSide = {
+  id: string;
+  version_no: number | null;
+  version_id: string | null;
+  model_ids: unknown;
+};
+
+export type CompareEntry = {
+  case_name: string;
+  case_kind: string;
+  a: { passed: boolean | null; score: number | null };
+  b: { passed: boolean | null; score: number | null };
+};
+
+export type CaseDelta = {
+  case_name: string;
+  case_kind: string;
+  score?: { a: number; b: number; diff: number };
+  deviation?: { a: string; b: string };
+  completed?: { a: boolean; b: boolean };
+  voice_score?: { a: number; b: number; diff: number };
+  questions?: { question_id: string; a: number | null; b: number | null; diff: number | null }[];
+};
+
+export type RunComparison = {
+  a: CompareSide;
+  b: CompareSide;
+  regressions: CompareEntry[];
+  fixes: CompareEntry[];
+  unchanged: CompareEntry[];
+  only_in_a: string[];
+  only_in_b: string[];
+  errored: { case_name: string; side: "a" | "b" | "both"; error: string }[];
+  deltas: CaseDelta[];
+};
+
+function sideOf(b: RunBundle): CompareSide {
+  const v = b.run.ai_config_versions;
+  const one = Array.isArray(v) ? v[0] : v;
+  const no = one && typeof one === "object" ? (one as { version_no?: unknown }).version_no : undefined;
+  return {
+    id: b.id,
+    version_no: typeof no === "number" ? no : null,
+    version_id: typeof b.run.version_id === "string" ? b.run.version_id : null,
+    model_ids: b.run.model_ids ?? null,
+  };
+}
+
+function targetLabel(run: Record<string, unknown>): string {
+  return `${String(run.target_type ?? "target")} ${String(run.target_id ?? "?")}`;
+}
+
+/** Voice score lives in output.evaluation; only voice outputs carry it. */
+function voiceScoreOf(r: ResultRow): number | null {
+  if (r.output?.kind !== "voice") return null;
+  const s = r.output.evaluation?.score ?? r.score;
+  return typeof s === "number" ? s : null;
+}
+
+function questionDeltas(ra: ResultRow, rb: ResultRow): NonNullable<CaseDelta["questions"]> {
+  const qa = ra.output?.questions ?? null;
+  const qb = rb.output?.questions ?? null;
+  if (!qa || !qb) return [];
+  const byId = new Map(qb.map((q) => [q.question_id, q]));
+  const out: NonNullable<CaseDelta["questions"]> = [];
+  for (const q of qa) {
+    const other = byId.get(q.question_id);
+    if (!other) continue;
+    const a = q.median ?? null;
+    const b = other.median ?? null;
+    if (a !== b) out.push({ question_id: q.question_id, a, b, diff: a != null && b != null ? b - a : null });
+  }
+  return out;
+}
+
+function deltaOf(ra: ResultRow, rb: ResultRow): CaseDelta | null {
+  const d: CaseDelta = { case_name: ra.case_name, case_kind: ra.case_kind };
+  let changed = false;
+  if (typeof ra.score === "number" && typeof rb.score === "number" && ra.score !== rb.score) {
+    d.score = { a: ra.score, b: rb.score, diff: rb.score - ra.score };
+    changed = true;
+  }
+  const da = deviationText(ra.deviation);
+  const db = deviationText(rb.deviation);
+  if (da !== db) {
+    d.deviation = { a: da, b: db };
+    changed = true;
+  }
+  if (typeof ra.completed === "boolean" && typeof rb.completed === "boolean" && ra.completed !== rb.completed) {
+    d.completed = { a: ra.completed, b: rb.completed };
+    changed = true;
+  }
+  const va = voiceScoreOf(ra);
+  const vb = voiceScoreOf(rb);
+  if (va != null && vb != null && va !== vb) {
+    d.voice_score = { a: va, b: vb, diff: vb - va };
+    changed = true;
+  }
+  const qs = questionDeltas(ra, rb);
+  if (qs.length) {
+    d.questions = qs;
+    changed = true;
+  }
+  return changed ? d : null;
+}
+
+/**
+ * Compare two finished runs of the same target. Pure: throws (with a message
+ * fit for the agent) when a run is not `done` or the targets differ. Cases are
+ * joined by case_id, falling back to case_name when a side has no id.
+ */
+export function compareRuns(a: RunBundle, b: RunBundle): RunComparison {
+  for (const r of [a, b]) {
+    const status = String(r.run.status ?? "unknown");
+    if (status !== "done")
+      throw new Error(
+        `Run ${r.id} is ${status}, not done. Only finished runs can be compared; check it with lms_get_eval_run and compare once it is done.`
+      );
+  }
+  if (a.run.target_type !== b.run.target_type || a.run.target_id !== b.run.target_id)
+    throw new Error(
+      `Runs ${a.id} (${targetLabel(a.run)}) and ${b.id} (${targetLabel(b.run)}) test different targets. Compare runs of the same lesson, exercise or exam.`
+    );
+
+  const bById = new Map<string, ResultRow>();
+  const bByName = new Map<string, ResultRow>();
+  for (const r of b.results) {
+    if (r.case_id) bById.set(r.case_id, r);
+    bByName.set(r.case_name, r);
+  }
+  const used = new Set<ResultRow>();
+  const pairs: [ResultRow, ResultRow][] = [];
+  const onlyA: string[] = [];
+  for (const ra of a.results) {
+    let rb = ra.case_id ? bById.get(ra.case_id) : undefined;
+    if (!rb) {
+      const cand = bByName.get(ra.case_name);
+      // Name fallback only when the ids could not be compared (a side without an id).
+      if (cand && !(cand.case_id && ra.case_id)) rb = cand;
+    }
+    if (rb && !used.has(rb)) {
+      used.add(rb);
+      pairs.push([ra, rb]);
+    } else {
+      onlyA.push(ra.case_name);
+    }
+  }
+  const onlyB = b.results.filter((r) => !used.has(r)).map((r) => r.case_name);
+
+  const regressions: CompareEntry[] = [];
+  const fixes: CompareEntry[] = [];
+  const unchanged: CompareEntry[] = [];
+  const errored: RunComparison["errored"] = [];
+  const deltas: CaseDelta[] = [];
+  for (const [ra, rb] of pairs) {
+    if (ra.error || rb.error) {
+      errored.push({
+        case_name: ra.case_name,
+        side: ra.error && rb.error ? "both" : ra.error ? "a" : "b",
+        error: [ra.error, rb.error].filter(Boolean).join(" / "),
+      });
+      continue;
+    }
+    const entry: CompareEntry = {
+      case_name: ra.case_name,
+      case_kind: ra.case_kind,
+      a: { passed: ra.passed ?? null, score: ra.score ?? null },
+      b: { passed: rb.passed ?? null, score: rb.score ?? null },
+    };
+    if (ra.passed === true && rb.passed === false) regressions.push(entry);
+    else if (ra.passed === false && rb.passed === true) fixes.push(entry);
+    else unchanged.push(entry);
+    const d = deltaOf(ra, rb);
+    if (d) deltas.push(d);
+  }
+
+  return {
+    a: sideOf(a),
+    b: sideOf(b),
+    regressions,
+    fixes,
+    unchanged,
+    only_in_a: onlyA,
+    only_in_b: onlyB,
+    errored,
+    deltas,
+  };
+}
+
+function modelsText(models: unknown): string {
+  if (!models || typeof models !== "object") return "models not recorded";
+  const parts = Object.entries(models as Record<string, unknown>).map(([role, id]) => `${role} ${String(id)}`);
+  return parts.length ? parts.join(", ") : "models not recorded";
+}
+
+const versionLabel = (s: CompareSide) => (s.version_no != null ? `v${s.version_no}` : "v?");
+const passLabel = (p: boolean | null) => (p === true ? "pass" : p === false ? "fail" : "n/a");
+const scoreLabel = (s: number | null) => (s != null ? String(s) : "n/a");
+const mdCell = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
+
+export function formatCompareReport(c: RunComparison): string {
+  const matched = c.regressions.length + c.fixes.length + c.unchanged.length + c.errored.length;
+  const out: string[] = [
+    `# A ${versionLabel(c.a)} (${modelsText(c.a.model_ids)}) vs B ${versionLabel(c.b)} (${modelsText(c.b.model_ids)})`,
+    "",
+    `- **A:** \`${c.a.id}\` · **B:** \`${c.b.id}\``,
+    `- **Matched cases:** ${matched} — ${c.regressions.length} regressions, ${c.fixes.length} fixes, ${c.unchanged.length} unchanged, ${c.errored.length} errored`,
+    `- **Only in A:** ${c.only_in_a.length} · **Only in B:** ${c.only_in_b.length}`,
+  ];
+  const table = (title: string, rows: CompareEntry[]) => {
+    out.push("", `## ${title}`, "");
+    if (!rows.length) return out.push("None.");
+    out.push("| Case | Kind | A | B |", "|---|---|---|---|");
+    for (const r of rows)
+      out.push(
+        `| ${mdCell(r.case_name)} | ${r.case_kind} | ${passLabel(r.a.passed)} (${scoreLabel(r.a.score)}) | ${passLabel(r.b.passed)} (${scoreLabel(r.b.score)}) |`
+      );
+  };
+  table("Regressions (passed in A, failed in B)", c.regressions);
+  table("Fixes (failed in A, passed in B)", c.fixes);
+
+  const big = c.deltas.filter(
+    (d) => (d.score && Math.abs(d.score.diff) > 10) || (d.voice_score && Math.abs(d.voice_score.diff) > 10)
+  );
+  out.push("", "## Score changes over 10 points", "");
+  if (!big.length) out.push("None.");
+  else {
+    out.push("| Case | Score A → B | Voice score A → B |", "|---|---|---|");
+    for (const d of big)
+      out.push(
+        `| ${mdCell(d.case_name)} | ${d.score ? `${d.score.a} → ${d.score.b}` : "—"} | ${d.voice_score ? `${d.voice_score.a} → ${d.voice_score.b}` : "—"} |`
+      );
+  }
+
+  const flips = c.deltas.filter((d) => d.completed);
+  if (flips.length) {
+    out.push("", "## Completion changes", "");
+    for (const d of flips) {
+      const label = (v: boolean) => (v ? "completed" : "not completed");
+      out.push(`- ${mdCell(d.case_name)}: ${label(d.completed!.a)} → ${label(d.completed!.b)}`);
+    }
+  }
+  if (c.deltas.length)
+    out.push("", `${c.deltas.length} case(s) changed in total; smaller deltas (deviation, per-question points) are in the structured result.`);
+
+  if (c.only_in_a.length) out.push("", "## Only in A", "", ...c.only_in_a.map((n) => `- ${n}`));
+  if (c.only_in_b.length) out.push("", "## Only in B", "", ...c.only_in_b.map((n) => `- ${n}`));
+  if (c.errored.length)
+    out.push(
+      "",
+      "## Errored (not compared)",
+      "",
+      ...c.errored.map((e) => `- ${e.case_name} (${e.side === "both" ? "both runs" : `run ${e.side.toUpperCase()}`}): ${e.error}`)
+    );
+  return out.join("\n");
+}
 
 export function registerEvalTools(server: LmsServer) {
   /**
@@ -657,7 +1118,7 @@ export function registerEvalTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_list_eval_cases",
-      description: `List the test cases of a lesson's AI task (pass lesson_id): golden chats (saved conversations replayed against the current prompt) and scenarios (simulated students), plus whether scenarios auto-regenerate. Or list the graded-answer cases of an AI-graded exercise (pass exercise_id), or the graded-exam cases of an exam (pass exam_id). ${GRADED_EXPLAINER} ${EXAM_EXPLAINER} ${WORKFLOW}`,
+      description: `List the test cases of a lesson's AI task (pass lesson_id): golden chats (saved conversations replayed against the current prompt) and scenarios (simulated students), plus whether scenarios auto-regenerate. Or list the cases of an AI-graded exercise (pass exercise_id): graded answers, coach scenarios and voice scenarios; or the graded-exam cases of an exam (pass exam_id). ${GRADED_EXPLAINER} ${EXAM_EXPLAINER} ${WORKFLOW}`,
       schema: z.object({ ...TargetFields }),
       annotations: READ_ONLY,
     },
@@ -678,7 +1139,7 @@ export function registerEvalTools(server: LmsServer) {
         if (t.kind === "exam")
           return ok({ exam_id: t.id, cases }, `# Graded-exam cases for exam ${t.id} (${cases.length})\n\n${md}`);
         if (t.kind === "exercise")
-          return ok({ exercise_id: t.id, cases }, `# Graded-answer cases for exercise ${t.id} (${cases.length})\n\n${md}`);
+          return ok({ exercise_id: t.id, cases }, `# Test cases for exercise ${t.id} (${cases.length})\n\n${md}`);
         const suite = res.body.suite as { auto_regenerate?: boolean } | undefined;
         return ok(
           { lesson_id: t.id, cases, suite: suite ?? { auto_regenerate: true } },
@@ -692,10 +1153,10 @@ export function registerEvalTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_create_eval_case",
-      description: `Add a test case to a lesson's AI task. kind 'golden_chat': a conversation (messages) that must keep working after you change the prompt — optionally record whether it completed (completed/completed_turn). kind 'scenario': a simulated student (persona, goal, optional scripted first messages, max_turns) played by the platform. Both can set expected_completed (true = the task must complete, false = must NOT complete, omit/null = either) and must_keep (short criteria a judge checks, e.g. 'Tutor never gives the final answer'; max 8). Max 20 cases per lesson. EXERCISES: pass exercise_id instead of lesson_id (kind is implied 'graded_answer') with content + expected_score (+ optional tolerance default 10, expected_passed, category) to save one sample answer. EXAMS: pass exam_id instead (kind is implied 'graded_exam') with answers (question_id → text) + expected_points (question_id → points), optional tolerance and category. ${GRADED_EXPLAINER} ${EXAM_EXPLAINER} ${WORKFLOW}`,
+      description: `Add a test case to a lesson's AI task. kind 'golden_chat': a conversation (messages) that must keep working after you change the prompt — optionally record whether it completed (completed/completed_turn). kind 'scenario': a simulated student (persona, goal, optional scripted first messages, max 5, and max_turns) played by the platform. Both can set expected_completed (true = the task must complete, false = must NOT complete, omit/null = either) and must_keep (short criteria a judge checks, e.g. 'Tutor never gives the final answer'; max 8). Max 20 cases per lesson. EXERCISES: pass exercise_id instead of lesson_id. kind 'graded_answer' (default, omit kind): content + expected_score (+ optional tolerance default 10, expected_passed, category) saves one sample answer. kind 'coach_scenario' (not for external exercise types): persona, goal, script (max 5), max_turns, expected_completed, must_keep. A simulated student tries to get the AI coach to complete the exercise; the coach gets a preview-only completion tool, so nothing is written. kind 'voice_scenario' (real_time_conversation exercises): persona, goal, script (max 10), max_turns, simulate_after_script (default true), expected_finished, expected_passed, score_min / score_max (0-100 band), must_keep. TEXT-simulated: a text model stands in for the realtime voice model, so no audio or pronunciation is tested. EXAMS: pass exam_id instead (kind is implied 'graded_exam') with answers (question_id → text) + expected_points (question_id → points), optional tolerance and category. ${GRADED_EXPLAINER} ${EXAM_EXPLAINER} ${WORKFLOW}`,
       schema: z.object({
         ...TargetFields,
-        kind: z.enum(["golden_chat", "scenario", "graded_answer", "graded_exam"]).optional().describe("Lessons: 'golden_chat' needs messages; 'scenario' needs persona. Exercises: omit (always 'graded_answer'). Exams: omit (always 'graded_exam')"),
+        kind: z.enum(["golden_chat", "scenario", "graded_answer", "graded_exam", "coach_scenario", "voice_scenario"]).optional().describe("Lessons: 'golden_chat' needs messages; 'scenario' needs persona. Exercises: omit or 'graded_answer' (sample answer), 'coach_scenario' or 'voice_scenario' (both need persona). Exams: omit (always 'graded_exam')"),
         ...GradedFields,
         ...ExamFields,
         name: z.string().min(1).max(200).describe("Short case name"),
@@ -706,22 +1167,31 @@ export function registerEvalTools(server: LmsServer) {
         completed: z.boolean().optional().describe("golden_chat only: did this conversation complete the task? (recorded as the golden outcome)"),
         completed_turn: z.number().int().min(1).max(100).nullable().optional().describe("golden_chat only: which student turn completed it"),
         ...ScenarioFields,
+        simulate_after_script: z.boolean().optional().describe("voice_scenario only: keep the simulated speaker going after the scripted messages (default true)"),
+        expected_finished: z.boolean().nullable().optional().describe("voice_scenario only: true = the tutor must finish the conversation, false = must not, null/omitted = either"),
+        score_min: z.number().int().min(0).max(100).optional().describe("voice_scenario only: lowest acceptable score (0-100)"),
+        score_max: z.number().int().min(0).max(100).optional().describe("voice_scenario only: highest acceptable score (0-100)"),
       }),
       annotations: WRITE,
     },
     async (input, ctx) => {
       const t = resolveEvalTarget(input);
       if (!t.ok) return errorResult(t.error);
+      const voiceOnly =
+        input.simulate_after_script !== undefined || input.expected_finished !== undefined ||
+        input.score_min !== undefined || input.score_max !== undefined;
       let built: ReturnType<typeof buildCreateCaseBody>;
+      let surface: EvalSurface = "graded";
       if (t.kind === "exam") {
         if (input.kind !== undefined && input.kind !== "graded_exam")
           return errorResult("Exams only support kind 'graded_exam' (omit kind).");
         if (
           input.content !== undefined || input.expected_score !== undefined || input.expected_passed !== undefined ||
           input.messages || input.persona || input.goal || input.script || input.max_turns !== undefined ||
-          input.must_keep || input.expected_completed !== undefined || input.completed !== undefined || input.completed_turn !== undefined
+          input.must_keep || input.expected_completed !== undefined || input.completed !== undefined || input.completed_turn !== undefined ||
+          voiceOnly
         )
-          return errorResult("content/expected_score/expected_passed and the lesson/exercise fields (messages, persona, must_keep, expected_completed, completed) don't apply to exam cases; use answers + expected_points.");
+          return errorResult("content/expected_score/expected_passed and the lesson/exercise fields (messages, persona, must_keep, expected_completed, completed, voice fields) don't apply to exam cases; use answers + expected_points.");
         built = buildExamCaseBody({
           name: input.name,
           importance_note: input.importance_note,
@@ -731,34 +1201,73 @@ export function registerEvalTools(server: LmsServer) {
           category: input.category,
         });
       } else if (t.kind === "exercise") {
-        if (input.kind !== undefined && input.kind !== "graded_answer")
-          return errorResult("Exercises only support kind 'graded_answer' (omit kind).");
-        if (input.messages || input.persona || input.goal || input.script || input.max_turns !== undefined || input.must_keep)
-          return errorResult("messages/persona/goal/script/max_turns/must_keep belong to lesson AI-task cases, not graded answers.");
+        const kind = input.kind;
+        if (kind !== undefined && kind !== "graded_answer" && kind !== "coach_scenario" && kind !== "voice_scenario")
+          return errorResult("Exercises support kind 'graded_answer' (omit kind), 'coach_scenario' or 'voice_scenario'.");
         if (input.answers !== undefined || input.expected_points !== undefined)
           return errorResult("answers/expected_points belong to exam cases; use exam_id.");
-        built = buildGradedCaseBody({
-          name: input.name,
-          importance_note: input.importance_note,
-          content: input.content ?? "",
-          expected_score: input.expected_score as number,
-          tolerance: input.tolerance,
-          expected_passed: input.expected_passed,
-          category: input.category,
-        });
+        if (kind === "coach_scenario" || kind === "voice_scenario") {
+          surface = kind === "coach_scenario" ? "coach" : "voice";
+          if (input.content !== undefined || input.expected_score !== undefined || input.category !== undefined || input.tolerance !== undefined)
+            return errorResult("content/expected_score/tolerance/category belong to graded answers; scenario cases use persona, goal, script and max_turns.");
+          if (kind === "coach_scenario") {
+            if (voiceOnly || input.expected_passed !== undefined)
+              return errorResult("simulate_after_script, expected_finished, expected_passed, score_min and score_max belong to voice_scenario cases.");
+            built = buildCoachCaseBody({
+              name: input.name,
+              importance_note: input.importance_note,
+              persona: input.persona ?? "",
+              goal: input.goal,
+              script: input.script,
+              max_turns: input.max_turns,
+              expected_completed: input.expected_completed,
+              must_keep: input.must_keep,
+            });
+          } else {
+            built = buildVoiceCaseBody({
+              name: input.name,
+              importance_note: input.importance_note,
+              persona: input.persona ?? "",
+              goal: input.goal,
+              script: input.script,
+              max_turns: input.max_turns,
+              simulate_after_script: input.simulate_after_script,
+              expected_finished: input.expected_finished,
+              expected_passed: input.expected_passed,
+              score_min: input.score_min,
+              score_max: input.score_max,
+              must_keep: input.must_keep,
+            });
+          }
+        } else {
+          if (input.messages || input.persona || input.goal || input.script || input.max_turns !== undefined || input.must_keep || voiceOnly)
+            return errorResult("messages, persona, goal, script, max_turns, must_keep and the voice fields belong to scenario cases (coach_scenario, voice_scenario) or lesson AI-task cases, not graded answers.");
+          built = buildGradedCaseBody({
+            name: input.name,
+            importance_note: input.importance_note,
+            content: input.content ?? "",
+            expected_score: input.expected_score as number,
+            tolerance: input.tolerance,
+            expected_passed: input.expected_passed,
+            category: input.category,
+          });
+        }
       } else {
-        if (input.kind === undefined || input.kind === "graded_answer" || input.kind === "graded_exam")
-          return errorResult("Lesson cases need kind 'golden_chat' or 'scenario'. For graded answers pass exercise_id, for exam questions pass exam_id, instead of lesson_id.");
+        if (input.kind === undefined || input.kind === "graded_answer" || input.kind === "graded_exam" || input.kind === "coach_scenario" || input.kind === "voice_scenario")
+          return errorResult("Lesson cases need kind 'golden_chat' or 'scenario'. For graded answers, coach or voice scenarios pass exercise_id; for exam questions pass exam_id.");
         if (input.content !== undefined || input.expected_score !== undefined || input.category !== undefined)
           return errorResult("content/expected_score/tolerance/category belong to exercise graded answers; use exercise_id.");
         if (input.answers !== undefined || input.expected_points !== undefined)
           return errorResult("answers/expected_points belong to exam cases; use exam_id.");
+        if (voiceOnly) return errorResult("simulate_after_script, expected_finished, score_min and score_max belong to voice_scenario cases on exercises (use exercise_id).");
+        if (input.kind === "scenario" && (input.script ?? []).length > 5)
+          return errorResult("A lesson scenario takes at most 5 scripted messages.");
         built = buildCreateCaseBody({ ...input, kind: input.kind });
       }
       if (!built.ok) return errorResult(built.error);
       return run(ctx, ownerOfTarget(t), async (call) => {
         const res = await call("POST", `${t.base}/cases`, built.body);
-        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body, t.kind));
+        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body, t.kind, surface));
         const c = res.body.case as CaseRow;
         return ok({ case: c }, `Saved test case:\n\n${formatCase(c)}\n\nAdd more cases, or call lms_run_evals to test the current prompt.`);
       });
@@ -792,6 +1301,8 @@ export function registerEvalTools(server: LmsServer) {
       const lessonEdit = scenarioEdit || input.expected_completed !== undefined || input.must_keep !== undefined;
       if (gradedEdit && (lessonEdit || input.lesson_id !== undefined))
         return errorResult("content/expected_score/tolerance/expected_passed/category belong to exercise graded answers; expected_completed/must_keep/persona/goal/script/max_turns and lesson_id belong to lesson cases. Don't mix them.");
+      if (input.script !== undefined && input.script.length > 5 && input.lesson_id !== undefined)
+        return errorResult("A lesson scenario takes at most 5 scripted messages.");
       if (scenarioEdit && input.lesson_id === undefined)
         return errorResult("Pass lesson_id when editing scenario fields (persona/goal/script/max_turns) so they can be merged with the current scenario.");
       return run(ctx, input.lesson_id ?? null, async (call) => {
@@ -880,27 +1391,40 @@ export function registerEvalTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_generate_eval_answers",
-      description: `Have the platform draft 8 sample student answers for an AI-graded exercise (essay, discussion, coding_challenge, artifact), one per category: high, mid, low, boundary (right at the passing score), injection (tries to make the grader give 100), keyword_stuffing, off_topic and short_correct. Each comes with an expected score. They are saved as UNVERIFIED cases — review them with lms_list_eval_cases and correct expected scores with lms_update_eval_case (that marks them verified). Uses the school's AI key; max 20 cases per exercise (409 case_limit if none fit). ${GRADED_EXPLAINER}`,
-      schema: z.object({ exercise_id: z.number().describe("The exercise ID") }),
+      description: `Have the platform draft test cases for an AI-graded exercise, using the school's AI key. surface 'graded' (default): 8 sample student answers, one per category: high, mid, low, boundary (right at the passing score), injection (tries to make the grader give 100), keyword_stuffing, off_topic and short_correct, each with an expected score. surface 'coach' (not for external exercises): simulated students who try to get the AI coach to complete the exercise, including a cheater who claims to be done and asks to be marked complete. surface 'voice' (real_time_conversation exercises only): simulated speakers for the TEXT-simulated conversation test (on-level, one-word answers, native-language switching, and an injection that asks to be told 100). All drafts are saved as UNVERIFIED cases: review them with lms_list_eval_cases and correct them with lms_update_eval_case (for graded answers, editing marks them verified). Max 20 cases per exercise (409 case_limit if none fit). ${GRADED_EXPLAINER}`,
+      schema: z.object({
+        exercise_id: z.number().describe("The exercise ID"),
+        surface: z
+          .enum(["graded", "coach", "voice"])
+          .optional()
+          .describe("graded (default) = sample answers to grade; coach = simulated students for the AI coach; voice = simulated speakers for a real_time_conversation exercise"),
+      }),
       annotations: WRITE,
     },
-    async ({ exercise_id }, ctx) =>
-      run(ctx, { exercise: exercise_id }, async (call) => {
-        const res = await call("POST", `/exercise/${exercise_id}/generate`, {}, 120_000);
-        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body, "exercise"));
+    async ({ exercise_id, surface }, ctx) => {
+      const s: EvalSurface = surface ?? "graded";
+      return run(ctx, { exercise: exercise_id }, async (call) => {
+        const res = await call("POST", `/exercise/${exercise_id}/generate`, { surface: s }, 120_000);
+        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body, "exercise", s));
         const cases = (Array.isArray(res.body.cases) ? res.body.cases : []) as CaseRow[];
+        const label = s === "graded" ? "sample answer(s)" : s === "coach" ? "coach scenario(s)" : "voice scenario(s)";
+        const next =
+          s === "graded"
+            ? "Review the expected scores, then run them with lms_run_evals (exercise_id)."
+            : "Review the personas and expectations, then run them with lms_run_evals (exercise_id).";
         return ok(
-          { cases },
-          `Drafted ${cases.length} sample answer(s) (unverified):\n\n${cases.map(formatCase).join("\n")}\n\nReview the expected scores, then run them with lms_run_evals (exercise_id).`
+          { cases, surface: s },
+          `Drafted ${cases.length} ${label} (unverified):\n\n${cases.map(formatCase).join("\n")}\n\n${next}`
         );
-      })
+      });
+    }
   );
 
   // ── lms_run_evals ──────────────────────────────────────────────────────────
   server.tool(
     {
       name: "lms_run_evals",
-      description: `Run every test case against the lesson's CURRENT saved AI task (save prompt changes first with lms_upsert_lesson_ai_task), or — with exercise_id — against the exercise's CURRENT saved grader (save changes first with lms_update_exercise), or — with exam_id — against the exam's CURRENT saved questions and grading (save changes first with lms_update_exam_question): each graded answer (or each exam's free-text answer set) is graded 3 times, so cost is cases × 3 model calls (returned as estimated_model_calls); injection cases must never score above expected. An exam with no free-text questions is rejected (no_ai_questions). The run executes in the background on the school's AI key (one run at a time per lesson, daily cap per school) and takes roughly 1–3 minutes; this call returns the run id immediately — then call lms_get_eval_run. ${WORKFLOW}`,
+      description: `Run every test case against the lesson's CURRENT saved AI task (save prompt changes first with lms_upsert_lesson_ai_task), or — with exercise_id — against the exercise's CURRENT saved grader (save changes first with lms_update_exercise), or — with exam_id — against the exam's CURRENT saved questions and grading (save changes first with lms_update_exam_question): each graded answer (or each exam's free-text answer set) is graded 3 times, so cost is cases × 3 model calls (returned as estimated_model_calls); injection cases must never score above expected. Exercises also run their coach and voice scenarios once each (the coach gets a preview-only completion tool, so nothing is written; voice is TEXT-simulated with no audio). An exam with no free-text questions is rejected (no_ai_questions). The run executes in the background on the school's AI key (one run at a time per lesson, daily cap per school) and takes roughly 1–3 minutes; this call returns the run id immediately — then call lms_get_eval_run. ${WORKFLOW}`,
       schema: z.object({ ...TargetFields }),
       annotations: WRITE,
     },
@@ -926,7 +1450,7 @@ export function registerEvalTools(server: LmsServer) {
     {
       name: "lms_get_eval_run",
       description:
-        "Read a test run's report as markdown: status, task version, summary, one line per case (✓/✗, completed vs expected, turn, deviation) and the failed criteria with evidence. For exercise runs: per case expected score ±tolerance vs the median score, the 3 repeat scores, stddev, deviation, INFLATED flag for injections, and the grader's feedback; summary has inflated_injections, pass_flips (majority verdict wrong), unstable_cases (a repeat disagreed), mean_deviation, max_stddev. For exam runs: per case the expected total vs the median total, then a per-question table (question ID, auto-scored or AI-graded, expected vs median points, deviation %, flags: flip, unstable, inflated, question removed); summary also has question_flips. If the run is still queued/running, call again in a minute. Set include_transcripts to read the full conversations (long). Use the failures to improve the prompt with lms_upsert_lesson_ai_task, then lms_run_evals again.",
+        "Read a test run's report as markdown: status, task version, summary, one line per case (✓/✗, completed vs expected, turn, deviation) and the failed criteria with evidence. For exercise runs: per case expected score ±tolerance vs the median score, the 3 repeat scores, stddev, deviation, INFLATED flag for injections, and the grader's feedback; summary has inflated_injections, pass_flips (majority verdict wrong), unstable_cases (a repeat disagreed), mean_deviation, max_stddev. For exam runs: per case the expected total vs the median total, then a per-question table (question ID, auto-scored or AI-graded, expected vs median points, deviation %, flags: flip, unstable, inflated, question removed); summary also has question_flips. Coach scenarios show completed or not against expected, the turn it completed at, and the failed reasons. Voice scenarios (text-simulated) show finished or not, the score against its expected band, hints and corrections. If the run is still queued/running, call again in a minute. Set include_transcripts to read the full conversations (long). Use the failures to improve the prompt with lms_upsert_lesson_ai_task, then lms_run_evals again.",
       schema: z.object({
         run_id: z.string().describe("The run ID returned by lms_run_evals / lms_list_eval_runs"),
         include_transcripts: z.boolean().optional().describe("Include each case's full conversation (default false)"),
@@ -947,12 +1471,42 @@ export function registerEvalTools(server: LmsServer) {
       })
   );
 
+  // ── lms_compare_eval_runs ──────────────────────────────────────────────────
+  server.tool(
+    {
+      name: "lms_compare_eval_runs",
+      description:
+        "Compare two finished test runs of the same lesson, exercise or exam: the before and after of a prompt or grader change. run_a = the baseline (older) run, run_b = the newer one. Lists REGRESSIONS (passed in run_a, failed in run_b), FIXES (failed → passed), cases in only one run, errored cases, and deltas: score, deviation, completion flips, per-question points (exams) and voice scores (voice scenarios). Cases are matched by case ID (name when IDs are missing). Both runs must be done and of the same target. Read-only.",
+      schema: z.object({
+        run_a: z.string().describe("The baseline run ID (older)"),
+        run_b: z.string().describe("The run ID to compare against the baseline (newer)"),
+      }),
+      annotations: READ_ONLY,
+    },
+    async ({ run_a, run_b }, ctx) =>
+      run(ctx, null, async (call) => {
+        const [ra, rb] = await Promise.all([
+          call("GET", `/runs/${encodeURIComponent(run_a)}`),
+          call("GET", `/runs/${encodeURIComponent(run_b)}`),
+        ]);
+        if (ra.status !== 200) return errorResult(describeEvalError(ra.status, ra.body));
+        if (rb.status !== 200) return errorResult(describeEvalError(rb.status, rb.body));
+        const bundle = (id: string, res: EvalHttpResult): RunBundle => ({
+          id,
+          run: (res.body.run ?? {}) as Record<string, unknown>,
+          results: (Array.isArray(res.body.results) ? res.body.results : []) as ResultRow[],
+        });
+        const cmp = compareRuns(bundle(run_a, ra), bundle(run_b, rb));
+        return ok({ ...cmp }, formatCompareReport(cmp));
+      })
+  );
+
   // ── lms_list_eval_runs ─────────────────────────────────────────────────────
   server.tool(
     {
       name: "lms_list_eval_runs",
       description:
-        "List the most recent test runs (up to 20) for a lesson's AI task (lesson_id), an AI-graded exercise (exercise_id) or an exam (exam_id) with status, task version and summary — use it to compare versions before/after a prompt change. Open one with lms_get_eval_run.",
+        "List the most recent test runs (up to 20) for a lesson's AI task (lesson_id), an AI-graded exercise (exercise_id) or an exam (exam_id) with status, task version and summary — use it to compare versions before/after a prompt change. Open one with lms_get_eval_run, or compare two finished runs of the same target with lms_compare_eval_runs.",
       schema: z.object({ ...TargetFields }),
       annotations: READ_ONLY,
     },

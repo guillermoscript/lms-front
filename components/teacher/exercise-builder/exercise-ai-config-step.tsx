@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { AIEvalTemplateBar } from './ai-eval-templates'
 import { ExerciseTestsPanel } from '@/components/teacher/ai-evals/exercise-tests-panel'
+import { ScenarioTestsPanel } from '@/components/teacher/ai-evals/scenario-tests-panel'
 import { isGradedExerciseType } from '@/components/teacher/ai-evals/types'
+import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types'
 import {
   IconRobot,
   IconEye,
@@ -111,6 +113,11 @@ export function ExerciseAIConfigStep() {
 
       {isGradedExerciseType(formData.exercise_type) && (
         <ExerciseTestsPanel exerciseId={exerciseId} hasUnsavedChanges={isDirty} passingScore={formData.passing_score} />
+      )}
+
+      {/* Coach tests: every exercise the chat coach serves (external types have their own flows). */}
+      {!(EXTERNAL_EXERCISE_TYPES as readonly string[]).includes(formData.exercise_type) && (
+        <ScenarioTestsPanel surface="coach" exerciseId={exerciseId} hasUnsavedChanges={isDirty} />
       )}
     </div>
   )

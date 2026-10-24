@@ -491,3 +491,207 @@ export interface ExamPreviewResult {
   score: number
   overall_feedback: string
 }
+
+// ---------------------------------------------------------------------------
+// F4: exercise coach ("cheater") and voice-conversation scenarios
+// ---------------------------------------------------------------------------
+
+/** Which exercise test surface a request is about. */
+export const EXERCISE_EVAL_SURFACES = ['graded', 'coach', 'voice'] as const
+export type ExerciseEvalSurface = (typeof EXERCISE_EVAL_SURFACES)[number]
+
+export const SCENARIO_CASE_KINDS = ['coach_scenario', 'voice_scenario'] as const
+export type ScenarioCaseKind = (typeof SCENARIO_CASE_KINDS)[number]
+
+export const VOICE_MAX_SCRIPT = 10
+
+export const createCoachCaseSchema = z.object({
+  kind: z.literal('coach_scenario'),
+  source: z.enum(['generated', 'teacher']).default('teacher'),
+  name: caseBase.name,
+  importance_note: caseBase.importance_note,
+  input: scenarioInputSchema,
+  expected: expectedSchema.default({ completed: null }),
+  must_keep: mustKeepSchema.default([]),
+})
+export type CreateCoachCaseInput = z.infer<typeof createCoachCaseSchema>
+
+export const voiceInputSchema = z.object({
+  persona: z.string().trim().min(1).max(1000),
+  goal: z.string().trim().max(1000).default(''),
+  /** Fixed first student turns, spoken before the simulator takes over. */
+  script: z.array(z.string().trim().min(1).max(EVAL_LIMITS.maxMessageChars)).max(VOICE_MAX_SCRIPT).default([]),
+  max_turns: z.number().int().min(1).max(EVAL_LIMITS.maxTurns).default(8),
+  /** After the script runs out, the simulated student keeps talking. */
+  simulate_after_script: z.boolean().default(true),
+})
+export type VoiceInput = z.infer<typeof voiceInputSchema>
+
+const voiceExpectedBase = z.object({
+  /** Should the tutor end the call (finish_conversation)? null = either. */
+  finished: z.boolean().nullable().default(null),
+  /** Should the graded result pass? null = either. */
+  passed: z.boolean().nullable().default(null),
+  score_min: z.number().int().min(0).max(100).optional(),
+  score_max: z.number().int().min(0).max(100).optional(),
+})
+export const scoreBandOk = (e: { score_min?: number; score_max?: number }) =>
+  e.score_min === undefined || e.score_max === undefined || e.score_min <= e.score_max
+
+export const voiceExpectedSchema = voiceExpectedBase.refine(scoreBandOk, { message: 'score_min must be <= score_max' })
+export type VoiceExpected = z.infer<typeof voiceExpectedSchema>
+
+export const createVoiceCaseSchema = z.object({
+  kind: z.literal('voice_scenario'),
+  source: z.enum(['generated', 'teacher']).default('teacher'),
+  name: caseBase.name,
+  importance_note: caseBase.importance_note,
+  input: voiceInputSchema,
+  expected: voiceExpectedSchema.default({ finished: null, passed: null }),
+  must_keep: mustKeepSchema.default([]),
+})
+export type CreateVoiceCaseInput = z.infer<typeof createVoiceCaseSchema>
+
+/** POST exercise/[id]/cases accepts any of the three exercise case kinds. */
+export const createExerciseCaseSchema = z.discriminatedUnion('kind', [
+  createGradedCaseSchema,
+  createCoachCaseSchema,
+  createVoiceCaseSchema,
+])
+export type CreateExerciseCaseInput = z.infer<typeof createExerciseCaseSchema>
+
+/**
+ * Partial; scenario fields merge into what is stored. These are written out
+ * WITHOUT zod defaults on purpose: `.partial()` still applies a field's
+ * default, which would silently reset the stored script / max_turns / expected
+ * on a PATCH that never mentioned them.
+ */
+const scenarioInputPatch = z.object({
+  persona: z.string().trim().min(1).max(1000).optional(),
+  goal: z.string().trim().max(1000).optional(),
+  script: z.array(z.string().trim().min(1).max(EVAL_LIMITS.maxMessageChars)).max(5).optional(),
+  max_turns: z.number().int().min(1).max(EVAL_LIMITS.maxTurns).optional(),
+})
+
+export const updateCoachCaseSchema = z.object({
+  name: caseBase.name.optional(),
+  importance_note: caseBase.importance_note,
+  expected: z.object({ completed: z.boolean().nullable().optional() }).optional(),
+  must_keep: mustKeepSchema.optional(),
+  input: scenarioInputPatch.optional(),
+})
+export type UpdateCoachCaseInput = z.infer<typeof updateCoachCaseSchema>
+
+export const updateVoiceCaseSchema = z.object({
+  name: caseBase.name.optional(),
+  importance_note: caseBase.importance_note,
+  expected: z
+    .object({
+      finished: z.boolean().nullable().optional(),
+      passed: z.boolean().nullable().optional(),
+      score_min: z.number().int().min(0).max(100).optional(),
+      score_max: z.number().int().min(0).max(100).optional(),
+    })
+    .optional(),
+  must_keep: mustKeepSchema.optional(),
+  input: z
+    .object({
+      persona: z.string().trim().min(1).max(1000).optional(),
+      goal: z.string().trim().max(1000).optional(),
+      script: z.array(z.string().trim().min(1).max(EVAL_LIMITS.maxMessageChars)).max(VOICE_MAX_SCRIPT).optional(),
+      max_turns: z.number().int().min(1).max(EVAL_LIMITS.maxTurns).optional(),
+      simulate_after_script: z.boolean().optional(),
+    })
+    .optional(),
+})
+export type UpdateVoiceCaseInput = z.infer<typeof updateVoiceCaseSchema>
+
+interface ScenarioCaseRowBase {
+  id: string
+  source: 'generated' | 'teacher'
+  name: string
+  importance_note: string | null
+  must_keep: string[]
+  golden_output: null
+  generated_for_version_id: string | null
+  teacher_edited: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CoachCaseRow extends ScenarioCaseRowBase {
+  kind: 'coach_scenario'
+  input: ScenarioInput
+  expected: EvalExpected
+}
+
+export interface VoiceCaseRow extends ScenarioCaseRowBase {
+  kind: 'voice_scenario'
+  input: VoiceInput
+  expected: VoiceExpected
+}
+
+export type CoachReason = 'unexpected_completion' | 'criteria_failed' | 'no_completion'
+
+/** `output` of a coach result row. */
+export interface CoachOutput {
+  kind: 'coach'
+  /** Every markExerciseCompleted call (the run stops at the first). */
+  completion_calls: { turn: number; score: number | null }[]
+  completed: boolean
+  reasons?: CoachReason[]
+}
+
+export type VoiceReason = 'score_below_band' | 'score_above_band' | 'pass_mismatch' | 'finish_mismatch' | 'criteria_failed'
+
+export interface VoiceEvaluation {
+  score: number
+  feedback: string
+  strengths: string[]
+  improvements: string[]
+  corrections: { said: string; better: string; why: string }[]
+}
+
+/** `output` of a voice result row. */
+export interface VoiceOutput {
+  kind: 'voice'
+  finished: boolean
+  finish_reason: 'scenario_completed' | 'student_asked_to_stop' | null
+  hints: string[]
+  corrections_logged: number
+  student_turns: number
+  evaluation: VoiceEvaluation
+  passing_score: number
+  passed: boolean
+  reasons?: VoiceReason[]
+}
+
+export interface VoiceOutcome {
+  transcript: TranscriptMessage[]
+  /** The tutor ended the call. */
+  completed: boolean
+  completed_turn: number | null
+  verdicts: CriterionVerdict[]
+  deviation: number
+  passed: boolean
+  score: number
+  output: VoiceOutput
+  error?: string
+}
+
+/** Coach outcome reuses CaseOutcome plus the coach-specific output. */
+export interface CoachOutcome extends CaseOutcome {
+  output: CoachOutput
+}
+
+/** `summary.scenario` of an exercise run: coach + voice results together. */
+export interface ScenarioRunSummary {
+  total: number
+  passed: number
+  failed: number
+  errored: number
+  /** Coach cases that marked the exercise complete although completed:false was expected. */
+  unexpected_completions: number
+  verdict_changes: number
+  avg_deviation: number
+}

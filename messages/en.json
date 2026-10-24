@@ -2767,7 +2767,216 @@
           "generate": "Generate simulated students",
           "generating": "Generating...",
           "regenerate": "Regenerate",
-          "autoRegenerate": "Regenerate when the task changes"
+          "autoRegenerate": "Regenerate when the task changes",
+          "common": {
+            "cases": {
+              "sourceTeacher": "Written by you",
+              "sourceGenerated": "Generated",
+              "unverified": "Unverified",
+              "editedByYou": "Edited by you",
+              "generating": "Generating...",
+              "limitReached": "You reached the limit of {max} test cases for this exercise. Delete one to add more."
+            },
+            "dialog": {
+              "editDescription": "Changes mark this case as verified by you.",
+              "name": "Name",
+              "persona": "Who is the simulated student?",
+              "goal": "What do they try to do?",
+              "script": "Opening messages (one per line)",
+              "scriptHint": "Optional. Up to {max} fixed messages the student sends first.",
+              "scriptTooLong": "Too many messages: the maximum is {max}.",
+              "maxTurns": "Maximum turns",
+              "simulateAfterScript": "Keep the student talking after the opening messages",
+              "simulateAfterScriptHint": "When off, the test ends once the opening messages are used up.",
+              "mustKeep": "What must not change",
+              "note": "Why is this case important? (optional)",
+              "cancel": "Cancel",
+              "saving": "Saving...",
+              "save": "Save"
+            },
+            "errors": {
+              "no_cases": "Add at least one test before running.",
+              "run_in_progress": "A run is already in progress for this exercise.",
+              "run_limit": "You reached today's limit of test runs. Try again tomorrow.",
+              "case_limit": "You reached the limit of test cases for this exercise.",
+              "unsupported_type": "This exercise type cannot have these tests.",
+              "plan_required": "Voice conversations are not included in your school's plan, so they cannot be tested.",
+              "runFailed": "Could not start the run. Try again.",
+              "generateFailed": "Could not generate tests. Try again.",
+              "saveFailed": "Could not save the test. Try again.",
+              "deleteFailed": "Could not delete the test. Try again."
+            },
+            "staleBanner": "You have unsaved changes. The last run used the saved version of the exercise.",
+            "unsavedBanner": "You have unsaved changes. Tests always run against the saved version of the exercise.",
+            "run": {
+              "button": "Run tests ({count})",
+              "starting": "Starting...",
+              "allKinds": "Runs every test of this exercise, not only these. Uses your school's AI key.",
+              "title": "Latest run",
+              "history": "Run",
+              "historyItem": "v{version} · {date}",
+              "version": "Exercise version v{version}",
+              "failedReason": "The run failed: {reason}",
+              "unknownError": "unknown error"
+            },
+            "confirm": {
+              "title": "Run all tests of this exercise?",
+              "description": "This runs {graded} grading answers, {coach} coach chats and {voice} voice calls, about {calls} AI calls on your school's key.",
+              "allKinds": "The run covers every kind of test, not only the ones on this panel.",
+              "cancel": "Cancel",
+              "run": "Run tests"
+            },
+            "report": {
+              "tiles": {
+                "passed": "Passed",
+                "unexpectedCompletions": "Unexpected completions",
+                "scoreAboveBand": "Score above range",
+                "errored": "Errors",
+                "avgDeviation": "Average deviation"
+              },
+              "verdict": {
+                "ok": "OK",
+                "error": "Error",
+                "unexpected_completion": "Marked complete by mistake",
+                "no_completion": "Never completed",
+                "criteria_failed": "Criteria failed",
+                "score_below_band": "Score too low",
+                "score_above_band": "Score too high",
+                "pass_mismatch": "Wrong pass or fail",
+                "finish_mismatch": "Call ended differently",
+                "failed": "Failed"
+              },
+              "noTranscript": "No conversation recorded.",
+              "student": "Student",
+              "coach": "Coach",
+              "tutor": "Tutor",
+              "unexpectedDetail": "The coach marked the exercise complete at turn {turn}, but this test says the student must not complete it. A real student could do the same.",
+              "transcript": "Conversation",
+              "voiceEvaluation": "Grader result",
+              "voiceScoreLine": "Score {score}/100 (passing {passing})",
+              "voicePassed": "passed",
+              "voiceNotPassed": "not passed",
+              "voiceStats": "{turns} student turns, {hints} hints, {corrections} corrections noted",
+              "finishReason": {
+                "scenario_completed": "The tutor ended the call: scenario completed",
+                "student_asked_to_stop": "The tutor ended the call: student asked to stop"
+              },
+              "strengths": "Strengths",
+              "improvements": "Improvements",
+              "verdicts": "Criteria",
+              "noVerdicts": "No criteria were judged.",
+              "verdictPassed": "Passed",
+              "verdictFailed": "Failed",
+              "markedCompleteAt": "Marked complete at turn {turn}",
+              "notMarkedComplete": "Not marked complete",
+              "scoreFinished": "{score}/100, call {finished}",
+              "finishedYes": "ended",
+              "finishedNo": "not ended",
+              "cols": {
+                "case": "Case",
+                "expected": "Expected",
+                "coachResult": "Coach",
+                "voiceResult": "Call",
+                "deviation": "Deviation",
+                "result": "Result"
+              }
+            }
+          },
+          "coach": {
+            "title": "Coach tests",
+            "description": "Simulated students chat with the exercise coach. Check that it helps honest students and does not mark the exercise complete for students who cheat.",
+            "saveFirst": "Save the exercise first. Tests run against the saved version.",
+            "cases": {
+              "title": "Simulated students ({count})",
+              "description": "Each one chats with the coach for a few turns. Cheaters try to get the exercise marked complete without doing the work.",
+              "generate": "Generate simulated students",
+              "add": "Add student",
+              "empty": "No simulated students yet. Generate a set, including cheaters, or add your own."
+            },
+            "dialog": {
+              "addTitle": "Add a simulated student",
+              "editTitle": "Edit simulated student",
+              "addDescription": "Describe a student and what they say to the coach.",
+              "expected": "Should the coach mark the exercise complete?",
+              "expectedHint": "For cheaters, choose \"Must not complete\".",
+              "mustKeepHint": "Coach behaviours the judge checks in every run. One per line."
+            },
+            "run": {
+              "empty": "No runs yet. Run the tests to see how the coach handles each student.",
+              "inProgress": "Running the simulated chats. This page updates by itself.",
+              "noResultsForSurface": "This run has no coach tests. Add some and run again."
+            },
+            "light": {
+              "green": {
+                "title": "The coach behaved as expected",
+                "body": "No student got the exercise marked complete by mistake."
+              },
+              "yellow": {
+                "title": "{issues, plural, one {# test needs a look} other {# tests need a look}}",
+                "body": "Open the flagged rows to read the chats and see which criteria failed."
+              },
+              "red": {
+                "title": "{count, plural, one {# student got the exercise marked complete by mistake} other {# students got the exercise marked complete by mistake}}",
+                "body": "The coach can be talked into completing the exercise. Tighten the AI instructions, then run the tests again."
+              }
+            }
+          },
+          "voice": {
+            "title": "Voice conversation tests",
+            "description": "Simulated students hold the conversation with the voice tutor, then the real grader scores it. Check the tutor and the grade without a live call.",
+            "textOnlyNote": "Simulated in text, with no audio. This checks the tutor's instructions and the grading, not speech recognition, accents or the voice itself.",
+            "saveFirst": "Save the exercise first. Tests run against the saved version.",
+            "cases": {
+              "title": "Simulated calls ({count})",
+              "description": "Each simulated student talks with the tutor for a few turns, then the call is graded.",
+              "generate": "Generate simulated calls",
+              "add": "Add call",
+              "empty": "No simulated calls yet. Generate a set or add your own."
+            },
+            "dialog": {
+              "addTitle": "Add a simulated call",
+              "editTitle": "Edit simulated call",
+              "addDescription": "Describe a student and how the call should go.",
+              "mustKeepHint": "Tutor behaviours the judge checks in every run. One per line."
+            },
+            "expected": {
+              "finished": "Should the tutor end the call?",
+              "finishedYes": "Ends",
+              "finishedNo": "Keeps going",
+              "either": "Either",
+              "passed": "Should the grade pass?",
+              "passedYes": "Pass",
+              "passedNo": "Fail",
+              "scoreMin": "Lowest score",
+              "scoreMax": "Highest score",
+              "bandHint": "Optional. The grade must land inside this range.",
+              "bandInvalid": "The lowest score cannot be above the highest.",
+              "summaryFinished": "ends",
+              "summaryNotFinished": "keeps going",
+              "summaryPass": "pass",
+              "summaryFail": "fail",
+              "summaryBand": "score {min}-{max}"
+            },
+            "run": {
+              "empty": "No runs yet. Run the tests to see how the tutor and the grader handle each call.",
+              "inProgress": "Running the simulated calls. This page updates by itself.",
+              "noResultsForSurface": "This run has no voice tests. Add some and run again."
+            },
+            "light": {
+              "green": {
+                "title": "Calls were graded as expected",
+                "body": "Every simulated call landed in its expected range."
+              },
+              "yellow": {
+                "title": "{issues, plural, one {# call needs a look} other {# calls need a look}}",
+                "body": "Open the flagged rows to read the call and the grader's feedback."
+              },
+              "red": {
+                "title": "{count, plural, one {# call scored higher than allowed} other {# calls scored higher than allowed}}",
+                "body": "The grader gave a higher score than the test allows. Check that the grading criteria resist students who ask for a high score."
+              }
+            }
+          }
         },
         "metrics": {
           "title": "Real students",
@@ -2879,7 +3088,8 @@
             "title": "Run the grading tests?",
             "description": "This grades {cases} answers {repeats} times each, about {calls} AI calls on your school's key.",
             "cancel": "Cancel",
-            "run": "Run tests"
+            "run": "Run tests",
+            "descriptionAll": "This runs every test of this exercise: {cases} grading answers (3 grades each), {coach} coach chats and {voice} voice calls, about {calls} AI calls on your school's key."
           },
           "light": {
             "green": {
