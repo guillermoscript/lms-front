@@ -412,7 +412,7 @@ export type UpdateExamCaseInput = z.infer<typeof updateExamCaseSchema>
 export interface ExamCaseRow {
   id: string
   kind: 'graded_exam'
-  source: 'preview' | 'generated' | 'teacher'
+  source: 'preview' | 'generated' | 'teacher' | 'submission'
   name: string
   importance_note: string | null
   expected: ExamExpected

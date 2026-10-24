@@ -13,13 +13,15 @@ import {
   IconEye,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { usePublishTestsGuard } from '../ai-evals/publish-tests-guard'
 
 export function ExerciseBuilderToolbar() {
   const {
     activeStep, setActiveStep, steps,
     loading, saveSuccess, formData, handleSave,
-    exerciseId,
+    exerciseId, isDirty,
   } = useExerciseBuilder()
+  const publishGuard = usePublishTestsGuard(exerciseId ? `/api/teacher/evals/exercise/${exerciseId}/status` : null)
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
   const router = useRouter()
 
@@ -88,8 +90,8 @@ export function ExerciseBuilderToolbar() {
         <Button
           size="sm"
           className="h-8 gap-1.5"
-          onClick={() => handleSave(true)}
-          disabled={loading || !formData.title}
+          onClick={() => void publishGuard.guardPublish(() => void handleSave(true), { unsavedAiChanges: isDirty })}
+          disabled={loading || publishGuard.checking || !formData.title}
         >
           {loading ? (
             <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
@@ -98,6 +100,7 @@ export function ExerciseBuilderToolbar() {
           )}
           {t('publishExercise')}
         </Button>
+        {publishGuard.dialog}
       </div>
     </div>
   )
