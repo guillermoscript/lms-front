@@ -1459,6 +1459,7 @@
         "publishExam": "Publicar",
         "saveError": "No se pudo guardar el examen. Revisa tu conexión e intenta de nuevo.",
         "removeQuestion": "Eliminar pregunta",
+        "removeQuestionAnswered": "Los estudiantes ya respondieron esta pregunta, así que no se puede eliminar",
         "removeOption": "Eliminar opción",
         "dragQuestion": "Arrastrar para reordenar pregunta",
         "publishSuccess": "Examen publicado",

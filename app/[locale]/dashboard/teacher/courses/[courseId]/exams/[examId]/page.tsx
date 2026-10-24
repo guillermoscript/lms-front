@@ -56,12 +56,16 @@ export default async function EditExamPage({ params }: PageProps) {
       questions:exam_questions(
         *,
         options:question_options(*),
+        exam_answers(count),
         ${EXAM_GRADING_SECRETS_EMBED}
       )
     `)
     .eq('exam_id', parseInt(examId))
     .eq('course_id', parseInt(courseId))
     .eq('tenant_id', tenantId)
+    .order('sequence', { referencedTable: 'questions', ascending: true, nullsFirst: false })
+    .order('question_id', { referencedTable: 'questions', ascending: true })
+    .order('option_id', { referencedTable: 'questions.options', ascending: true })
     .single()
 
   if (!exam) {

@@ -1459,6 +1459,7 @@
         "publishExam": "Publish",
         "saveError": "Couldn't save the exam. Check your connection and try again.",
         "removeQuestion": "Remove question",
+        "removeQuestionAnswered": "Students have answered this question, so it can’t be removed",
         "removeOption": "Remove option",
         "dragQuestion": "Drag to reorder question",
         "publishSuccess": "Exam published",

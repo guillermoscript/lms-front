@@ -2503,6 +2503,7 @@ export type Database = {
           question_id: number
           question_text: string
           question_type: string
+          sequence: number | null
         }
         Insert: {
           ai_grading_criteria?: string | null
@@ -2515,6 +2516,7 @@ export type Database = {
           question_id?: number
           question_text: string
           question_type: string
+          sequence?: number | null
         }
         Update: {
           ai_grading_criteria?: string | null
@@ -2527,6 +2529,7 @@ export type Database = {
           question_id?: number
           question_text?: string
           question_type?: string
+          sequence?: number | null
         }
         Relationships: [
           {

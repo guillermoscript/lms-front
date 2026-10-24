@@ -26,6 +26,8 @@ export interface QuestionData {
   ai_grading_criteria: string
   expected_keywords: string[]
   grading_rubric?: string
+  /** Students have answered it: removing it would delete their answers, so the action refuses. */
+  answered?: boolean
   options: {
     id: number | string
     option_text: string
@@ -43,10 +45,34 @@ export interface ExamFormData {
   questions: QuestionData[]
 }
 
+/** A saved question as the edit page loads it (key merged back by `withExamGradingSecrets`). */
+interface InitialExamQuestion {
+  question_id: number
+  question_text: string
+  question_type: string
+  ai_grading_criteria?: string | null
+  expected_keywords?: string[] | null
+  grading_rubric?: string | null
+  points_possible?: number
+  exam_answers?: { count: number }[]
+  options?: { option_id: number; option_text: string; is_correct: boolean }[]
+}
+
+export interface InitialExamData {
+  exam_id?: number
+  title?: string | null
+  description?: string | null
+  image?: string | null
+  duration?: number | null
+  sequence?: number | null
+  status?: string | null
+  questions?: InitialExamQuestion[]
+}
+
 export interface ExamBuilderProps {
   courseId: number
   courseTitle: string
-  initialData?: any
+  initialData?: InitialExamData
 }
 
 export interface ExamBuilderContextValue {
@@ -100,19 +126,23 @@ export function ExamBuilderProvider({
     duration: initialData?.duration || 60,
     sequence: initialData?.sequence || 1,
     status: initialData?.status || 'draft',
-    questions: (initialData?.questions || [])
-      .map((q: any) => ({
-        ...q,
-        id: q.question_id || `new-${Math.random()}`,
-        expected_keywords: q.expected_keywords || [],
-        ai_grading_criteria: q.ai_grading_criteria || '',
-        points_possible: q.points_possible ?? 10,
-        options: (q.options || []).map((o: any) => ({
-          ...o,
-          id: o.option_id || `new-opt-${Math.random()}`
-        }))
-      }))
-      .sort((a: any, b: any) => a.sequence - b.sequence) as QuestionData[],
+    // Saved rows keep their numeric ids so the save updates them in place.
+    questions: (initialData?.questions || []).map((q, idx): QuestionData => ({
+      id: q.question_id,
+      question_text: q.question_text,
+      question_type: q.question_type as QuestionData['question_type'],
+      points_possible: q.points_possible ?? 10,
+      sequence: idx + 1,
+      ai_grading_criteria: q.ai_grading_criteria || '',
+      expected_keywords: q.expected_keywords || [],
+      grading_rubric: q.grading_rubric || '',
+      answered: (q.exam_answers?.[0]?.count ?? 0) > 0,
+      options: (q.options || []).map((o) => ({
+        id: o.option_id,
+        option_text: o.option_text,
+        is_correct: o.is_correct,
+      })),
+    })),
   })
 
   const sensors = useSensors(
@@ -201,7 +231,10 @@ export function ExamBuilderProvider({
       duration: formData.duration,
       sequence: formData.sequence,
       publish,
+      // Saved rows carry their numeric id so the action updates them in place;
+      // new ones carry a `new-…` string id and are inserted.
       questions: formData.questions.map(q => ({
+        question_id: typeof q.id === 'number' ? q.id : undefined,
         question_text: q.question_text,
         question_type: q.question_type,
         points_possible: q.points_possible,
@@ -210,6 +243,7 @@ export function ExamBuilderProvider({
         expected_keywords: q.expected_keywords,
         grading_rubric: q.grading_rubric,
         options: q.options.map(o => ({
+          option_id: typeof o.id === 'number' ? o.id : undefined,
           option_text: o.option_text,
           is_correct: o.is_correct,
         })),
