@@ -93,7 +93,13 @@ function InnerAIPreviewModal({ type, config, evals }: AIPreviewModalProps) {
   const isBusy = status === 'submitted' || status === 'streaming'
   const isCompleted = Boolean(findLessonCompletion(messages)) || messages.some((message) => message.parts.some((part) => exerciseCompletion(part)?.success))
 
-  const canSaveGolden = type === 'lesson' && Boolean(evals) && messages.some((m) => m.role === 'user')
+  // A golden is a reference for the tutor's behaviour: it needs at least one
+  // tutor reply (a chat whose replies all failed would save student text only).
+  const hasText = (m: (typeof messages)[number]) => m.parts.some((p) => p.type === 'text' && p.text.trim())
+  const canSaveGolden =
+    type === 'lesson' && Boolean(evals) && !isBusy &&
+    messages.some((m) => m.role === 'user' && hasText(m)) &&
+    messages.some((m) => m.role === 'assistant' && hasText(m))
 
   const handleRestart = () => {
     stop()

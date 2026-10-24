@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { MockLanguageModelV4 } from 'ai/test'
 import { computeDeviation } from '@/lib/ai/evals/deviation'
 import { runGoldenCase, runScenarioCase, type EngineContext } from '@/lib/ai/evals/lesson-task-engine'
-import type { EvalCaseRow } from '@/lib/ai/evals/schema'
+import { goldenInputSchema, type EvalCaseRow } from '@/lib/ai/evals/schema'
 
 const usage = {
   inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
@@ -115,6 +115,13 @@ const golden = (over: Partial<EvalCaseRow> = {}): EvalCaseRow => ({
   generated_for_version_id: null,
   teacher_edited: false,
   ...over,
+})
+
+describe('goldenInputSchema', () => {
+  it('rejects a golden without a tutor reply (a preview whose replies all failed)', () => {
+    expect(goldenInputSchema.safeParse({ messages: [{ role: 'user', text: 'a' }, { role: 'user', text: 'b' }] }).success).toBe(false)
+    expect(goldenInputSchema.safeParse({ messages: [{ role: 'user', text: 'a' }, { role: 'assistant', text: 'b' }] }).success).toBe(true)
+  })
 })
 
 describe('computeDeviation', () => {

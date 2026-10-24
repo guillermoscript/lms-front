@@ -38,7 +38,14 @@ export const mustKeepSchema = z
   .max(EVAL_LIMITS.maxCriteria)
 
 export const goldenInputSchema = z.object({
-  messages: z.array(transcriptMessageSchema).min(1).max(EVAL_LIMITS.maxGoldenMessages),
+  messages: z
+    .array(transcriptMessageSchema)
+    .min(2)
+    .max(EVAL_LIMITS.maxGoldenMessages)
+    // Replay needs student turns; the judge compares against tutor turns.
+    .refine((m) => m.some((x) => x.role === 'user') && m.some((x) => x.role === 'assistant'), {
+      message: 'A golden needs at least one student message and one tutor reply',
+    }),
 })
 export type GoldenInput = z.infer<typeof goldenInputSchema>
 
