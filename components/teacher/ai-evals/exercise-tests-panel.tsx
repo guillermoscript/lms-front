@@ -34,6 +34,8 @@ import {
   type GradedRunResult,
 } from './types'
 
+export type EvalTarget = { kind: 'exercise' | 'checkpoint'; id: number }
+
 interface Props {
   exerciseId: number | null
   /** Editor has edits the saved exercise does not have yet; runs always use the saved version. */
@@ -46,22 +48,32 @@ type Load<T> = { state: 'loading' } | { state: 'error' } | { state: 'ready'; dat
 
 const POLL_MS = 3000
 
-export function ExerciseTestsPanel({ exerciseId, hasUnsavedChanges, passingScore = 70 }: Props) {
+export function ExerciseTestsPanel({ exerciseId, hasUnsavedChanges }: Props) {
   const t = useTranslations('dashboard.teacher.aiEvals.graded')
 
   if (exerciseId === null) {
     return (
       <section aria-labelledby="graded-evals-title" className="mt-10 space-y-3 border-t pt-8">
-        <PanelHeading />
+        <PanelHeading kind="exercise" />
         <p className="rounded-lg border border-dashed px-4 py-5 text-sm text-muted-foreground">{t('saveFirst')}</p>
       </section>
     )
   }
-  return <SavedExerciseTests exerciseId={exerciseId} hasUnsavedChanges={hasUnsavedChanges} passingScore={passingScore} />
+  return <SavedTests target={{ kind: 'exercise', id: exerciseId }} hasUnsavedChanges={hasUnsavedChanges} />
 }
 
-function PanelHeading({ action }: { action?: React.ReactNode }) {
+/**
+ * Grading tests for a lesson checkpoint. Checkpoint edits save immediately, so there is no
+ * "unsaved changes" state. Meant to live inside a dialog (`embedded`).
+ */
+export function CheckpointTestsPanel({ checkpointId }: { checkpointId: number }) {
+  return <SavedTests target={{ kind: 'checkpoint', id: checkpointId }} hasUnsavedChanges={false} embedded />
+}
+
+function PanelHeading({ action, kind, embedded }: { action?: React.ReactNode; kind: EvalTarget['kind']; embedded?: boolean }) {
   const t = useTranslations('dashboard.teacher.aiEvals.graded')
+  const p = kind === 'checkpoint' ? 'checkpoint.' : ''
+  const Heading = embedded ? 'h2' : 'h3'
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex items-start gap-3">
@@ -69,10 +81,10 @@ function PanelHeading({ action }: { action?: React.ReactNode }) {
           <IconFlask aria-hidden="true" className="h-5 w-5 text-brand-text" />
         </div>
         <div className="max-w-prose">
-          <h3 id="graded-evals-title" className="text-base font-semibold tracking-tight">
-            {t('title')}
-          </h3>
-          <p className="text-sm text-muted-foreground">{t('description')}</p>
+          <Heading id="graded-evals-title" className="text-base font-semibold tracking-tight">
+            {t(`${p}title`)}
+          </Heading>
+          <p className="text-sm text-muted-foreground">{t(`${p}description`)}</p>
         </div>
       </div>
       {action}
@@ -80,9 +92,12 @@ function PanelHeading({ action }: { action?: React.ReactNode }) {
   )
 }
 
-function SavedExerciseTests({ exerciseId, hasUnsavedChanges }: Required<Props> & { exerciseId: number }) {
+function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: EvalTarget; hasUnsavedChanges: boolean; embedded?: boolean }) {
   const t = useTranslations('dashboard.teacher.aiEvals.graded')
-  const base = `/api/teacher/evals/exercise/${exerciseId}`
+  const kind = target.kind
+  const base = `/api/teacher/evals/${kind}/${target.id}`
+  const sectionClass = embedded ? 'space-y-6' : 'mt-10 space-y-6 border-t pt-8'
+  const [unsupported, setUnsupported] = useState(false)
 
   const [cases, setCases] = useState<Load<GradedCaseRow[]>>({ state: 'loading' })
   const [runs, setRuns] = useState<Load<GradedRunRow[]>>({ state: 'loading' })
@@ -101,12 +116,17 @@ function SavedExerciseTests({ exerciseId, hasUnsavedChanges }: Required<Props> &
 
   const loadCases = useCallback(async () => {
     const res = await evalRequest<{ cases: GradedCaseRow[] }>(`${base}/cases`)
+    if (res.status === 409 && res.code === 'unsupported_type') return setUnsupported(true)
     if (!res.ok || !res.data) return setCases({ state: 'error' })
     setCases({ state: 'ready', data: res.data.cases ?? [] })
   }, [base])
 
   const loadRuns = useCallback(async () => {
     const res = await evalRequest<{ runs: GradedRunRow[] }>(`${base}/runs`)
+    if (res.status === 409 && res.code === 'unsupported_type') {
+      setUnsupported(true)
+      return
+    }
     if (!res.ok || !res.data) return setRuns({ state: 'error' })
     setRuns({ state: 'ready', data: res.data.runs ?? [] })
     return res.data.runs ?? []
@@ -176,7 +196,9 @@ function SavedExerciseTests({ exerciseId, hasUnsavedChanges }: Required<Props> &
       return
     }
     const known = ['no_cases', 'run_in_progress', 'run_limit', 'case_limit', 'unsupported_type']
-    setError(res.code && known.includes(res.code) ? t(`errors.${res.code}`) : t(fallbackKey))
+    if (res.code === 'unsupported_type') setUnsupported(true)
+    const override = kind === 'checkpoint' && res.code && ['run_in_progress', 'case_limit', 'unsupported_type'].includes(res.code)
+    setError(res.code && known.includes(res.code) ? t(override ? `checkpoint.errors.${res.code}` : `errors.${res.code}`) : t(fallbackKey))
   }
 
   const clearErrors = () => {
@@ -225,7 +247,7 @@ function SavedExerciseTests({ exerciseId, hasUnsavedChanges }: Required<Props> &
           body: JSON.stringify({ kind: 'graded_answer', source: 'teacher', ...patch, expected: { ...patch.expected, category: 'custom' } }),
         })
     setDialogSaving(false)
-    if (!res.ok) return setDialogError(res.code === 'case_limit' ? t('errors.case_limit') : t('errors.saveFailed'))
+    if (!res.ok) return setDialogError(res.code === 'case_limit' ? t(kind === 'checkpoint' ? 'checkpoint.errors.case_limit' : 'errors.case_limit') : t('errors.saveFailed'))
     setDialog(null)
     await loadCases()
   }
@@ -238,9 +260,22 @@ function SavedExerciseTests({ exerciseId, hasUnsavedChanges }: Required<Props> &
   const latestRun = runList[0]
   const staleBanner = hasUnsavedChanges && latestRun && !isActive(latestRun)
 
+  if (unsupported) {
+    return (
+      <section aria-labelledby="graded-evals-title" className={embedded ? 'space-y-3' : 'mt-10 space-y-3 border-t pt-8'}>
+        <PanelHeading kind={kind} embedded={embedded} />
+        <p role="status" className="rounded-lg border border-dashed px-4 py-5 text-sm text-muted-foreground">
+          {t(kind === 'checkpoint' ? 'checkpoint.unsupported' : 'errors.unsupported_type')}
+        </p>
+      </section>
+    )
+  }
+
   return (
-    <section aria-labelledby="graded-evals-title" className="mt-10 space-y-6 border-t pt-8">
+    <section aria-labelledby="graded-evals-title" className={sectionClass}>
       <PanelHeading
+        kind={kind}
+        embedded={embedded}
         action={
           <div className="flex flex-col items-end gap-1">
             <Button type="button" className="gap-2" onClick={() => setConfirmRun(true)} disabled={caseCount === 0 || runActive || starting}>
@@ -366,7 +401,7 @@ function SavedExerciseTests({ exerciseId, hasUnsavedChanges }: Required<Props> &
               detailRun?.status === 'done' && <TrafficLight summary={detailRun.summary} />
             )}
             <GradedSummaryTiles summary={detail.data.run.summary} />
-            {results.length > 0 && <GradedResultsTable results={results} />}
+            {results.length > 0 && <GradedResultsTable results={results} nextStep={kind === 'checkpoint'} />}
           </div>
         )}
       </div>

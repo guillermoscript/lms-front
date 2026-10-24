@@ -15,7 +15,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const body = await req.json().catch(() => null)
 
-  if (ctx.targetType === 'exercise') {
+  if (ctx.targetType === 'exercise' || ctx.targetType === 'checkpoint') {
     const graded = updateGradedCaseSchema.safeParse(body)
     if (!graded.success) return NextResponse.json({ error: 'Invalid case', issues: graded.error.issues }, { status: 400 })
     const gp = graded.data

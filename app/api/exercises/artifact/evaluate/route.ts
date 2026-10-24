@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
 import { aiFailureResponse, canConfigureAi } from '@/lib/exercises/ai-failure'
-import { evaluateArtifactExercise } from '@/lib/exercises/evaluate-artifact'
+import { gradeWrittenSubmission } from '@/lib/exercises/grade-written-submission'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
@@ -100,19 +100,15 @@ export async function POST(req: Request) {
     }, { status: 429 })
   }
 
-  // 7. Extract server-side config
-  const config = (exercise.exercise_config ?? {}) as {
-    evaluation_criteria?: string
-    system_prompt?: string | null
-    passing_score?: number
-  }
-  const passingScore = config.passing_score ?? 70
-
-  // 8. AI evaluation
+  // 7-8. AI evaluation through the shared grader (rounds/clamps the score,
+  // resolves the passing score from exercise_config).
   try {
-    const evaluation = await evaluateArtifactExercise(exercise, content, grader.model, metadata)
-
-    const passed = evaluation.score >= passingScore
+    const { evaluation, score, passed, passingScore } = await gradeWrittenSubmission(
+      exercise,
+      content,
+      grader.model,
+      metadata
+    )
 
     // 10. Insert evaluation record
     const { error: evaluationError } = await adminClient.from('exercise_evaluations').insert({
@@ -120,7 +116,7 @@ export async function POST(req: Request) {
       user_id: user.id,
       tenant_id: tenantId,
       engine_type: 'simulation',
-      score: evaluation.score,
+      score,
       passed,
       ai_result: {
         feedback: evaluation.feedback,
@@ -136,7 +132,7 @@ export async function POST(req: Request) {
 
     // 11. Record completion if passed
     if (passed) {
-      const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score: evaluation.score })
+      const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score })
       if (completion.error) {
         console.error('Failed to record exercise completion:', completion.error)
         return Response.json({ error: 'Could not record the result' }, { status: 500 })
@@ -153,7 +149,7 @@ export async function POST(req: Request) {
         exercise_id: exerciseId,
         course_id: exercise.course_id,
         exercise_type: exercise.exercise_type,
-        score: evaluation.score,
+        score,
         passed,
         passing_score: passingScore,
         attempts_last_hour: (recentCount ?? 0) + 1,
@@ -163,7 +159,7 @@ export async function POST(req: Request) {
 
     // 13. Return result (never include evaluation_criteria or system_prompt)
     return Response.json({
-      score: evaluation.score,
+      score,
       feedback: evaluation.feedback,
       passed,
       strengths: evaluation.strengths,

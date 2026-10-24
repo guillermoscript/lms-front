@@ -1,7 +1,7 @@
 import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
 import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
-import { gradeWrittenSubmission } from '@/lib/exercises/grade-written-submission'
+import { gradeWrittenSubmission, type GradedSubmission } from '@/lib/exercises/grade-written-submission'
 import {
   GRADED_CATEGORIES,
   GRADED_CONTENT_MAX,
@@ -23,6 +23,11 @@ export interface GradedEngineContext {
   grader: LanguageModel
   /** The saved exercise with its grading secrets merged back. */
   exercise: WrittenGradingExercise
+  /**
+   * Replaces the exercise grader for targets graded by their own code path
+   * (checkpoints). Must resolve to the same shape; `grader` is still the model.
+   */
+  grade?: (content: string, metadata?: Record<string, unknown>) => Promise<GradedSubmission>
   /** Incremented once per model request, for the run's cost line. */
   onModelCall?: () => void
 }
@@ -94,7 +99,9 @@ export async function runGradedCase(ctx: GradedEngineContext, testCase: GradedCa
   for (let i = 0; i < GRADED_REPEATS; i++) {
     ctx.onModelCall?.()
     try {
-      const graded = await gradeWrittenSubmission(ctx.exercise, testCase.input.content, ctx.grader, testCase.input.metadata)
+      const graded = ctx.grade
+        ? await ctx.grade(testCase.input.content, testCase.input.metadata)
+        : await gradeWrittenSubmission(ctx.exercise, testCase.input.content, ctx.grader, testCase.input.metadata)
       passingScore = graded.passingScore
       scores.push(graded.score)
       passedFlags.push(graded.passed)

@@ -5,6 +5,8 @@ import { parseStructuredRequirements } from '@/lib/ai/lesson-requirements'
 import type { LessonTaskConfig, LessonTaskLesson } from '@/lib/ai/lesson-task-preview'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
+import { CLOSED_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
+import { checkpointPassingScore } from '@/lib/checkpoints/grade-checkpoint-answer'
 import { isGradedEvalExerciseType, type EvalCaseRow, type GradedCaseRow } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -185,6 +187,115 @@ export async function loadGradingExercise(
 /** Version id for the exercise's current grader config (created when new). Caller has verified the tenant. */
 export async function ensureExerciseGraderVersion(admin: Admin, exerciseId: number) {
   const { data, error } = await admin.rpc('ensure_exercise_grader_version', { _exercise_id: exerciseId })
+  if (error || !data) throw new Error(`Could not record the grader version: ${error?.message ?? 'no id'}`)
+  return data as string
+}
+
+export interface CheckpointTestsTarget {
+  id: number
+  lesson_id: number
+  exercise_id: number
+  course_id: number
+  title: string
+  exercise_type: string
+}
+
+/** Checkpoint text grading applies to open-text exercises (or closed ones saved without questions). */
+export function checkpointAcceptsText(exerciseType: string, config: unknown): boolean {
+  return (
+    exerciseType === 'essay' ||
+    exerciseType === 'discussion' ||
+    ((CLOSED_EXERCISE_TYPES as readonly string[]).includes(exerciseType) && !parseCheckpointQuestions((config ?? {}) as Record<string, unknown>))
+  )
+}
+
+/**
+ * Staff access to one checkpoint's graded-answer tests: an active
+ * teacher/admin of the caller's tenant, the checkpoint in that tenant, and —
+ * for teachers — the author of the linked exercise's course. Checkpoints the
+ * text grader never runs on are refused with 409 `unsupported_type`.
+ */
+export async function authorizeCheckpointStaff(
+  supabase: SupabaseClient,
+  ctx: { userId: string; tenantId: string },
+  checkpointId: number,
+  opts: { requireGraded?: boolean } = {}
+): Promise<{ role: 'teacher' | 'admin'; checkpoint: CheckpointTestsTarget } | { error: string; status: number }> {
+  const { data: membership } = await supabase
+    .from('tenant_users')
+    .select('role')
+    .eq('user_id', ctx.userId)
+    .eq('tenant_id', ctx.tenantId)
+    .eq('status', 'active')
+    .maybeSingle()
+  const role = membership?.role
+  if (role !== 'teacher' && role !== 'admin') return { error: 'Forbidden', status: 403 }
+
+  const { data: checkpoint } = await supabase
+    .from('lesson_checkpoints')
+    .select('id, lesson_id, exercise_id, exercises!inner(title, exercise_type, exercise_config, course_id, tenant_id, courses!inner(author_id, tenant_id))')
+    .eq('id', checkpointId)
+    .eq('tenant_id', ctx.tenantId)
+    .maybeSingle()
+  if (!checkpoint) return { error: 'Checkpoint not found', status: 404 }
+
+  const exercise = Array.isArray(checkpoint.exercises) ? checkpoint.exercises[0] : checkpoint.exercises
+  if (!exercise || exercise.tenant_id !== ctx.tenantId) return { error: 'Checkpoint not found', status: 404 }
+  const course = Array.isArray(exercise.courses) ? exercise.courses[0] : exercise.courses
+  if (role !== 'admin' && course?.author_id !== ctx.userId) return { error: 'Forbidden', status: 403 }
+  if ((opts.requireGraded ?? true) && !checkpointAcceptsText(exercise.exercise_type, exercise.exercise_config)) {
+    return { error: 'unsupported_type', status: 409 }
+  }
+
+  return {
+    role,
+    checkpoint: {
+      id: checkpoint.id,
+      lesson_id: checkpoint.lesson_id,
+      exercise_id: checkpoint.exercise_id,
+      course_id: exercise.course_id,
+      title: exercise.title,
+      exercise_type: exercise.exercise_type,
+    },
+  }
+}
+
+/**
+ * The checkpoint's linked exercise exactly as the checkpoint grader sees it,
+ * grading secrets merged back (service role), pinned to the authorized tenant.
+ */
+export async function loadCheckpointGradingExercise(
+  admin: Admin,
+  checkpointId: number,
+  tenantId: string
+): Promise<(WrittenGradingExercise & { passingScore: number }) | null> {
+  const { data } = await admin
+    .from('lesson_checkpoints')
+    .select(`id, exercises!inner(title, instructions, system_prompt, exercise_type, exercise_config, tenant_id, ${GRADING_SECRETS_EMBED})`)
+    .eq('id', checkpointId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  const row = data?.exercises ? (Array.isArray(data.exercises) ? data.exercises[0] : data.exercises) : null
+  if (!row || (row as { tenant_id: string }).tenant_id !== tenantId) return null
+  const merged = withGradingSecrets(row as never as { exercise_config?: unknown; system_prompt?: string | null; exercise_grading_secrets?: unknown }) as {
+    exercise_config?: Record<string, unknown> | null
+    system_prompt?: string | null
+  }
+  const config = merged.exercise_config ?? {}
+  const exercise = row as unknown as { title: string; instructions: string; exercise_type: string }
+  return {
+    title: exercise.title,
+    instructions: exercise.instructions,
+    system_prompt: merged.system_prompt ?? null,
+    exercise_type: exercise.exercise_type,
+    exercise_config: config,
+    passingScore: Math.min(100, Math.max(0, checkpointPassingScore(config))),
+  }
+}
+
+/** Version id for the checkpoint's current grader config (created when new). Caller has verified the tenant. */
+export async function ensureCheckpointGraderVersion(admin: Admin, checkpointId: number) {
+  const { data, error } = await admin.rpc('ensure_checkpoint_grader_version', { _checkpoint_id: checkpointId })
   if (error || !data) throw new Error(`Could not record the grader version: ${error?.message ?? 'no id'}`)
   return data as string
 }

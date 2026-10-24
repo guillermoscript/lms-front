@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
 import { aiFailureResponse, canConfigureAi } from '@/lib/exercises/ai-failure'
-import { evaluateWrittenExercise, type WrittenEvaluation } from '@/lib/exercises/evaluate-written'
+import { gradeWrittenSubmission, type GradedSubmission } from '@/lib/exercises/grade-written-submission'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { getEngineType } from '@/lib/exercises/engine'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
@@ -127,18 +127,13 @@ export async function POST(req: Request) {
     )
   }
 
-  let evaluation: WrittenEvaluation
-  let passingScore: number
+  let graded: GradedSubmission
   try {
-    const result = await evaluateWrittenExercise(exercise, content, grader.model)
-    evaluation = result.evaluation
-    passingScore = result.passingScore
+    graded = await gradeWrittenSubmission(exercise, content, grader.model)
   } catch (err) {
     return aiFailure(err)
   }
-
-  const score = Math.max(0, Math.min(100, Math.round(evaluation.score)))
-  const passed = score >= passingScore
+  const { score, passed, passingScore, evaluation } = graded
 
   const { data: evaluationRow, error: evaluationError } = await adminClient
     .from('exercise_evaluations')

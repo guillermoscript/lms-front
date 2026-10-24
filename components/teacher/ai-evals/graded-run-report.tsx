@@ -102,7 +102,7 @@ function ReasonBadge({ reason }: { reason: Reason }) {
   )
 }
 
-function ResultDetail({ result }: { result: GradedRunResult }) {
+function ResultDetail({ result, nextStep = false }: { result: GradedRunResult; nextStep?: boolean }) {
   const t = useTranslations('dashboard.teacher.aiEvals.graded.report')
   const out = result.output
   return (
@@ -127,7 +127,7 @@ function ResultDetail({ result }: { result: GradedRunResult }) {
         )}
         {(out?.improvements?.length ?? 0) > 0 && (
           <div>
-            <h4 className="mb-1 font-semibold">{t('improvements')}</h4>
+            <h4 className="mb-1 font-semibold">{t(nextStep ? 'nextStep' : 'improvements')}</h4>
             <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
               {out?.improvements?.map((s, i) => <li key={i}>{s}</li>)}
             </ul>
@@ -138,7 +138,7 @@ function ResultDetail({ result }: { result: GradedRunResult }) {
   )
 }
 
-export function GradedResultsTable({ results }: { results: GradedRunResult[] }) {
+export function GradedResultsTable({ results, nextStep = false }: { results: GradedRunResult[]; nextStep?: boolean }) {
   const t = useTranslations('dashboard.teacher.aiEvals.graded.report')
   const [open, setOpen] = useState<string | null>(null)
   return (
@@ -196,7 +196,7 @@ export function GradedResultsTable({ results }: { results: GradedRunResult[] }) 
                 {expanded && (
                   <TableRow className="bg-muted/20 hover:bg-muted/20">
                     <TableCell colSpan={6} className="whitespace-normal">
-                      <ResultDetail result={r} />
+                      <ResultDetail result={r} nextStep={nextStep} />
                     </TableCell>
                   </TableRow>
                 )}
