@@ -9,16 +9,19 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * AFTER INSERT XP trigger fires once. The table has NO tenant_id column —
  * sending one 400s the insert.
  *
+ * `completedBy` defaults to the student; a teacher's passing regrade passes
+ * their own id.
+ *
  * Returns whether this call created the completion.
  */
 export async function recordExerciseCompletion(
   adminClient: SupabaseClient,
-  { exerciseId, userId, score }: { exerciseId: number; userId: string; score: number }
+  { exerciseId, userId, score, completedBy }: { exerciseId: number; userId: string; score: number; completedBy?: string }
 ): Promise<{ created: boolean; error: string | null }> {
   const { data, error } = await adminClient
     .from('exercise_completions')
     .upsert(
-      { exercise_id: exerciseId, user_id: userId, completed_by: userId, score },
+      { exercise_id: exerciseId, user_id: userId, completed_by: completedBy ?? userId, score },
       { onConflict: 'exercise_id,user_id', ignoreDuplicates: true }
     )
     .select('id')

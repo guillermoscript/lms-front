@@ -2186,7 +2186,8 @@
             "instructions": "Tema: {{topic}}\nExplica y muestra cómo hacerlo, en orden, para que un principiante lo siga.",
             "criteria": "Evalúa el tutorial sobre {{topic}}. Corrección 30%, orden y completitud de pasos 25%, claridad para un principiante 25%, ejemplos/visuales 20%. Cita momentos concretos y da una acción siguiente."
           }
-        }
+        },
+        "studentAttempts": "Intentos de estudiantes"
       },
       "submissionReview": {
         "status": {
@@ -3051,7 +3052,8 @@
             "source": {
               "preview": "De la vista previa",
               "teacher": "Escrita por ti",
-              "generated": "Generada"
+              "generated": "Generada",
+              "submission": "De una respuesta de estudiante"
             },
             "unverified": "Sin verificar",
             "editedByYou": "Editada por ti",
@@ -3295,6 +3297,43 @@
           "unsavedDescription": "Cambiaste la configuración de IA desde el último guardado y {count, plural, one {su # prueba no ha corrido} other {sus # pruebas no han corrido}} con esos cambios. Córrelas primero para detectar si la IA empeoró.",
           "cancel": "Ahora no",
           "publishAnyway": "Publicar igual"
+        }
+      },
+      "exerciseAttempts": {
+        "title": "Intentos de estudiantes",
+        "description": "Todos los intentos calificados por la IA, del más reciente al más antiguo. Recalifica uno cuando la IA se equivocó; se aprueba con {passingScore}.",
+        "unsupported": "La IA no califica este tipo de ejercicio a partir de una respuesta escrita, así que aquí no hay intentos que revisar.",
+        "empty": "Todavía no hay intentos calificados.",
+        "limited": "Se muestran los últimos {count} intentos.",
+        "unknownStudent": "Estudiante desconocido",
+        "attempt": "Intento {number}",
+        "aiGrade": "IA",
+        "teacherGrade": "Tú",
+        "noScore": "Sin nota",
+        "passed": "aprobado",
+        "failed": "reprobado",
+        "noAnswer": "No se guardó la respuesta de este intento (se calificó antes de que se guardaran las respuestas).",
+        "aiFeedback": "Comentarios de la IA",
+        "teacherFeedback": "Tu nota para el estudiante",
+        "scoreLabel": "Tu nota (0–100)",
+        "feedbackLabel": "Nota para el estudiante (opcional)",
+        "willPass": "Aprueba (con {passingScore} o más)",
+        "willFail": "No aprueba (necesita {passingScore})",
+        "overrideNote": "El estudiante ve tu nota y tu comentario en lugar de la nota de la IA. Una nota aprobatoria le completa el ejercicio; una reprobatoria no deshace un ejercicio ya completado.",
+        "saveGrade": "Guardar nota",
+        "cancel": "Cancelar",
+        "regrade": "Recalificar",
+        "changeGrade": "Cambiar nota",
+        "saveAsTest": "Guardar como prueba",
+        "savedAsTest": "Guardada como prueba de calificación",
+        "caseName": "Respuesta calificada por el docente · {date}",
+        "errors": {
+          "saveGrade": "No se pudo guardar la nota. Inténtalo de nuevo.",
+          "saveTest": "No se pudo guardar la prueba. Inténtalo de nuevo.",
+          "case_limit": "Este ejercicio ya tiene el máximo de pruebas. Borra una primero.",
+          "answer_too_large": "Esta respuesta es demasiado larga para guardarla como prueba.",
+          "no_answer": "No se guardó la respuesta de este intento.",
+          "not_reviewed": "Guarda tu nota primero."
         }
       }
     },
@@ -8092,7 +8131,9 @@
     "result": {
       "title": "Tu último resultado",
       "noFeedbackRecorded": "Este ejercicio se califica automáticamente, así que no hay comentarios escritos para revisar.",
-      "passMark": "Nota mínima {score}"
+      "passMark": "Nota mínima {score}",
+      "teacherReview": "Revisado por tu docente",
+      "aiScoreWas": "La IA lo calificó primero con {score}."
     },
     "audio": {
       "title": "Ejercicio de audio",

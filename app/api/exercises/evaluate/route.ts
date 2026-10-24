@@ -144,6 +144,8 @@ export async function POST(req: Request) {
       engine_type: engineType,
       score,
       passed,
+      // Kept so a teacher can review and regrade the attempt (F5).
+      submission_text: content,
       ai_result: {
         feedback: evaluation.feedback,
         strengths: evaluation.strengths,

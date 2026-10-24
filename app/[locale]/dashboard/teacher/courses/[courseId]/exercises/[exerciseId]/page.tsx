@@ -21,6 +21,8 @@ const ExerciseBuilder = dynamic(
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { isGradedEvalExerciseType } from '@/lib/ai/evals/schema'
+import { IconUsers } from '@tabler/icons-react'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
@@ -87,7 +89,17 @@ export default async function EditExercisePage({ params }: PageProps) {
       <PageHeader
         back={{ href: `/dashboard/teacher/courses/${courseId}/exercises`, label: course.title }}
         title={tEx('updateExercise')}
-        actions={<AiSetupGate><AiEditSheet scope={{ type: 'exercise', exerciseId: exercise.id, courseId: parseInt(courseId) }} /></AiSetupGate>}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {isGradedEvalExerciseType(exercise.exercise_type) && (
+              <Button variant="outline" size="sm" className="gap-1.5" nativeButton={false} render={<Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}/attempts`} />}>
+                <IconUsers aria-hidden="true" className="h-3.5 w-3.5" />
+                {tEx('studentAttempts')}
+              </Button>
+            )}
+            <AiSetupGate><AiEditSheet scope={{ type: 'exercise', exerciseId: exercise.id, courseId: parseInt(courseId) }} /></AiSetupGate>
+          </div>
+        }
       />
 
       <ExerciseBuilder
