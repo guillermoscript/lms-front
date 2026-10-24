@@ -2395,7 +2395,6 @@
         "buttonText": "Preview AI Behavior",
         "modalTitle": "AI Preview Mode",
         "modalSubtitle": "You are the student. This is the conversation they will have.",
-        "readyTitle": "Ready to Preview",
         "readyDesc": "Write as a student would. The tutor uses your current, unsaved prompts, and completes the lesson on its own when the task is done.",
         "placeholder": "Answer as your student would...",
         "placeholderCompleted": "Task completed. Restart to try again.",
@@ -6069,10 +6068,6 @@
         "restarting": "Restarting...",
         "tryAgain": "Try Again"
       },
-      "emptyState": {
-        "title": "AI Tutor Ready",
-        "description": "I'm ready to review your work! Type your answer below based on the task description."
-      },
       "targetAchieved": "Target Achieved!",
       "generating": "Generating response...",
       "placeholders": {
@@ -8363,8 +8358,6 @@
       "ready": "Write your answer or ask for help",
       "completed": "Completed",
       "restart": "Restart conversation",
-      "emptyTitle": "Write your answer here.",
-      "emptyBody": "The coach can explain the task or give a hint, and grades your work when you ask it to check your answer.",
       "markedComplete": "Exercise completed",
       "placeholder": "Type your answer…",
       "suggestions": {
@@ -10851,5 +10844,16 @@
     "noResults": "No results found.",
     "clearFilters": "Clear filters",
     "columnActions": "Column actions"
+  },
+  "aiKickoff": {
+    "lessonGreeting": "Hi! 👋 I'm your tutor for this lesson.",
+    "taskHeading": "**Your task:**",
+    "taskAbove": "Your task is written right above this chat — give it a quick read first.",
+    "requirements": "You'll need to cover {count, plural, one {# point} other {# points}}; the bar above tracks your progress.",
+    "lessonStart": "**How to start:** send me your first attempt right away, no need to say hello. If you get stuck, ask me for a hint (I won't give you the answer). The lesson completes on its own once you've shown you've got it.",
+    "exerciseGreeting": "Hi! 👋 I'm your coach for **{title}**.",
+    "exerciseGreetingGeneric": "Hi! 👋 I'm your coach for this exercise.",
+    "exerciseInstructions": "The full instructions are next to this chat — read them before you start.",
+    "exerciseStart": "**How to start:** write your answer, or a first draft, right here. I'll give you feedback and hints (not the answer), and I'll mark the exercise complete once it meets the goal."
   }
 }

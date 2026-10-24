@@ -33,7 +33,6 @@ import {
     IconCheck,
     IconChevronDown,
     IconMessageCircle,
-    IconRobot,
     IconRotateClockwise2,
     IconSparkles,
     IconTrophy,
@@ -69,6 +68,7 @@ import { LessonCompletionCard } from "@/components/ai/lesson-completion-card";
 import { findLessonCompletion, lessonCompletionOutput } from "@/lib/ai/lesson-completion";
 import { latestReportedProgress, type Requirement } from "@/lib/ai/lesson-requirements";
 import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
+import { ChatKickoff, useLessonKickoff } from '@/components/ai/chat-kickoff'
 
 /**
  * Tracks the visual viewport height while the mobile chat overlay is open so
@@ -167,6 +167,7 @@ function InnerLessonAIChat({
     const viewportHeight = useVisualViewportHeight(mobileOpen);
     const shellRef = useRef<HTMLDivElement>(null);
     const { textInput } = usePromptInputController();
+    const kickoff = useLessonKickoff({ task: taskDescription, requirementsCount: requirements?.length });
 
     useEffect(() => {
         if (!mobileOpen) return;
@@ -433,13 +434,7 @@ function InnerLessonAIChat({
 
                 <Conversation className="overscroll-contain [&>div]:overscroll-contain">
                     <ConversationContent className={`gap-4 sm:gap-8 p-3 sm:p-4 ${isCompleted ? "pb-48 sm:pb-64" : ""}`}>
-                        {messages.length === 0 && !isCompleted && (
-                            <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-1 sm:p-6 text-center">
-                                <IconRobot className="h-8 w-8 sm:h-12 sm:w-12 mb-2 sm:mb-4 opacity-20" />
-                                <h3 className="text-sm sm:text-lg font-medium text-foreground mb-1 sm:mb-2">{t('emptyState.title')}</h3>
-                                <p className="max-w-xs mx-auto text-xs sm:text-sm">{t('emptyState.description')}</p>
-                            </div>
-                        )}
+                        <ChatKickoff text={kickoff} />
 
                         {messages.map((message) => (
                             <Message key={message.id} from={message.role}>

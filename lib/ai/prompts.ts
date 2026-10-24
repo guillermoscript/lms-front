@@ -24,6 +24,13 @@ export const METACOGNITIVE_NUDGE = `
     - Ask these nudges in the language the student is using.
 `;
 
+// The chat UI opens with a canned tutor message (components/ai/chat-kickoff.tsx)
+// that is rendered, never sent — so the model would otherwise greet a second
+// time and re-ask what the student wants to do.
+export const CHAT_KICKOFF_NOTE = `
+    OPENING: the student already saw an opening message from you that greeted them, restated the task and asked for their first attempt. Do not greet them or introduce yourself again. If their first message is only a greeting or "what do I do?", point them to the first concrete step of the task in one or two sentences.
+`;
+
 // Platform-owned completion rule for AI lesson tasks. A teacher writes WHAT the
 // task is (level, scenario, requirements); deciding WHEN it is done and calling
 // the tool is never the teacher's job, so this rides along with every task —
@@ -88,6 +95,7 @@ export const PROMPTS = {
     ${exercise.system_prompt || 'Be helpful and encouraging. Guide the student toward the answer with questions and hints — never state it outright.'}
     ${TUTOR_GUARDRAIL_FLOOR}
     ${METACOGNITIVE_NUDGE}
+    ${CHAT_KICKOFF_NOTE}
     When the student completes the task or demonstrates sufficient mastery, use the "markExerciseCompleted" tool.
   `,
 
@@ -110,6 +118,7 @@ export const PROMPTS = {
     }
     ${TUTOR_GUARDRAIL_FLOOR}
     ${METACOGNITIVE_NUDGE}
+    ${CHAT_KICKOFF_NOTE}
     ${LESSON_COMPLETION_PROTOCOL}
   `,
 
