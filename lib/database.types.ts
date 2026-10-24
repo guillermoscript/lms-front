@@ -115,7 +115,15 @@ export type Database = {
           tenant_id?: string
           version_no?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_config_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_eval_cases: {
         Row: {
@@ -175,7 +183,22 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_eval_cases_generated_for_version_id_fkey"
+            columns: ["generated_for_version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_config_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_eval_cases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_eval_results: {
         Row: {
@@ -189,8 +212,12 @@ export type Database = {
           error: string | null
           expected: Json
           id: string
+          output: Json | null
           passed: boolean | null
           run_id: string
+          score: number | null
+          score_stddev: number | null
+          scores: number[] | null
           tenant_id: string
           transcript: Json
           verdicts: Json
@@ -206,8 +233,12 @@ export type Database = {
           error?: string | null
           expected?: Json
           id?: string
+          output?: Json | null
           passed?: boolean | null
           run_id: string
+          score?: number | null
+          score_stddev?: number | null
+          scores?: number[] | null
           tenant_id: string
           transcript?: Json
           verdicts?: Json
@@ -223,13 +254,39 @@ export type Database = {
           error?: string | null
           expected?: Json
           id?: string
+          output?: Json | null
           passed?: boolean | null
           run_id?: string
+          score?: number | null
+          score_stddev?: number | null
+          scores?: number[] | null
           tenant_id?: string
           transcript?: Json
           verdicts?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_eval_results_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "ai_eval_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_eval_results_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_eval_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_eval_results_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_eval_runs: {
         Row: {
@@ -277,7 +334,22 @@ export type Database = {
           tenant_id?: string
           version_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_eval_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_eval_runs_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_config_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_eval_suites: {
         Row: {
@@ -8107,6 +8179,14 @@ export type Database = {
       }
     }
     Functions: {
+      ensure_exercise_grader_version: {
+        Args: { _exercise_id: number }
+        Returns: string
+      }
+      exercise_grader_config_snapshot: {
+        Args: { _exercise_id: number }
+        Returns: Json
+      }
       ensure_lesson_task_version: {
         Args: {
           _lesson_id: number
@@ -8115,6 +8195,14 @@ export type Database = {
           _task_instructions: string
         }
         Returns: string
+      }
+      lesson_task_config_snapshot: {
+        Args: {
+          _requirements: Json
+          _system_prompt: string
+          _task_instructions: string
+        }
+        Returns: Json
       }
       lesson_task_version_metrics: {
         Args: { _lesson_id: number }

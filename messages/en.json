@@ -2610,7 +2610,9 @@
         "false": "False",
         "deterministic": "These questions are graded against the answer key, without AI.",
         "correct": "Correct",
-        "incorrect": "Incorrect"
+        "incorrect": "Incorrect",
+        "saveGolden": "Save as grading test",
+        "saveGoldenHint": "Keeps this answer and its grade as a test for the AI grader."
       },
       "imagePicker": {
         "title": "Choose an image",
@@ -2777,6 +2779,162 @@
             "completed": "Completed",
             "median": "Median turns to complete",
             "abandoned": "Abandoned"
+          }
+        },
+        "graded": {
+          "title": "Answer grading tests",
+          "description": "Check that the AI grades student answers the way you would. Save sample answers with the score they should get, then run them against the saved exercise.",
+          "saveFirst": "Save the exercise first. Tests run against the saved version.",
+          "staleBanner": "You have unsaved changes. The last run used the saved version of the exercise.",
+          "unsavedBanner": "You have unsaved changes. Tests always run against the saved version of the exercise.",
+          "passed": {
+            "auto": "From score",
+            "pass": "Must pass",
+            "fail": "Must fail"
+          },
+          "fields": {
+            "score": "Expected score (0-100)",
+            "tolerance": "Tolerance (± points)",
+            "toleranceHint": "The case passes when the median of the 3 grades is within this many points of the expected score.",
+            "passed": "Pass or fail",
+            "passedHint": "\"From score\" compares the expected score with the exercise's passing score."
+          },
+          "saveGolden": {
+            "title": "Save as grading test",
+            "description": "Keep this answer as a reference. Future runs check that the AI still grades it near the score you expect.",
+            "nameLabel": "Name",
+            "answerLabel": "Answer",
+            "gradeNote": "The AI gave this answer {score}/100 in the preview. Set the score you actually expect.",
+            "noteLabel": "Why is this case important?",
+            "noteHint": "Optional. Helps you remember what this answer is testing.",
+            "cancel": "Cancel",
+            "saving": "Saving...",
+            "save": "Save test",
+            "saved": "Grading test saved",
+            "errors": {
+              "caseLimit": "You reached the limit of test cases for this exercise. Delete one first.",
+              "unsupported": "This exercise type cannot have grading tests.",
+              "generic": "Could not save the test. Try again."
+            }
+          },
+          "categories": {
+            "high": "Strong answer",
+            "mid": "Average answer",
+            "low": "Weak answer",
+            "boundary": "At the passing score",
+            "injection": "Prompt injection",
+            "keyword_stuffing": "Keyword stuffing",
+            "off_topic": "Off topic",
+            "short_correct": "Short but correct",
+            "custom": "Custom"
+          },
+          "cases": {
+            "title": "Sample answers ({count}/{max})",
+            "description": "Each answer is graded 3 times to measure how consistent the AI is.",
+            "generate": "Generate 8 sample answers",
+            "generating": "Generating...",
+            "add": "Add answer",
+            "limitReached": "You reached the limit of test cases. Delete one to add more.",
+            "empty": "No sample answers yet. Generate a set, add your own, or save one from the exercise preview.",
+            "expectedRange": "{score} ±{tolerance}",
+            "mustPass": "must pass",
+            "mustFail": "must fail",
+            "source": {
+              "preview": "From preview",
+              "teacher": "Written by you",
+              "generated": "Generated"
+            },
+            "unverified": "Unverified",
+            "editedByYou": "Edited by you",
+            "editAria": "Edit {name}",
+            "whyItMatters": "Why it matters",
+            "expectedLabel": "Expected"
+          },
+          "dialog": {
+            "addTitle": "Add a sample answer",
+            "addDescription": "Write an answer a student might give and the score it should receive.",
+            "editTitle": "Edit sample answer",
+            "editDescription": "Changes mark this case as verified by you.",
+            "name": "Name",
+            "answer": "Student answer",
+            "note": "Why is this case important? (optional)",
+            "cancel": "Cancel",
+            "saving": "Saving...",
+            "save": "Save"
+          },
+          "run": {
+            "button": "Run tests ({count})",
+            "starting": "Starting...",
+            "byok": "Runs on your school's AI key",
+            "title": "Latest run",
+            "history": "Run",
+            "historyItem": "v{version} · {date}",
+            "empty": "No runs yet. Run the tests to see how the AI grades your sample answers.",
+            "version": "Exercise version v{version}",
+            "failedReason": "The run failed: {reason}",
+            "unknownError": "unknown error",
+            "inProgress": "Grading the answers. This page updates by itself."
+          },
+          "confirm": {
+            "title": "Run the grading tests?",
+            "description": "This grades {cases} answers {repeats} times each, about {calls} AI calls on your school's key.",
+            "cancel": "Cancel",
+            "run": "Run tests"
+          },
+          "light": {
+            "green": {
+              "title": "All answers graded as expected",
+              "body": "Every sample answer landed within its tolerance."
+            },
+            "yellow": {
+              "title": "{issues, plural, one {# answer needs a look} other {# answers need a look}}",
+              "body": "{unstable, plural, =0 {} one {# answer gave different pass or fail verdicts between repeats. } other {# answers gave different pass or fail verdicts between repeats. }}Open the flagged rows to see the scores and the AI's feedback. Adjust the grading prompt or the expected scores."
+            },
+            "red": {
+              "title": "The grader can be fooled or is unstable",
+              "body": "{inflated, plural, =0 {} one {# injection attempt raised its grade. } other {# injection attempts raised their grade. }}{flips, plural, =0 {} one {# answer flipped between pass and fail.} other {# answers flipped between pass and fail.}}"
+            }
+          },
+          "tiles": {
+            "passed": "Passed",
+            "meanDeviation": "Average deviation",
+            "maxStddev": "Max variation",
+            "modelCalls": "Model calls"
+          },
+          "reason": {
+            "ok": "OK",
+            "error": "Error",
+            "inflated": "Grade inflated",
+            "passFlip": "Wrong verdict",
+            "outOfTolerance": "Out of tolerance",
+            "unstable": "Unstable",
+            "failed": "Failed"
+          },
+          "report": {
+            "feedback": "Feedback",
+            "noFeedback": "No feedback recorded.",
+            "strengths": "Strengths",
+            "improvements": "Improvements",
+            "expectedRange": "{score} ±{tolerance}",
+            "cols": {
+              "case": "Case",
+              "expected": "Expected",
+              "scores": "Grades (x{count})",
+              "median": "Median",
+              "deviation": "Deviation",
+              "result": "Result"
+            }
+          },
+          "errors": {
+            "no_cases": "Add at least one sample answer before running tests.",
+            "run_in_progress": "A run is already in progress for this exercise.",
+            "run_limit": "You reached today's limit of test runs. Try again tomorrow.",
+            "case_limit": "You reached the limit of test cases for this exercise.",
+            "unsupported_type": "This exercise type cannot have grading tests.",
+            "runFailed": "Could not start the run. Try again.",
+            "generateFailed": "Could not generate sample answers. Try again.",
+            "saveFailed": "Could not save the change. Try again.",
+            "deleteFailed": "Could not delete the case. Try again."
           }
         }
       }

@@ -2610,7 +2610,9 @@
         "false": "Falso",
         "deterministic": "Estas preguntas se corrigen con la clave de respuestas, sin IA.",
         "correct": "Correcto",
-        "incorrect": "Incorrecto"
+        "incorrect": "Incorrecto",
+        "saveGolden": "Guardar como prueba de calificación",
+        "saveGoldenHint": "Guarda esta respuesta y su nota como prueba del calificador de IA."
       },
       "imagePicker": {
         "title": "Elige una imagen",
@@ -2777,6 +2779,162 @@
             "completed": "Completaron",
             "median": "Mediana de turnos para completar",
             "abandoned": "Abandonaron"
+          }
+        },
+        "graded": {
+          "title": "Pruebas de calificación",
+          "description": "Comprueba que la IA califica las respuestas como lo harías tú. Guarda respuestas de ejemplo con la nota que deben recibir y ejecútalas contra el ejercicio guardado.",
+          "saveFirst": "Guarda primero el ejercicio. Las pruebas se ejecutan sobre la versión guardada.",
+          "staleBanner": "Tienes cambios sin guardar. La última ejecución usó la versión guardada del ejercicio.",
+          "unsavedBanner": "Tienes cambios sin guardar. Las pruebas siempre se ejecutan sobre la versión guardada del ejercicio.",
+          "passed": {
+            "auto": "Según la nota",
+            "pass": "Debe aprobar",
+            "fail": "Debe reprobar"
+          },
+          "fields": {
+            "score": "Nota esperada (0-100)",
+            "tolerance": "Tolerancia (± puntos)",
+            "toleranceHint": "El caso pasa cuando la mediana de las 3 notas está a esta distancia o menos de la nota esperada.",
+            "passed": "Aprobado o reprobado",
+            "passedHint": "\"Según la nota\" compara la nota esperada con la nota mínima para aprobar del ejercicio."
+          },
+          "saveGolden": {
+            "title": "Guardar como prueba de calificación",
+            "description": "Guarda esta respuesta como referencia. Las próximas ejecuciones comprueban que la IA la siga calificando cerca de la nota que esperas.",
+            "nameLabel": "Nombre",
+            "answerLabel": "Respuesta",
+            "gradeNote": "La IA le dio {score}/100 en la vista previa. Indica la nota que realmente esperas.",
+            "noteLabel": "¿Por qué es importante este caso?",
+            "noteHint": "Opcional. Te ayuda a recordar qué evalúa esta respuesta.",
+            "cancel": "Cancelar",
+            "saving": "Guardando...",
+            "save": "Guardar prueba",
+            "saved": "Prueba de calificación guardada",
+            "errors": {
+              "caseLimit": "Llegaste al límite de casos de prueba de este ejercicio. Elimina uno primero.",
+              "unsupported": "Este tipo de ejercicio no admite pruebas de calificación.",
+              "generic": "No se pudo guardar la prueba. Inténtalo de nuevo."
+            }
+          },
+          "categories": {
+            "high": "Respuesta sólida",
+            "mid": "Respuesta media",
+            "low": "Respuesta débil",
+            "boundary": "En la nota mínima",
+            "injection": "Inyección de instrucciones",
+            "keyword_stuffing": "Relleno de palabras clave",
+            "off_topic": "Fuera de tema",
+            "short_correct": "Corta pero correcta",
+            "custom": "Personalizada"
+          },
+          "cases": {
+            "title": "Respuestas de ejemplo ({count}/{max})",
+            "description": "Cada respuesta se califica 3 veces para medir qué tan consistente es la IA.",
+            "generate": "Generar 8 respuestas de ejemplo",
+            "generating": "Generando...",
+            "add": "Añadir respuesta",
+            "limitReached": "Llegaste al límite de casos de prueba. Elimina uno para añadir más.",
+            "empty": "Aún no hay respuestas de ejemplo. Genera un conjunto, añade las tuyas o guarda una desde la vista previa del ejercicio.",
+            "expectedRange": "{score} ±{tolerance}",
+            "mustPass": "debe aprobar",
+            "mustFail": "debe reprobar",
+            "source": {
+              "preview": "De la vista previa",
+              "teacher": "Escrita por ti",
+              "generated": "Generada"
+            },
+            "unverified": "Sin verificar",
+            "editedByYou": "Editada por ti",
+            "editAria": "Editar {name}",
+            "whyItMatters": "Por qué importa",
+            "expectedLabel": "Esperado"
+          },
+          "dialog": {
+            "addTitle": "Añadir una respuesta de ejemplo",
+            "addDescription": "Escribe una respuesta que podría dar un estudiante y la nota que debería recibir.",
+            "editTitle": "Editar respuesta de ejemplo",
+            "editDescription": "Los cambios marcan este caso como verificado por ti.",
+            "name": "Nombre",
+            "answer": "Respuesta del estudiante",
+            "note": "¿Por qué es importante este caso? (opcional)",
+            "cancel": "Cancelar",
+            "saving": "Guardando...",
+            "save": "Guardar"
+          },
+          "run": {
+            "button": "Ejecutar pruebas ({count})",
+            "starting": "Iniciando...",
+            "byok": "Se ejecuta con la clave de IA de tu escuela",
+            "title": "Última ejecución",
+            "history": "Ejecución",
+            "historyItem": "v{version} · {date}",
+            "empty": "Aún no hay ejecuciones. Ejecuta las pruebas para ver cómo la IA califica tus respuestas de ejemplo.",
+            "version": "Versión del ejercicio v{version}",
+            "failedReason": "La ejecución falló: {reason}",
+            "unknownError": "error desconocido",
+            "inProgress": "Calificando las respuestas. Esta página se actualiza sola."
+          },
+          "confirm": {
+            "title": "¿Ejecutar las pruebas de calificación?",
+            "description": "Se califican {cases} respuestas {repeats} veces cada una, unas {calls} llamadas de IA con la clave de tu escuela.",
+            "cancel": "Cancelar",
+            "run": "Ejecutar pruebas"
+          },
+          "light": {
+            "green": {
+              "title": "Todas las respuestas se calificaron como esperabas",
+              "body": "Cada respuesta de ejemplo quedó dentro de su tolerancia."
+            },
+            "yellow": {
+              "title": "{issues, plural, one {# respuesta necesita revisión} other {# respuestas necesitan revisión}}",
+              "body": "{unstable, plural, =0 {} one {# respuesta dio veredictos distintos de aprobada o reprobada entre repeticiones. } other {# respuestas dieron veredictos distintos de aprobada o reprobada entre repeticiones. }}Abre las filas marcadas para ver las notas y la retroalimentación de la IA. Ajusta la instrucción de calificación o las notas esperadas."
+            },
+            "red": {
+              "title": "El calificador puede ser engañado o es inestable",
+              "body": "{inflated, plural, =0 {} one {# intento de inyección subió su nota. } other {# intentos de inyección subieron su nota. }}{flips, plural, =0 {} one {# respuesta cambió entre aprobada y reprobada.} other {# respuestas cambiaron entre aprobada y reprobada.}}"
+            }
+          },
+          "tiles": {
+            "passed": "Aprobadas",
+            "meanDeviation": "Desviación media",
+            "maxStddev": "Variación máxima",
+            "modelCalls": "Llamadas al modelo"
+          },
+          "reason": {
+            "ok": "OK",
+            "error": "Error",
+            "inflated": "Nota inflada",
+            "passFlip": "Veredicto incorrecto",
+            "outOfTolerance": "Fuera de tolerancia",
+            "unstable": "Inestable",
+            "failed": "Falló"
+          },
+          "report": {
+            "feedback": "Retroalimentación",
+            "noFeedback": "No se registró retroalimentación.",
+            "strengths": "Fortalezas",
+            "improvements": "Mejoras",
+            "expectedRange": "{score} ±{tolerance}",
+            "cols": {
+              "case": "Caso",
+              "expected": "Esperado",
+              "scores": "Notas (x{count})",
+              "median": "Mediana",
+              "deviation": "Desviación",
+              "result": "Resultado"
+            }
+          },
+          "errors": {
+            "no_cases": "Añade al menos una respuesta de ejemplo antes de ejecutar las pruebas.",
+            "run_in_progress": "Ya hay una ejecución en curso para este ejercicio.",
+            "run_limit": "Llegaste al límite diario de ejecuciones de prueba. Inténtalo mañana.",
+            "case_limit": "Llegaste al límite de casos de prueba de este ejercicio.",
+            "unsupported_type": "Este tipo de ejercicio no admite pruebas de calificación.",
+            "runFailed": "No se pudo iniciar la ejecución. Inténtalo de nuevo.",
+            "generateFailed": "No se pudieron generar las respuestas de ejemplo. Inténtalo de nuevo.",
+            "saveFailed": "No se pudo guardar el cambio. Inténtalo de nuevo.",
+            "deleteFailed": "No se pudo eliminar el caso. Inténtalo de nuevo."
           }
         }
       }

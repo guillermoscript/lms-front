@@ -7,13 +7,15 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { AIEvalTemplateBar } from './ai-eval-templates'
+import { ExerciseTestsPanel } from '@/components/teacher/ai-evals/exercise-tests-panel'
+import { isGradedExerciseType } from '@/components/teacher/ai-evals/types'
 import {
   IconRobot,
   IconEye,
 } from '@tabler/icons-react'
 
 export function ExerciseAIConfigStep() {
-  const { formData, updateField, setFormData } = useExerciseBuilder()
+  const { formData, updateField, setFormData, exerciseId, isDirty } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
 
   return (
@@ -106,6 +108,10 @@ export function ExerciseAIConfigStep() {
           exercise: { title: formData.title, description: formData.description },
         }}
       />
+
+      {isGradedExerciseType(formData.exercise_type) && (
+        <ExerciseTestsPanel exerciseId={exerciseId} hasUnsavedChanges={isDirty} passingScore={formData.passing_score} />
+      )}
     </div>
   )
 }

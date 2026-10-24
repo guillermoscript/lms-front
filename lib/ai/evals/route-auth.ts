@@ -2,7 +2,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
-import { authorizeLessonTaskStaff } from './store'
+import { authorizeExerciseStaff, authorizeLessonTaskStaff, type ExerciseTestsExercise } from './store'
 
 export interface LessonTaskStaffContext {
   supabase: SupabaseClient
@@ -34,26 +34,73 @@ export async function lessonTaskStaff(
   return { supabase: auth.supabase, user: auth.user, tenantId: auth.tenantId, role: access.role, lesson: access.lesson }
 }
 
-/** Staff access through a case or run row: RLS finds the row, then the lesson is re-checked. */
-export async function lessonTaskStaffForRow(
+export interface ExerciseStaffContext {
+  supabase: SupabaseClient
+  user: User
+  tenantId: string
+  role: 'teacher' | 'admin'
+  exercise: ExerciseTestsExercise
+}
+
+/** Cookie or Bearer (MCP) auth, then staff access to the exercise (graded types only). */
+export async function exerciseStaff(
+  req: Request,
+  exerciseIdParam: string | number
+): Promise<ExerciseStaffContext | NextResponse> {
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new NextResponse('Unauthorized', { status: 401 })
+
+  const exerciseId = Number(exerciseIdParam)
+  if (!Number.isInteger(exerciseId) || exerciseId <= 0) return new NextResponse('Invalid exercise id', { status: 400 })
+
+  const access = await authorizeExerciseStaff(auth.supabase, { userId: auth.user.id, tenantId: auth.tenantId }, exerciseId)
+  if ('error' in access) {
+    return access.error === 'unsupported_type'
+      ? NextResponse.json({ error: 'unsupported_type' }, { status: 409 })
+      : new NextResponse(access.error, { status: access.status })
+  }
+  return { supabase: auth.supabase, user: auth.user, tenantId: auth.tenantId, role: access.role, exercise: access.exercise }
+}
+
+export type EvalRowContext = { supabase: SupabaseClient; user: User; tenantId: string; role: 'teacher' | 'admin' } & (
+  | { targetType: 'lesson_ai_task'; lesson: LessonTaskStaffContext['lesson']; row: { id: string; target_id: number } }
+  | { targetType: 'exercise'; exercise: ExerciseTestsExercise; row: { id: string; target_id: number } }
+)
+
+/**
+ * Staff access through a case or run row of either target: RLS finds the row,
+ * then the lesson or exercise it belongs to is re-checked.
+ */
+export async function evalStaffForRow(
   req: Request,
   table: 'ai_eval_cases' | 'ai_eval_runs',
   rowId: string
-): Promise<(LessonTaskStaffContext & { row: { id: string; target_id: number } }) | NextResponse> {
+): Promise<EvalRowContext | NextResponse> {
   const auth = await getApiAuthContext(req)
   if (!auth) return new NextResponse('Unauthorized', { status: 401 })
   if (!/^[0-9a-f-]{36}$/i.test(rowId)) return new NextResponse('Invalid id', { status: 400 })
 
   const { data: row } = await auth.supabase
     .from(table)
-    .select('id, target_id')
+    .select('id, target_id, target_type')
     .eq('id', rowId)
     .eq('tenant_id', auth.tenantId)
     .maybeSingle()
   if (!row) return new NextResponse('Not found', { status: 404 })
 
-  const access = await authorizeLessonTaskStaff(auth.supabase, { userId: auth.user.id, tenantId: auth.tenantId }, row.target_id)
-  if ('error' in access) return new NextResponse(access.error, { status: access.status })
+  const ctx = { userId: auth.user.id, tenantId: auth.tenantId }
+  const base = { supabase: auth.supabase, user: auth.user, tenantId: auth.tenantId }
+  const ref = { id: row.id, target_id: row.target_id }
 
-  return { supabase: auth.supabase, user: auth.user, tenantId: auth.tenantId, role: access.role, lesson: access.lesson, row }
+  if (row.target_type === 'exercise') {
+    // Existing cases and runs stay readable, editable and deletable even if the
+    // exercise type changed later; only generating and running enforce the type.
+    const access = await authorizeExerciseStaff(auth.supabase, ctx, row.target_id, { requireGraded: false })
+    if ('error' in access) return new NextResponse(access.error, { status: access.status })
+    return { ...base, role: access.role, targetType: 'exercise', exercise: access.exercise, row: ref }
+  }
+
+  const access = await authorizeLessonTaskStaff(auth.supabase, ctx, row.target_id)
+  if ('error' in access) return new NextResponse(access.error, { status: access.status })
+  return { ...base, role: access.role, targetType: 'lesson_ai_task', lesson: access.lesson, row: ref }
 }

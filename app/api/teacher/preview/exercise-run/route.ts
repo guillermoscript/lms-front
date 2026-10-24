@@ -2,8 +2,7 @@ import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
 import { PreviewDraftSchema } from '@/lib/exercises/preview'
 import { authorizeExercisePreview, checkExercisePreviewBudget } from '@/lib/exercises/preview-auth'
-import { evaluateWrittenExercise } from '@/lib/exercises/evaluate-written'
-import { evaluateArtifactExercise } from '@/lib/exercises/evaluate-artifact'
+import { gradeWrittenSubmission } from '@/lib/exercises/grade-written-submission'
 import { CLOSED_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
 import { ConversationTranscriptSchema, ConversationNotesSchema, ConversationEvaluationSchema, buildConversationGraderPrompt, parseConversationConfig } from '@/lib/speech/conversation'
@@ -120,11 +119,8 @@ export async function POST(req: Request) {
       const evaluation = await runSpeechPipeline(source, context, providers!, { mediaType: mediaMime })
       return Response.json({ ...evaluation, feedback: evaluation.focus_next, passed: evaluation.score >= passingScore, passingScore, preview: true, evaluator: 'ai' })
     }
-    const result = draft.exercise_type === 'artifact'
-      ? { evaluation: await evaluateArtifactExercise(draft, content!, grader!, metadata), passingScore }
-      : await evaluateWrittenExercise(draft, content!, grader!)
-    const score = Math.min(100, Math.max(0, Math.round(result.evaluation.score)))
-    return Response.json({ ...result.evaluation, score, passed: score >= result.passingScore, passingScore: result.passingScore, preview: true, evaluator: 'ai' })
+    const graded = await gradeWrittenSubmission(draft, content!, grader!, metadata)
+    return Response.json({ ...graded.evaluation, score: graded.score, passed: graded.passed, passingScore: graded.passingScore, preview: true, evaluator: 'ai' })
   } catch (error) {
     return aiFailure(error)
   }

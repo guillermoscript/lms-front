@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { lessonTaskStaffForRow } from '@/lib/ai/evals/route-auth'
+import { evalStaffForRow } from '@/lib/ai/evals/route-auth'
 
 type Params = { params: Promise<{ runId: string }> }
 
 /** One run with its per-case results (the report). Poll while status is queued/running. */
 export async function GET(req: Request, { params }: Params) {
-  const ctx = await lessonTaskStaffForRow(req, 'ai_eval_runs', (await params).runId)
+  const ctx = await evalStaffForRow(req, 'ai_eval_runs', (await params).runId)
   if (ctx instanceof NextResponse) return ctx
 
   const [{ data: run }, { data: results }] = await Promise.all([
@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: Params) {
       .single(),
     ctx.supabase
       .from('ai_eval_results')
-      .select('id, case_id, case_name, case_kind, expected, transcript, completed, completed_turn, verdicts, deviation, passed, error, created_at')
+      .select('id, case_id, case_name, case_kind, expected, transcript, completed, completed_turn, verdicts, deviation, passed, error, created_at, scores, score, score_stddev, output')
       .eq('run_id', ctx.row.id)
       .eq('tenant_id', ctx.tenantId)
       .order('created_at'),

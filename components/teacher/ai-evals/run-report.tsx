@@ -48,7 +48,7 @@ export function isActive(run: Pick<RunRow, 'status'> | undefined | null) {
   return run?.status === 'queued' || run?.status === 'running'
 }
 
-export function StatusPill({ run }: { run: RunRow }) {
+export function StatusPill({ run }: { run: Pick<RunRow, 'status'> }) {
   const t = useTranslations('dashboard.teacher.aiEvals.run.status')
   const base = 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium'
   if (isActive(run)) {

@@ -59,3 +59,30 @@ export async function evalRequest<T = unknown>(url: string, init?: RequestInit):
 }
 
 export const DRIFT_THRESHOLD = 30
+
+// ---- Graded-answer evals (F2): AI-graded exercises --------------------------
+// Types and constants come from the server schema module (zod only, client-safe).
+
+import { DEFAULT_GRADED_TOLERANCE, EVAL_LIMITS, GRADED_CATEGORIES, GRADED_REPEATS, isGradedEvalExerciseType } from '@/lib/ai/evals/schema'
+import type { GradedResultRow } from '@/lib/ai/evals/schema'
+
+export { DEFAULT_GRADED_TOLERANCE, GRADED_CATEGORIES, GRADED_REPEATS }
+export type {
+  GradedCaseRow,
+  GradedCategory,
+  GradedExpected,
+  GradedOutput,
+  GradedReason,
+  GradedRunSummary,
+} from '@/lib/ai/evals/schema'
+
+export function isGradedExerciseType(type: string | null | undefined): boolean {
+  return !!type && isGradedEvalExerciseType(type)
+}
+
+export const GRADED_CASE_LIMIT = EVAL_LIMITS.maxCasesPerTarget
+/** Fired on window when a case is saved outside the tests panel (e.g. from the preview modal). */
+export const GRADED_CASES_CHANGED_EVENT = 'ai-evals:graded-cases-changed'
+
+/** Result row of a graded run, as GET /runs/[runId] returns it. */
+export type GradedRunResult = GradedResultRow
