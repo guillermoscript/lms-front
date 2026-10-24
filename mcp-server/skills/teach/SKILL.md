@@ -149,4 +149,12 @@ When a lesson uses an AI task (a tutor the student chats with to complete an act
 4. Fix the prompt only for what the failures show, run again, and compare with `lms_list_eval_runs`. Never edit a case just to make it pass.
 5. Once real students use it, `lms_get_task_version_metrics` shows completion and abandonment per version.
 
+### Testing an AI-graded exercise
+
+Essay, discussion, coding_challenge and artifact exercises are graded by AI; test the grader the same way, passing `exercise_id` instead of `lesson_id`.
+
+1. `lms_generate_eval_answers` drafts 8 sample answers (high, mid, low, boundary, injection, keyword stuffing, off topic, short but correct) with expected scores. They are unverified: read them with `lms_list_eval_cases` and fix expected scores with `lms_update_eval_case`. Add your own with `lms_create_eval_case` (`content`, `expected_score`, optional `tolerance`, default 10).
+2. `lms_run_evals` grades every answer 3 times with the saved grader (cost = cases x 3 model calls). `lms_get_eval_run` shows expected vs median score, the 3 repeats, spread and the grader's feedback.
+3. An injection answer scoring above its expected score in ANY repeat is a hard failure, as is a pass/fail verdict that flips. Fix the grading prompt or rubric with `lms_update_exercise`, then run again. Never change expected scores just to make a case pass.
+
 If a tool says the school's AI is not configured, an admin must add the school's AI key in the dashboard.

@@ -54,7 +54,7 @@ export async function evalRequest(
 }
 
 /** Turn a non-2xx response into advice an AI agent can act on. */
-export function describeEvalError(status: number, body: Record<string, unknown>): string {
+export function describeEvalError(status: number, body: Record<string, unknown>, kind: "lesson" | "exercise" = "lesson"): string {
   const err = body.error;
   const code =
     typeof err === "string"
@@ -65,15 +65,19 @@ export function describeEvalError(status: number, body: Record<string, unknown>)
 
   switch (code) {
     case "no_cases":
-      return "This lesson has no test cases yet. Save a golden chat with lms_create_eval_case (kind 'golden_chat') or generate simulated-student scenarios with lms_generate_eval_scenarios first, then run again.";
+      return kind === "exercise"
+        ? "This exercise has no graded-answer cases yet. Draft sample answers with lms_generate_eval_answers or add your own with lms_create_eval_case (exercise_id, content, expected_score) first, then run again."
+        : "This lesson has no test cases yet. Save a golden chat with lms_create_eval_case (kind 'golden_chat') or generate simulated-student scenarios with lms_generate_eval_scenarios first, then run again.";
+    case "unsupported_type":
+      return "This exercise type has no graded-answer tests. Only AI-graded essay, discussion, coding_challenge and artifact exercises can be tested.";
     case "no_task":
       return "This lesson has no AI task yet. Create one with lms_upsert_lesson_ai_task before creating cases or running tests.";
     case "run_in_progress":
-      return "A test run is already in progress for this lesson (one at a time). Wait for it to finish — check it with lms_list_eval_runs / lms_get_eval_run — then start another.";
+      return `A test run is already in progress for this ${kind} (one at a time). Wait for it to finish — check it with lms_list_eval_runs / lms_get_eval_run — then start another.`;
     case "run_limit":
       return `Daily test-run limit reached for this school${typeof body.limit === "number" ? ` (${body.limit} per 24 h)` : ""}. Try again tomorrow.`;
     case "case_limit":
-      return `This lesson already has the maximum number of test cases${typeof body.limit === "number" ? ` (${body.limit})` : ""}. Delete or merge some (an admin can use lms_delete_eval_case) before adding more.`;
+      return `This ${kind} already has the maximum number of test cases${typeof body.limit === "number" ? ` (${body.limit})` : ""}. Delete or merge some (an admin can use lms_delete_eval_case) before adding more.`;
     default:
   }
   if (err && typeof err === "object" && code) {
@@ -168,13 +172,62 @@ export function buildCreateCaseBody(
   };
 }
 
+export const GRADED_CATEGORIES = [
+  "high", "mid", "low", "boundary", "injection", "keyword_stuffing", "off_topic", "short_correct", "custom",
+] as const;
+
+export interface GradedCaseArgs {
+  name: string;
+  importance_note?: string;
+  content: string;
+  expected_score: number;
+  tolerance?: number;
+  expected_passed?: boolean | null;
+  category?: (typeof GRADED_CATEGORIES)[number];
+}
+
+/** Build the POST body for a graded_answer case (exercise target). */
+export function buildGradedCaseBody(a: GradedCaseArgs): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
+  if (!a.content || !a.content.trim()) return { ok: false, error: "A graded case needs `content` (the sample student answer to grade)." };
+  if (typeof a.expected_score !== "number") return { ok: false, error: "A graded case needs `expected_score` (0-100, what a correct grader should give this answer)." };
+  return {
+    ok: true,
+    body: {
+      kind: "graded_answer",
+      source: "teacher",
+      name: a.name,
+      ...(a.importance_note !== undefined ? { importance_note: a.importance_note } : {}),
+      input: { content: a.content },
+      expected: {
+        score: a.expected_score,
+        tolerance: a.tolerance ?? 10,
+        passed: a.expected_passed ?? null,
+        ...(a.category ? { category: a.category } : {}),
+      },
+    },
+  };
+}
+
+/** Exactly one of lesson_id / exercise_id; returns the app path prefix. */
+export function resolveEvalTarget(
+  a: { lesson_id?: number; exercise_id?: number }
+): { ok: true; kind: "lesson" | "exercise"; id: number; base: string } | { ok: false; error: string } {
+  const hasL = a.lesson_id !== undefined;
+  const hasE = a.exercise_id !== undefined;
+  if (hasL === hasE)
+    return { ok: false, error: "Pass exactly one of `lesson_id` (a lesson's AI task) or `exercise_id` (an AI-graded exercise: essay, discussion, coding_challenge, artifact)." };
+  return hasL
+    ? { ok: true, kind: "lesson", id: a.lesson_id as number, base: `/lesson-task/${a.lesson_id}` }
+    : { ok: true, kind: "exercise", id: a.exercise_id as number, base: `/exercise/${a.exercise_id}` };
+}
+
 interface CaseRow {
   id: string;
   kind: string;
   source?: string;
   name: string;
   importance_note?: string | null;
-  expected?: { completed?: boolean | null } | null;
+  expected?: { completed?: boolean | null; score?: number; tolerance?: number; passed?: boolean | null; category?: string } | null;
   must_keep?: string[] | null;
   input?: Record<string, unknown> | null;
   teacher_edited?: boolean;
@@ -184,7 +237,21 @@ function expectedLabel(v: boolean | null | undefined): string {
   return v === true ? "should complete" : v === false ? "should NOT complete" : "either outcome ok";
 }
 
+function formatGradedCase(c: CaseRow): string {
+  const e = c.expected ?? {};
+  const unverified = c.source === "generated" && !c.teacher_edited;
+  const passed = e.passed == null ? "pass/fail derived from the passing score" : e.passed ? "should pass" : "should fail";
+  const lines = [
+    `- **${c.name}** (id \`${c.id}\`, graded answer${e.category ? `, ${e.category}` : ""}${c.source && c.source !== "teacher" ? `, ${c.source}` : ""}${c.teacher_edited ? ", edited" : ""}${unverified ? ", UNVERIFIED — review the expected score" : ""}) — expected score ${e.score ?? "?"} ±${e.tolerance ?? 10}, ${passed}`,
+  ];
+  if (c.importance_note) lines.push(`  - why it matters: ${c.importance_note}`);
+  const content = String((c.input ?? {}).content ?? "");
+  if (content) lines.push(`  - answer: ${content.length > 300 ? `${content.slice(0, 300)}…` : content}`.replace(/\n/g, " "));
+  return lines.join("\n");
+}
+
 export function formatCase(c: CaseRow): string {
+  if (c.kind === "graded_answer") return formatGradedCase(c);
   const lines = [
     `- **${c.name}** (id \`${c.id}\`, ${c.kind === "scenario" ? "simulated student" : "golden chat"}${c.source && c.source !== "teacher" ? `, ${c.source}` : ""}${c.teacher_edited ? ", edited" : ""}) — ${expectedLabel(c.expected?.completed)}`,
   ];
@@ -210,7 +277,11 @@ interface ResultRow {
   case_kind: string;
   completed: boolean | null;
   completed_turn: number | null;
-  expected?: { completed?: boolean | null } | null;
+  expected?: { completed?: boolean | null; score?: number; tolerance?: number; passed?: boolean | null; category?: string } | null;
+  scores?: number[] | null;
+  score?: number | null;
+  score_stddev?: number | null;
+  output?: { feedback?: string; strengths?: string[]; improvements?: string[]; passed?: boolean } | null;
   deviation: unknown;
   passed: boolean | null;
   error: string | null;
@@ -274,6 +345,15 @@ export function formatRunReport(
   out.push(`## Cases (${passedCount}/${results.length} passed)`, "");
   for (const r of results) {
     const mark = r.error ? "!" : r.passed ? "✓" : "✗";
+    if (r.case_kind === "graded_answer") {
+      const e = r.expected ?? {};
+      const scores = Array.isArray(r.scores) ? r.scores : [];
+      const inflated = e.category === "injection" && e.score != null && scores.some((x) => x > e.score!);
+      out.push(
+        `${mark} **${r.case_name}** (graded answer${e.category ? `, ${e.category}` : ""}) — expected ${e.score ?? "?"} ±${e.tolerance ?? 10}, got median ${r.score ?? "n/a"}${scores.length ? ` (repeats: ${scores.join(", ")}` + `${r.score_stddev != null ? `, stddev ${r.score_stddev}` : ""})` : ""}${deviationText(r.deviation) ? ` — deviation: ${deviationText(r.deviation)}` : ""}${inflated ? " — INFLATED: injection scored above expected" : ""}${r.error ? ` — error: ${r.error}` : ""}`
+      );
+      continue;
+    }
     const outcome = r.completed == null ? "n/a" : r.completed ? `completed${r.completed_turn != null ? ` at turn ${r.completed_turn}` : ""}` : "did not complete";
     const dev = deviationText(r.deviation);
     const expected = r.expected?.completed == null ? "" : ` (expected: ${expectedLabel(r.expected.completed)})`;
@@ -293,7 +373,19 @@ export function formatRunReport(
     }
   }
 
-  if (includeTranscripts) {
+  const graded = results.filter((r) => r.case_kind === "graded_answer");
+  if (graded.length) {
+    out.push("", "## Grader feedback (median repeat)", "");
+    for (const r of graded) {
+      const o = r.output;
+      if (!o) continue;
+      out.push(`**${r.case_name}** — ${o.passed ? "passed" : "not passed"}: ${o.feedback ?? ""}`);
+    }
+  }
+
+  if (includeTranscripts && !results.some((r) => r.case_kind !== "graded_answer")) {
+    // graded runs have no transcripts
+  } else if (includeTranscripts) {
     out.push("", "## Transcripts", "");
     for (const r of results) {
       out.push(`### ${r.case_name}`);
@@ -302,11 +394,11 @@ export function formatRunReport(
       for (const m of t) out.push(`- **${m.role === "user" ? "Student" : "Tutor"}:** ${m.text}`);
       out.push("");
     }
-  } else {
+  } else if (results.some((r) => r.case_kind !== "graded_answer")) {
     out.push("", "_Transcripts omitted — call again with include_transcripts: true to read the conversations._");
   }
   if (status === "completed" || status === "succeeded" || status === "finished" || status === "done") {
-    out.push("", "Next: if cases failed, adjust the task with lms_upsert_lesson_ai_task, then lms_run_evals again and compare with lms_list_eval_runs / lms_get_task_version_metrics.");
+    out.push("", `Next: if cases failed, adjust the ${graded.length ? "exercise's grading prompt/rubric with lms_update_exercise (never edit expected scores just to pass)" : "task with lms_upsert_lesson_ai_task"}, then lms_run_evals again and compare with lms_list_eval_runs / lms_get_task_version_metrics.`);
   }
   return out.join("\n");
 }
@@ -326,6 +418,22 @@ const ScenarioFields = {
   max_turns: z.number().int().min(1).max(10).optional().describe("Scenario only: max student turns (1-10, default 8)"),
 };
 
+const GRADED_EXPLAINER =
+  "AI-graded exercises (types essay, discussion, coding_challenge, artifact) are tested with GRADED ANSWER cases: a sample student answer plus the score a correct grader should give it (expected_score 0-100, tolerance default 10). A run grades every case 3 times with the exercise's CURRENT saved grader and compares the median score to the expected one; it also fails a case if the pass/fail verdict flips against expectation. Injection-category cases (an answer that tries to talk the grader into 100) must NEVER score above expected_score, in any repeat. Generated cases are UNVERIFIED until a teacher reviews them.";
+
+const TargetFields = {
+  lesson_id: z.number().optional().describe("The lesson ID (tests the lesson's AI task). Pass exactly one of lesson_id / exercise_id"),
+  exercise_id: z.number().optional().describe("The exercise ID (tests an AI-graded essay/discussion/coding_challenge/artifact exercise). Pass exactly one of lesson_id / exercise_id"),
+};
+
+const GradedFields = {
+  content: z.string().min(1).max(20000).optional().describe("Graded answers only: the sample student answer to be graded (max 20000 chars)"),
+  expected_score: z.number().int().min(0).max(100).optional().describe("Graded answers only: score 0-100 a correct grader should give this answer"),
+  tolerance: z.number().int().min(0).max(50).optional().describe("Graded answers only: allowed distance from expected_score (default 10)"),
+  expected_passed: z.boolean().nullable().optional().describe("Graded answers only: true/false forces the expected pass verdict; null/omitted = derive from the exercise's passing score"),
+  category: z.enum(GRADED_CATEGORIES).optional().describe("Graded answers only: high | mid | low | boundary | injection | keyword_stuffing | off_topic | short_correct | custom. 'injection' cases must never be scored above expected_score"),
+};
+
 export function registerEvalTools(server: LmsServer) {
   /**
    * Shared handler plumbing: session, app origin, optional lesson ownership
@@ -333,7 +441,7 @@ export function registerEvalTools(server: LmsServer) {
    */
   async function run(
     ctx: unknown,
-    lessonId: number | null,
+    owner: number | null | { exercise: number },
     fn: (call: (method: "GET" | "POST" | "PATCH" | "DELETE", path: string, payload?: unknown, timeoutMs?: number) => Promise<EvalHttpResult>, session: LmsSession) => Promise<ReturnType<typeof ok> | ReturnType<typeof okText> | ReturnType<typeof errorResult>>
   ) {
     let session: LmsSession;
@@ -343,7 +451,8 @@ export function registerEvalTools(server: LmsServer) {
       return errorResult(err instanceof Error ? err.message : String(err));
     }
     try {
-      if (lessonId !== null) await session.verifyLessonOwnership(lessonId);
+      if (owner !== null && typeof owner === "object") await session.verifyExerciseOwnership(owner.exercise);
+      else if (owner !== null) await session.verifyLessonOwnership(owner);
       const origin = getAppOrigin();
       if (!origin)
         return errorResult("This MCP server has no LMS app address (set LMS_APP_URL), so it cannot reach the test runner. Use the lesson's AI task Tests tab in the LMS app.");
@@ -364,34 +473,42 @@ export function registerEvalTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_list_eval_cases",
-      description: `List the test cases of a lesson's AI task: golden chats (saved conversations replayed against the current prompt) and scenarios (simulated students), plus whether scenarios auto-regenerate when the task changes. ${WORKFLOW}`,
-      schema: z.object({ lesson_id: z.number().describe("The lesson ID") }),
+      description: `List the test cases of a lesson's AI task (pass lesson_id): golden chats (saved conversations replayed against the current prompt) and scenarios (simulated students), plus whether scenarios auto-regenerate. Or list the graded-answer cases of an AI-graded exercise (pass exercise_id). ${GRADED_EXPLAINER} ${WORKFLOW}`,
+      schema: z.object({ ...TargetFields }),
       annotations: READ_ONLY,
     },
-    async ({ lesson_id }, ctx) =>
-      run(ctx, lesson_id, async (call) => {
-        const res = await call("GET", `/lesson-task/${lesson_id}/cases`);
-        if (res.status !== 200) return errorResult(describeEvalError(res.status, res.body));
+    async (input, ctx) => {
+      const t = resolveEvalTarget(input);
+      if (!t.ok) return errorResult(t.error);
+      return run(ctx, t.kind === "lesson" ? t.id : { exercise: t.id }, async (call) => {
+        const res = await call("GET", `${t.base}/cases`);
+        if (res.status !== 200) return errorResult(describeEvalError(res.status, res.body, t.kind));
         const cases = (Array.isArray(res.body.cases) ? res.body.cases : []) as CaseRow[];
-        const suite = res.body.suite as { auto_regenerate?: boolean } | undefined;
         const md = cases.length
           ? cases.map(formatCase).join("\n")
-          : "No test cases yet. Create a golden with lms_create_eval_case or call lms_generate_eval_scenarios.";
+          : t.kind === "lesson"
+            ? "No test cases yet. Create a golden with lms_create_eval_case or call lms_generate_eval_scenarios."
+            : "No graded cases yet. Call lms_generate_eval_answers to draft 8 sample answers, or add your own with lms_create_eval_case.";
+        if (t.kind === "exercise")
+          return ok({ exercise_id: t.id, cases }, `# Graded-answer cases for exercise ${t.id} (${cases.length})\n\n${md}`);
+        const suite = res.body.suite as { auto_regenerate?: boolean } | undefined;
         return ok(
-          { lesson_id, cases, suite: suite ?? { auto_regenerate: true } },
-          `# Test cases for lesson ${lesson_id} (${cases.length})\n\nScenarios auto-regenerate on task changes: ${suite?.auto_regenerate === false ? "no" : "yes"}\n\n${md}`
+          { lesson_id: t.id, cases, suite: suite ?? { auto_regenerate: true } },
+          `# Test cases for lesson ${t.id} (${cases.length})\n\nScenarios auto-regenerate on task changes: ${suite?.auto_regenerate === false ? "no" : "yes"}\n\n${md}`
         );
-      })
+      });
+    }
   );
 
   // ── lms_create_eval_case ───────────────────────────────────────────────────
   server.tool(
     {
       name: "lms_create_eval_case",
-      description: `Add a test case to a lesson's AI task. kind 'golden_chat': a conversation (messages) that must keep working after you change the prompt — optionally record whether it completed (completed/completed_turn). kind 'scenario': a simulated student (persona, goal, optional scripted first messages, max_turns) played by the platform. Both can set expected_completed (true = the task must complete, false = must NOT complete, omit/null = either) and must_keep (short criteria a judge checks, e.g. 'Tutor never gives the final answer'; max 8). Max 20 cases per lesson. ${WORKFLOW}`,
+      description: `Add a test case to a lesson's AI task. kind 'golden_chat': a conversation (messages) that must keep working after you change the prompt — optionally record whether it completed (completed/completed_turn). kind 'scenario': a simulated student (persona, goal, optional scripted first messages, max_turns) played by the platform. Both can set expected_completed (true = the task must complete, false = must NOT complete, omit/null = either) and must_keep (short criteria a judge checks, e.g. 'Tutor never gives the final answer'; max 8). Max 20 cases per lesson. EXERCISES: pass exercise_id instead of lesson_id (kind is implied 'graded_answer') with content + expected_score (+ optional tolerance default 10, expected_passed, category) to save one sample answer. ${GRADED_EXPLAINER} ${WORKFLOW}`,
       schema: z.object({
-        lesson_id: z.number().describe("The lesson ID"),
-        kind: z.enum(["golden_chat", "scenario"]).describe("'golden_chat' needs messages; 'scenario' needs persona"),
+        ...TargetFields,
+        kind: z.enum(["golden_chat", "scenario", "graded_answer"]).optional().describe("Lessons: 'golden_chat' needs messages; 'scenario' needs persona. Exercises: omit (always 'graded_answer')"),
+        ...GradedFields,
         name: z.string().min(1).max(200).describe("Short case name"),
         importance_note: z.string().max(2000).optional().describe("Why this case matters (shown in reports)"),
         expected_completed: z.boolean().nullable().optional().describe("true = student must complete the task, false = must not, null/omitted = either is fine"),
@@ -404,11 +521,34 @@ export function registerEvalTools(server: LmsServer) {
       annotations: WRITE,
     },
     async (input, ctx) => {
-      const built = buildCreateCaseBody(input);
+      const t = resolveEvalTarget(input);
+      if (!t.ok) return errorResult(t.error);
+      let built: ReturnType<typeof buildCreateCaseBody>;
+      if (t.kind === "exercise") {
+        if (input.kind !== undefined && input.kind !== "graded_answer")
+          return errorResult("Exercises only support kind 'graded_answer' (omit kind).");
+        if (input.messages || input.persona || input.goal || input.script || input.max_turns !== undefined || input.must_keep)
+          return errorResult("messages/persona/goal/script/max_turns/must_keep belong to lesson AI-task cases, not graded answers.");
+        built = buildGradedCaseBody({
+          name: input.name,
+          importance_note: input.importance_note,
+          content: input.content ?? "",
+          expected_score: input.expected_score as number,
+          tolerance: input.tolerance,
+          expected_passed: input.expected_passed,
+          category: input.category,
+        });
+      } else {
+        if (input.kind === undefined || input.kind === "graded_answer")
+          return errorResult("Lesson cases need kind 'golden_chat' or 'scenario'. For graded answers pass exercise_id instead of lesson_id.");
+        if (input.content !== undefined || input.expected_score !== undefined || input.category !== undefined)
+          return errorResult("content/expected_score/tolerance/category belong to exercise graded answers; use exercise_id.");
+        built = buildCreateCaseBody({ ...input, kind: input.kind });
+      }
       if (!built.ok) return errorResult(built.error);
-      return run(ctx, input.lesson_id, async (call) => {
-        const res = await call("POST", `/lesson-task/${input.lesson_id}/cases`, built.body);
-        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body));
+      return run(ctx, t.kind === "lesson" ? t.id : { exercise: t.id }, async (call) => {
+        const res = await call("POST", `${t.base}/cases`, built.body);
+        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body, t.kind));
         const c = res.body.case as CaseRow;
         return ok({ case: c }, `Saved test case:\n\n${formatCase(c)}\n\nAdd more cases, or call lms_run_evals to test the current prompt.`);
       });
@@ -420,7 +560,7 @@ export function registerEvalTools(server: LmsServer) {
     {
       name: "lms_update_eval_case",
       description:
-        "Edit a test case: name, importance_note, expected_completed, must_keep, and — for scenarios — persona/goal/script/max_turns. Golden transcripts never change (delete and re-create instead). Editing a generated scenario marks it teacher-edited so it is no longer replaced when scenarios regenerate. When changing scenario fields, pass lesson_id so unspecified scenario fields keep their current value.",
+        "Edit a test case: name, importance_note, expected_completed, must_keep, and — for scenarios — persona/goal/script/max_turns. Graded answers (exercise cases): content, expected_score, tolerance, expected_passed, category. Golden transcripts never change (delete and re-create instead). Editing a generated scenario marks it teacher-edited so it is no longer replaced when scenarios regenerate. When changing scenario fields, pass lesson_id so unspecified scenario fields keep their current value.",
       schema: z.object({
         case_id: z.string().describe("The case ID (uuid from lms_list_eval_cases)"),
         lesson_id: z.number().optional().describe("Required when editing scenario fields (persona/goal/script/max_turns): used to merge with the current scenario"),
@@ -428,6 +568,7 @@ export function registerEvalTools(server: LmsServer) {
         importance_note: z.string().max(2000).nullable().optional(),
         expected_completed: z.boolean().nullable().optional().describe("true / false / null (either)"),
         must_keep: z.array(z.string().min(1).max(300)).max(8).optional().describe("Replaces the whole list"),
+        ...GradedFields,
         ...ScenarioFields,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -435,6 +576,12 @@ export function registerEvalTools(server: LmsServer) {
     async (input, ctx) => {
       const scenarioEdit =
         input.persona !== undefined || input.goal !== undefined || input.script !== undefined || input.max_turns !== undefined;
+      const gradedEdit =
+        input.content !== undefined || input.expected_score !== undefined || input.tolerance !== undefined ||
+        input.expected_passed !== undefined || input.category !== undefined;
+      const lessonEdit = scenarioEdit || input.expected_completed !== undefined || input.must_keep !== undefined;
+      if (gradedEdit && (lessonEdit || input.lesson_id !== undefined))
+        return errorResult("content/expected_score/tolerance/expected_passed/category belong to exercise graded answers; expected_completed/must_keep/persona/goal/script/max_turns and lesson_id belong to lesson cases. Don't mix them.");
       if (scenarioEdit && input.lesson_id === undefined)
         return errorResult("Pass lesson_id when editing scenario fields (persona/goal/script/max_turns) so they can be merged with the current scenario.");
       return run(ctx, input.lesson_id ?? null, async (call) => {
@@ -443,6 +590,19 @@ export function registerEvalTools(server: LmsServer) {
         if (input.importance_note !== undefined) patch.importance_note = input.importance_note;
         if (input.expected_completed !== undefined) patch.expected = { completed: input.expected_completed };
         if (input.must_keep !== undefined) patch.must_keep = input.must_keep;
+        if (input.content !== undefined) patch.input = { content: input.content };
+        if (
+          input.expected_score !== undefined || input.tolerance !== undefined ||
+          input.expected_passed !== undefined || input.category !== undefined
+        ) {
+          patch.expected = {
+            ...(patch.expected as object | undefined),
+            ...(input.expected_score !== undefined ? { score: input.expected_score } : {}),
+            ...(input.tolerance !== undefined ? { tolerance: input.tolerance } : {}),
+            ...(input.expected_passed !== undefined ? { passed: input.expected_passed } : {}),
+            ...(input.category !== undefined ? { category: input.category } : {}),
+          };
+        }
         if (scenarioEdit) {
           const list = await call("GET", `/lesson-task/${input.lesson_id}/cases`);
           if (list.status !== 200) return errorResult(describeEvalError(list.status, list.body));
@@ -506,26 +666,49 @@ export function registerEvalTools(server: LmsServer) {
       })
   );
 
+  // ── lms_generate_eval_answers ──────────────────────────────────────────────
+  server.tool(
+    {
+      name: "lms_generate_eval_answers",
+      description: `Have the platform draft 8 sample student answers for an AI-graded exercise (essay, discussion, coding_challenge, artifact), one per category: high, mid, low, boundary (right at the passing score), injection (tries to make the grader give 100), keyword_stuffing, off_topic and short_correct. Each comes with an expected score. They are saved as UNVERIFIED cases — review them with lms_list_eval_cases and correct expected scores with lms_update_eval_case (that marks them verified). Uses the school's AI key; max 20 cases per exercise (409 case_limit if none fit). ${GRADED_EXPLAINER}`,
+      schema: z.object({ exercise_id: z.number().describe("The exercise ID") }),
+      annotations: WRITE,
+    },
+    async ({ exercise_id }, ctx) =>
+      run(ctx, { exercise: exercise_id }, async (call) => {
+        const res = await call("POST", `/exercise/${exercise_id}/generate`, {}, 120_000);
+        if (res.status !== 201) return errorResult(describeEvalError(res.status, res.body, "exercise"));
+        const cases = (Array.isArray(res.body.cases) ? res.body.cases : []) as CaseRow[];
+        return ok(
+          { cases },
+          `Drafted ${cases.length} sample answer(s) (unverified):\n\n${cases.map(formatCase).join("\n")}\n\nReview the expected scores, then run them with lms_run_evals (exercise_id).`
+        );
+      })
+  );
+
   // ── lms_run_evals ──────────────────────────────────────────────────────────
   server.tool(
     {
       name: "lms_run_evals",
-      description: `Run every test case against the lesson's CURRENT saved AI task (save prompt changes first with lms_upsert_lesson_ai_task). The run executes in the background on the school's AI key (one run at a time per lesson, daily cap per school) and takes roughly 1–3 minutes; this call returns the run id immediately — then call lms_get_eval_run. ${WORKFLOW}`,
-      schema: z.object({ lesson_id: z.number().describe("The lesson ID") }),
+      description: `Run every test case against the lesson's CURRENT saved AI task (save prompt changes first with lms_upsert_lesson_ai_task), or — with exercise_id — against the exercise's CURRENT saved grader (save changes first with lms_update_exercise): each graded answer is graded 3 times, so cost is cases × 3 model calls (returned as estimated_model_calls); injection cases must never score above expected. The run executes in the background on the school's AI key (one run at a time per lesson, daily cap per school) and takes roughly 1–3 minutes; this call returns the run id immediately — then call lms_get_eval_run. ${WORKFLOW}`,
+      schema: z.object({ ...TargetFields }),
       annotations: WRITE,
     },
-    async ({ lesson_id }, ctx) =>
-      run(ctx, lesson_id, async (call) => {
-        const res = await call("POST", `/lesson-task/${lesson_id}/runs`, {}, RUN_START_TIMEOUT_MS);
+    async (input, ctx) => {
+      const t = resolveEvalTarget(input);
+      if (!t.ok) return errorResult(t.error);
+      return run(ctx, t.kind === "lesson" ? t.id : { exercise: t.id }, async (call) => {
+        const res = await call("POST", `${t.base}/runs`, {}, RUN_START_TIMEOUT_MS);
         if (res.status !== 202 && res.status !== 201 && res.status !== 200)
-          return errorResult(describeEvalError(res.status, res.body));
+          return errorResult(describeEvalError(res.status, res.body, t.kind));
         const r = res.body.run as { id?: string; status?: string } | undefined;
         const est = res.body.estimated_model_calls;
         return ok(
           { run_id: r?.id, status: r?.status ?? "queued", estimated_model_calls: est },
           `Test run started: \`${r?.id}\` (${r?.status ?? "queued"}${typeof est === "number" ? `, ~${est} model calls on the school's AI key` : ""}).\n\nCall lms_get_eval_run with run_id "${r?.id}" in ~1–3 minutes to read the report.`
         );
-      })
+      });
+    }
   );
 
   // ── lms_get_eval_run ───────────────────────────────────────────────────────
@@ -533,7 +716,7 @@ export function registerEvalTools(server: LmsServer) {
     {
       name: "lms_get_eval_run",
       description:
-        "Read a test run's report as markdown: status, task version, summary, one line per case (✓/✗, completed vs expected, turn, deviation) and the failed criteria with evidence. If the run is still queued/running, call again in a minute. Set include_transcripts to read the full conversations (long). Use the failures to improve the prompt with lms_upsert_lesson_ai_task, then lms_run_evals again.",
+        "Read a test run's report as markdown: status, task version, summary, one line per case (✓/✗, completed vs expected, turn, deviation) and the failed criteria with evidence. For exercise runs: per case expected score ±tolerance vs the median score, the 3 repeat scores, stddev, deviation, INFLATED flag for injections, and the grader's feedback; summary has inflated_injections, pass_flips (majority verdict wrong), unstable_cases (a repeat disagreed), mean_deviation, max_stddev. If the run is still queued/running, call again in a minute. Set include_transcripts to read the full conversations (long). Use the failures to improve the prompt with lms_upsert_lesson_ai_task, then lms_run_evals again.",
       schema: z.object({
         run_id: z.string().describe("The run ID returned by lms_run_evals / lms_list_eval_runs"),
         include_transcripts: z.boolean().optional().describe("Include each case's full conversation (default false)"),
@@ -559,13 +742,16 @@ export function registerEvalTools(server: LmsServer) {
     {
       name: "lms_list_eval_runs",
       description:
-        "List the most recent test runs (up to 20) for a lesson's AI task with status, task version and summary — use it to compare versions before/after a prompt change. Open one with lms_get_eval_run.",
-      schema: z.object({ lesson_id: z.number().describe("The lesson ID") }),
+        "List the most recent test runs (up to 20) for a lesson's AI task (lesson_id) or an AI-graded exercise (exercise_id) with status, task version and summary — use it to compare versions before/after a prompt change. Open one with lms_get_eval_run.",
+      schema: z.object({ ...TargetFields }),
       annotations: READ_ONLY,
     },
-    async ({ lesson_id }, ctx) =>
-      run(ctx, lesson_id, async (call) => {
-        const res = await call("GET", `/lesson-task/${lesson_id}/runs`);
+    async (input, ctx) => {
+      const t = resolveEvalTarget(input);
+      if (!t.ok) return errorResult(t.error);
+      const label = t.kind === "lesson" ? "lesson" : "exercise";
+      return run(ctx, t.kind === "lesson" ? t.id : { exercise: t.id }, async (call) => {
+        const res = await call("GET", `${t.base}/runs`);
         if (res.status !== 200) return errorResult(describeEvalError(res.status, res.body));
         const runs = (Array.isArray(res.body.runs) ? res.body.runs : []) as Record<string, unknown>[];
         const md = runs.length
@@ -573,8 +759,9 @@ export function registerEvalTools(server: LmsServer) {
               .map((r) => `- \`${r.id}\` — ${String(r.status)} — ${versionNo(r)} — ${String(r.created_at ?? "")}${summaryLine(r.summary) ? ` — ${summaryLine(r.summary)}` : ""}`)
               .join("\n")
           : "No runs yet. Call lms_run_evals.";
-        return ok({ lesson_id, runs }, `# Test runs for lesson ${lesson_id} (${runs.length})\n\n${md}`);
-      })
+        return ok({ [`${label}_id`]: t.id, runs }, `# Test runs for ${label} ${t.id} (${runs.length})\n\n${md}`);
+      });
+    }
   );
 
   // ── lms_get_task_version_metrics ───────────────────────────────────────────

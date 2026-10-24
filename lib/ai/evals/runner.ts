@@ -3,8 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createTenantAi } from '@/lib/ai/tenant-ai'
 import { DRIFT_THRESHOLD } from './deviation'
 import { draftScenarios, runCase, type EngineContext } from './lesson-task-engine'
-import { CASE_COLUMNS, snapshotToConfig, toCaseRow } from './store'
-import { EVAL_LIMITS, type CaseOutcome, type EvalCaseRow, type RunSummary } from './schema'
+import { CASE_COLUMNS, loadGradingExercise, snapshotToConfig, toCaseRow, toGradedCaseRow } from './store'
+import { runGradedCase } from './graded-answer-engine'
+import { EVAL_LIMITS, type CaseOutcome, type EvalCaseRow, type GradedCaseRow, type GradedOutcome, type GradedRunSummary, type RunSummary } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -23,6 +24,39 @@ function errorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
   // Provider errors can echo request details; keep the report short and key-free.
   return message.replace(/(sk|key|token)[-_a-z0-9]{8,}/gi, '[redacted]').slice(0, 500)
+}
+
+/** A run still "running" after this long died with its process: free the slot. */
+export const STALE_RUN_MS = 20 * 60 * 1000
+
+/** Fails queued/running runs of a target that outlived their process, freeing its single active slot. */
+export async function freeStaleRuns(admin: Admin, tenantId: string, targetType: 'lesson_ai_task' | 'exercise', targetId: number) {
+  await admin
+    .from('ai_eval_runs')
+    .update({ status: 'failed', error: 'Interrupted', finished_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
+    .eq('target_type', targetType)
+    .eq('target_id', targetId)
+    .in('status', ['queued', 'running'])
+    .lt('created_at', new Date(Date.now() - STALE_RUN_MS).toISOString())
+}
+
+/** Whether the tenant already queued its daily maximum of runs (any target). */
+export async function runLimitReached(admin: Admin, tenantId: string): Promise<boolean> {
+  const { count } = await admin
+    .from('ai_eval_runs')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+  return (count ?? 0) >= EVAL_LIMITS.runsPerTenantPerDay
+}
+
+async function failRun(admin: Admin, runId: string, tenantId: string, error: unknown, modelCalls: number) {
+  await admin
+    .from('ai_eval_runs')
+    .update({ status: 'failed', error: errorMessage(error), finished_at: new Date().toISOString(), summary: { model_calls: modelCalls } })
+    .eq('id', runId)
+    .eq('tenant_id', tenantId)
 }
 
 /**
@@ -86,12 +120,11 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
   const lessonId = run.target_id
   let modelCalls = 0
 
-  const fail = async (error: unknown) => {
-    await admin
-      .from('ai_eval_runs')
-      .update({ status: 'failed', error: errorMessage(error), finished_at: new Date().toISOString(), summary: { model_calls: modelCalls } })
-      .eq('id', runId)
-      .eq('tenant_id', tenantId)
+  const fail = (error: unknown) => failRun(admin, runId, tenantId, error, modelCalls)
+
+  if (run.target_type === 'exercise') {
+    await executeExerciseRun(admin, { runId, tenantId, exerciseId: run.target_id, actorId: opts.actorId ?? null })
+    return
   }
 
   try {
@@ -195,5 +228,98 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
       .eq('tenant_id', tenantId)
   } catch (error) {
     await fail(error)
+  }
+}
+
+/**
+ * Graded-answer run: every case is graded GRADED_REPEATS times by the school's
+ * exercise grader on the SAVED exercise; repeats fold into one result row.
+ */
+async function executeExerciseRun(
+  admin: Admin,
+  run: { runId: string; tenantId: string; exerciseId: number; actorId: string | null }
+) {
+  const { runId, tenantId, exerciseId } = run
+  let modelCalls = 0
+
+  try {
+    const exercise = await loadGradingExercise(admin, exerciseId, tenantId)
+    if (!exercise) throw new Error('The exercise no longer exists.')
+
+    // A missing key fails here, before any case runs.
+    const ai = createTenantAi(tenantId, { actorId: run.actorId })
+    const grader = await ai.getModelForFeature('exercise_grader')
+    await admin
+      .from('ai_eval_runs')
+      .update({ model_ids: { grader: `${grader.providerId}/${grader.modelId}` } })
+      .eq('id', runId)
+      .eq('tenant_id', tenantId)
+
+    const { data } = await admin
+      .from('ai_eval_cases')
+      .select(CASE_COLUMNS)
+      .eq('target_type', 'exercise')
+      .eq('target_id', exerciseId)
+      .eq('tenant_id', tenantId)
+      .eq('kind', 'graded_answer')
+      .order('created_at')
+      .limit(EVAL_LIMITS.maxCasesPerTarget)
+    const cases = (data ?? []).map((row) => toGradedCaseRow(row as Record<string, unknown>))
+
+    const ctx = { grader: grader.model, exercise, onModelCall: () => { modelCalls++ } }
+    const outcomes: { testCase: GradedCaseRow; outcome: GradedOutcome | null; error?: string }[] = []
+
+    await mapLimit(cases, EVAL_LIMITS.concurrency, async (testCase) => {
+      let outcome: GradedOutcome | null = null
+      let error: string | undefined
+      try {
+        outcome = await runGradedCase(ctx, testCase)
+      } catch (e) {
+        error = errorMessage(e)
+      }
+      const { error: insertError } = await admin.from('ai_eval_results').insert({
+        tenant_id: tenantId,
+        run_id: runId,
+        case_id: testCase.id,
+        case_name: testCase.name,
+        case_kind: 'graded_answer',
+        expected: testCase.expected,
+        scores: outcome?.scores ?? null,
+        score: outcome?.score ?? null,
+        score_stddev: outcome?.score_stddev ?? null,
+        output: (outcome?.output ?? null) as never,
+        deviation: outcome?.deviation ?? null,
+        passed: outcome ? outcome.ok : null,
+        error: error ?? null,
+      })
+      // A result that could not be saved counts as an error, not a silent gap.
+      if (insertError) {
+        outcome = null
+        error = 'Could not save the result.'
+      }
+      outcomes.push({ testCase, outcome, error })
+    })
+
+    const scored = outcomes.filter((o) => o.outcome)
+    const summary: GradedRunSummary = {
+      total: outcomes.length,
+      passed: scored.filter((o) => o.outcome!.ok).length,
+      failed: scored.filter((o) => !o.outcome!.ok).length,
+      errors: outcomes.length - scored.length,
+      inflated_injections: scored.filter((o) => o.outcome!.inflated).length,
+      pass_flips: scored.filter((o) => o.outcome!.pass_flip).length,
+      unstable_cases: scored.filter((o) => o.outcome!.unstable).length,
+      mean_deviation: scored.length ? Math.round(scored.reduce((sum, o) => sum + o.outcome!.deviation, 0) / scored.length) : 0,
+      max_stddev: scored.reduce((max, o) => Math.max(max, o.outcome!.score_stddev), 0),
+      model_calls: modelCalls,
+    }
+
+    await admin
+      .from('ai_eval_runs')
+      .update({ status: 'done', summary, finished_at: new Date().toISOString() })
+      .eq('id', runId)
+      .eq('tenant_id', tenantId)
+  } catch (error) {
+    await failRun(admin, runId, tenantId, error, modelCalls)
   }
 }

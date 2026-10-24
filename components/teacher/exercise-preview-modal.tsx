@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
-import { IconPlayerPlay, IconRefresh } from '@tabler/icons-react'
+import { IconPlayerPlay, IconRefresh, IconStar } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Field, FieldLabel, FieldGroup, FieldDescription } from '@/components/ui/field'
@@ -17,6 +17,8 @@ import { parseCheckpointQuestions, CLOSED_EXERCISE_TYPES } from '@/lib/checkpoin
 import type { SpeechEvaluation } from '@/lib/speech/types'
 import ExerciseBrief from '@/components/exercises/exercise-brief'
 import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
+import { SaveGradedGoldenDialog, type GradedPreviewRun } from './ai-evals/save-graded-golden-dialog'
+import { isGradedExerciseType } from './ai-evals/types'
 
 // Recorder, realtime and sandbox bundles load only when the teacher opens a test.
 const ConversationExercise = dynamic(() => import('@/components/exercises/conversation-exercise'), { ssr: false })
@@ -42,7 +44,7 @@ interface PreviewResult {
 interface Snapshot { draft: PreviewDraft; files: Record<string, string>; activeFile?: string | null; visibleFiles?: string[] | null }
 
 export function ExercisePreviewModal() {
-  const { formData, courseId, initialData, loading } = useExerciseBuilder()
+  const { formData, courseId, initialData, loading, exerciseId } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exercisePreview')
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [revision, setRevision] = useState(0)
@@ -69,14 +71,14 @@ export function ExercisePreviewModal() {
           <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         {snapshot && <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <ExercisePreviewSession key={revision} snapshot={snapshot} />
+          <ExercisePreviewSession key={revision} snapshot={snapshot} exerciseId={exerciseId} />
         </div>}
       </DialogContent>
     </Dialog>
   </>
 }
 
-function ExercisePreviewSession({ snapshot }: { snapshot: Snapshot }) {
+function ExercisePreviewSession({ snapshot, exerciseId }: { snapshot: Snapshot; exerciseId: number | null }) {
   const { draft } = snapshot
   const t = useTranslations('dashboard.teacher.exercisePreview')
   const [content, setContent] = useState('')
@@ -84,6 +86,9 @@ function ExercisePreviewSession({ snapshot }: { snapshot: Snapshot }) {
   const [result, setResult] = useState<PreviewResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Last graded submission, so a good (or bad) grade can be saved as an eval case.
+  const [lastRun, setLastRun] = useState<GradedPreviewRun | null>(null)
+  const [goldenOpen, setGoldenOpen] = useState(false)
   const config = draft.exercise_config
   const passingScore = typeof config.passing_score === 'number' ? config.passing_score : 70
   const questions = useMemo(() => (CLOSED_EXERCISE_TYPES as readonly string[]).includes(draft.exercise_type) ? parseCheckpointQuestions(config) : null, [draft.exercise_type, config])
@@ -92,11 +97,15 @@ function ExercisePreviewSession({ snapshot }: { snapshot: Snapshot }) {
   }), [draft])
   const evaluate = async (input: Record<string, unknown> | FormData) => {
     if (busy) return
-    setBusy(true); setError(null); setResult(null)
+    setBusy(true); setError(null); setResult(null); setLastRun(null)
     try {
       const response = input instanceof FormData ? await fetch('/api/teacher/preview/exercise-run', { method: 'POST', body: input }) : await requestEvaluation(input)
       if (!response.ok) throw new Error(response.status === 429 ? t('limitError') : response.status === 413 ? t('mediaLimit') : t('evaluationError'))
-      setResult(await response.json())
+      const data = await response.json()
+      setResult(data)
+      if (!(input instanceof FormData) && typeof input.content === 'string') {
+        setLastRun({ content: input.content, score: data.score, passed: data.passed, feedback: data.feedback })
+      }
     } catch (cause) { setError(cause instanceof Error ? cause.message : t('evaluationError')) }
     finally { setBusy(false) }
   }
@@ -116,15 +125,29 @@ function ExercisePreviewSession({ snapshot }: { snapshot: Snapshot }) {
     },
     evaluate: (transcript: ConversationTurn[], notes: ConversationNote[]) => requestEvaluation({ transcript, notes }),
   }), [draft, conversationConfig, requestEvaluation])
-  const artifactEvaluate = useCallback((content: string, metadata: Record<string, unknown>) => requestEvaluation({ content, metadata }), [requestEvaluation])
+  const artifactEvaluate = useCallback(async (content: string, metadata: Record<string, unknown>) => {
+    const response = await requestEvaluation({ content, metadata })
+    if (response.ok) {
+      void response.clone().json().then((data) => setLastRun({ content, metadata, score: data.score, passed: data.passed, feedback: data.feedback })).catch(() => {})
+    }
+    return response
+  }, [requestEvaluation])
+  const saveGolden = exerciseId !== null && lastRun && isGradedExerciseType(draft.exercise_type) ? <div className="flex flex-col items-start gap-1">
+    <Button type="button" variant="outline" size="sm" onClick={() => setGoldenOpen(true)}><IconStar aria-hidden="true" />{t('saveGolden')}</Button>
+    <p className="text-xs text-muted-foreground">{t('saveGoldenHint')}</p>
+    <SaveGradedGoldenDialog open={goldenOpen} onOpenChange={setGoldenOpen} exerciseId={exerciseId} run={lastRun} />
+  </div> : null
 
   if (draft.exercise_type === 'real_time_conversation') return <ConversationExercise
     exercise={{ ...draft, id: 0 }} scenario={conversationConfig.scenario} maxMinutes={conversationConfig.max_minutes}
     passingScore={conversationConfig.passing_score} isExerciseCompleted={false} dailyAttemptsUsed={0} maxDailyAttempts={0}
     initialResult={null} preview={voicePreview} />
-  if (draft.exercise_type === 'artifact' && typeof config.artifact_html === 'string' && config.artifact_html) return <ArtifactExercise
-    exercise={{ ...draft, id: 0, exercise_config: { artifact_html: config.artifact_html } }}
-    isExerciseCompleted={false} passingScore={passingScore} evaluateSubmission={artifactEvaluate} />
+  if (draft.exercise_type === 'artifact' && typeof config.artifact_html === 'string' && config.artifact_html) return <div className="flex flex-col gap-4">
+    <ArtifactExercise
+      exercise={{ ...draft, id: 0, exercise_config: { artifact_html: config.artifact_html } }}
+      isExerciseCompleted={false} passingScore={passingScore} evaluateSubmission={artifactEvaluate} />
+    {saveGolden}
+  </div>
 
   return <div className="flex flex-col gap-6">
     <div><h3 className="mb-3 text-lg font-semibold">{draft.title}</h3><ExerciseBrief instructions={draft.instructions} /></div>
@@ -161,6 +184,7 @@ function ExercisePreviewSession({ snapshot }: { snapshot: Snapshot }) {
       {result.evaluator === 'deterministic' && <p className="text-sm text-muted-foreground">{t('deterministic')}</p>}
       {result.perQuestion?.map((item) => <p key={item.questionId} className="text-sm">{questions?.find((question) => question.id === item.questionId)?.prompt}: {item.correct ? t('correct') : t('incorrect')} · {typeof item.correctValue === 'boolean' ? t(item.correctValue ? 'true' : 'false') : String(item.correctValue ?? '')} {item.explanation}</p>)}
       {result.metrics && result.annotated_transcript && <SpeechFeedback evaluation={result as SpeechEvaluation} />}
+      {saveGolden}
     </ExerciseResultSummary>}
   </div>
 }

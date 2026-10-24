@@ -71,7 +71,7 @@ export function ExpectedToggle({
   )
 }
 
-function DeleteButton({ name, onConfirm, disabled }: { name: string; onConfirm: () => void; disabled?: boolean }) {
+export function DeleteButton({ name, onConfirm, disabled }: { name: string; onConfirm: () => void; disabled?: boolean }) {
   const t = useTranslations('dashboard.teacher.aiEvals.cases')
   const [open, setOpen] = useState(false)
   return (

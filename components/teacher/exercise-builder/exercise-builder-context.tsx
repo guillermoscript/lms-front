@@ -98,6 +98,8 @@ export interface ExerciseBuilderContextValue {
   isConversationType: boolean
   isDetailsComplete: boolean
   hasAIConfig: boolean
+  /** Editor values differ from what was last saved (or loaded). */
+  isDirty: boolean
   steps: StepDefinition[]
 
   // Actions
@@ -169,6 +171,10 @@ export function ExerciseBuilderProvider({
     conv_voice: initialData?.exercise_config?.voice || CONVERSATION_DEFAULTS.voice,
     conv_max_minutes: initialData?.exercise_config?.max_minutes || CONVERSATION_DEFAULTS.max_minutes,
   })
+
+  // Baseline for "unsaved changes": the loaded values, refreshed on every successful draft save.
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(formData))
+  const isDirty = JSON.stringify(formData) !== savedJson
 
   const isAudioType = formData.exercise_type === 'audio_evaluation' || formData.exercise_type === 'video_evaluation'
   const isConversationType = formData.exercise_type === 'real_time_conversation'
@@ -267,6 +273,7 @@ export function ExerciseBuilderProvider({
             window.location.pathname.replace(/\/new\/?$/, `/${result.data.exerciseId}`)
           )
         }
+        setSavedJson(JSON.stringify(formData))
         setSaveSuccess(true)
         setLoading(false)
       }
@@ -313,10 +320,10 @@ export function ExerciseBuilderProvider({
   const value = useMemo(() => ({
     formData, loading, error, saveSuccess, activeStep,
     initialData, courseId, exerciseId,
-    isAudioType, isConversationType, isDetailsComplete, hasAIConfig, steps,
+    isAudioType, isConversationType, isDetailsComplete, hasAIConfig, isDirty, steps,
     updateField, setFormData, handleSave, setActiveStep, setError,
   }), [formData, loading, error, saveSuccess, activeStep,
-    initialData, courseId, exerciseId, isAudioType, isConversationType, isDetailsComplete, hasAIConfig])
+    initialData, courseId, exerciseId, isAudioType, isConversationType, isDetailsComplete, hasAIConfig, isDirty])
 
   return (
     <ExerciseBuilderContext value={value}>

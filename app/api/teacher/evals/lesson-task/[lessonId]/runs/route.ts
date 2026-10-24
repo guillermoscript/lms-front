@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { lessonTaskStaff } from '@/lib/ai/evals/route-auth'
 import { ensureLessonTaskVersion, loadLiveLessonTaskConfig } from '@/lib/ai/evals/store'
 import { draftConfigSchema, EVAL_LIMITS, type DraftConfig } from '@/lib/ai/evals/schema'
-import { executeEvalRun } from '@/lib/ai/evals/runner'
+import { executeEvalRun, freeStaleRuns, runLimitReached } from '@/lib/ai/evals/runner'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -11,9 +11,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const maxDuration = 300
 
 type Params = { params: Promise<{ lessonId: string }> }
-
-/** A run still "running" after this long died with its process: free the slot. */
-const STALE_RUN_MS = 20 * 60 * 1000
 
 export async function GET(req: Request, { params }: Params) {
   const ctx = await lessonTaskStaff(req, (await params).lessonId)
@@ -49,13 +46,7 @@ export async function POST(req: Request, { params }: Params) {
 
   const admin = createAdminClient()
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const { count: runsToday } = await admin
-    .from('ai_eval_runs')
-    .select('id', { count: 'exact', head: true })
-    .eq('tenant_id', ctx.tenantId)
-    .gte('created_at', since)
-  if ((runsToday ?? 0) >= EVAL_LIMITS.runsPerTenantPerDay) {
+  if (await runLimitReached(admin, ctx.tenantId)) {
     return NextResponse.json({ error: 'run_limit', limit: EVAL_LIMITS.runsPerTenantPerDay }, { status: 429 })
   }
 
@@ -92,14 +83,7 @@ async function queueRun(
   const versionId = await ensureLessonTaskVersion(admin, ctx.lesson.id, config)
 
   // Free a slot held by a run whose process died.
-  await admin
-    .from('ai_eval_runs')
-    .update({ status: 'failed', error: 'Interrupted', finished_at: new Date().toISOString() })
-    .eq('tenant_id', ctx.tenantId)
-    .eq('target_type', 'lesson_ai_task')
-    .eq('target_id', ctx.lesson.id)
-    .in('status', ['queued', 'running'])
-    .lt('created_at', new Date(Date.now() - STALE_RUN_MS).toISOString())
+  await freeStaleRuns(admin, ctx.tenantId, 'lesson_ai_task', ctx.lesson.id)
 
   // Inserted under RLS (staff of this tenant, created_by = caller, status queued).
   const { data: run, error } = await ctx.supabase
