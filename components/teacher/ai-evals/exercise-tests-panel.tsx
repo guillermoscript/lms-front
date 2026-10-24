@@ -23,6 +23,7 @@ import {
   TrafficLight,
   type GradedRunRow,
 } from './graded-run-report'
+import { countCases, type AnyCaseRow } from './scenario-types'
 import { isActive, ReportSkeleton, StatusPill, versionNo } from './run-report'
 import {
   GRADED_CASES_CHANGED_EVENT,
@@ -108,6 +109,8 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
   const [starting, setStarting] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [confirmRun, setConfirmRun] = useState(false)
+  // Every case kind of the exercise (a run executes all of them), fetched when the confirm opens.
+  const [allCases, setAllCases] = useState<AnyCaseRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aiError, setAiError] = useState<AiSetupError | null>(null)
   const [dialog, setDialog] = useState<{ item: GradedCaseRow | null } | null>(null)
@@ -115,7 +118,7 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
   const [dialogError, setDialogError] = useState<string | null>(null)
 
   const loadCases = useCallback(async () => {
-    const res = await evalRequest<{ cases: GradedCaseRow[] }>(`${base}/cases`)
+    const res = await evalRequest<{ cases: GradedCaseRow[] }>(`${base}/cases?kind=graded_answer`)
     if (res.status === 409 && res.code === 'unsupported_type') return setUnsupported(true)
     if (!res.ok || !res.data) return setCases({ state: 'error' })
     setCases({ state: 'ready', data: res.data.cases ?? [] })
@@ -188,7 +191,17 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
   const runActive = runList.some(isActive) || isActive(detail?.state === 'ready' ? detail.data.run : null)
   const caseCount = caseList.length
   const atLimit = caseCount >= GRADED_CASE_LIMIT
-  const estimate = caseCount * GRADED_REPEATS
+  const totals = allCases ? countCases(allCases) : null
+  const estimate = totals ? totals.calls : caseCount * GRADED_REPEATS
+  const otherKinds = totals ? totals.coach + totals.voice : 0
+
+  const openConfirm = async () => {
+    setAllCases(null)
+    setConfirmRun(true)
+    if (kind !== 'exercise') return
+    const res = await evalRequest<{ cases: AnyCaseRow[] }>(`${base}/cases`)
+    if (res.ok && res.data) setAllCases(res.data.cases ?? [])
+  }
 
   const fail = (res: Awaited<ReturnType<typeof evalRequest>>, fallbackKey: string) => {
     if (res.aiError) {
@@ -255,7 +268,9 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
   const detailRun = detail?.state === 'ready' ? detail.data.run : null
   const results =
     detail?.state === 'ready'
-      ? detail.data.results.map((r) => ({ ...r, expected: r.expected ?? caseList.find((c) => c.id === r.case_id)?.expected ?? null }))
+      ? detail.data.results
+          .filter((r) => !r.case_kind || r.case_kind === 'graded_answer')
+          .map((r) => ({ ...r, expected: r.expected ?? caseList.find((c) => c.id === r.case_id)?.expected ?? null }))
       : []
   const latestRun = runList[0]
   const staleBanner = hasUnsavedChanges && latestRun && !isActive(latestRun)
@@ -278,7 +293,7 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
         embedded={embedded}
         action={
           <div className="flex flex-col items-end gap-1">
-            <Button type="button" className="gap-2" onClick={() => setConfirmRun(true)} disabled={caseCount === 0 || runActive || starting}>
+            <Button type="button" className="gap-2" onClick={() => void openConfirm()} disabled={caseCount === 0 || runActive || starting}>
               <IconPlayerPlay aria-hidden="true" className="h-4 w-4" />
               {starting ? t('run.starting') : t('run.button', { count: caseCount })}
             </Button>
@@ -398,9 +413,9 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
             {isActive(detail.data.run) ? (
               <p className="text-xs text-muted-foreground">{t('run.inProgress')}</p>
             ) : (
-              detailRun?.status === 'done' && <TrafficLight summary={detailRun.summary} />
+              detailRun?.status === 'done' && results.length > 0 && <TrafficLight summary={detailRun.summary} />
             )}
-            <GradedSummaryTiles summary={detail.data.run.summary} />
+            {(results.length > 0 || isActive(detail.data.run)) && <GradedSummaryTiles summary={detail.data.run.summary} />}
             {results.length > 0 && <GradedResultsTable results={results} nextStep={kind === 'checkpoint'} />}
           </div>
         )}
@@ -410,7 +425,11 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('confirm.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('confirm.description', { cases: caseCount, repeats: GRADED_REPEATS, calls: estimate })}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {otherKinds > 0
+                ? t('confirm.descriptionAll', { cases: totals?.graded ?? caseCount, coach: totals?.coach ?? 0, voice: totals?.voice ?? 0, calls: estimate })
+                : t('confirm.description', { cases: caseCount, repeats: GRADED_REPEATS, calls: estimate })}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('confirm.cancel')}</AlertDialogCancel>

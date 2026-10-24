@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { ScenarioTestsPanel } from '@/components/teacher/ai-evals/scenario-tests-panel'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { AIEvalTemplateBar, useBuiltInTemplates } from './ai-eval-templates'
 import { Separator } from '@/components/ui/separator'
@@ -25,7 +26,7 @@ import {
 } from '@/lib/speech/conversation'
 
 export function ExerciseConversationConfigStep() {
-  const { formData, updateField, setFormData } = useExerciseBuilder()
+  const { formData, updateField, setFormData, exerciseId, isDirty } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
 
   const templates = useBuiltInTemplates(
@@ -233,6 +234,8 @@ export function ExerciseConversationConfigStep() {
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">{t('conversationCostHint')}</p>
       </div>
+
+      <ScenarioTestsPanel surface="voice" exerciseId={exerciseId} hasUnsavedChanges={isDirty} />
     </div>
   )
 }

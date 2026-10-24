@@ -2,6 +2,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import type { ExerciseEvalSurface } from './schema'
 import { authorizeCheckpointStaff, authorizeExamStaff, authorizeExerciseStaff, authorizeLessonTaskStaff, type CheckpointTestsTarget, type ExamTestsTarget, type ExerciseTestsExercise } from './store'
 
 export interface LessonTaskStaffContext {
@@ -42,10 +43,14 @@ export interface ExerciseStaffContext {
   exercise: ExerciseTestsExercise
 }
 
-/** Cookie or Bearer (MCP) auth, then staff access to the exercise (graded types only). */
+/**
+ * Cookie or Bearer (MCP) auth, then staff access to the exercise. `surface`
+ * defaults to 'graded' (graded types only); see authorizeExerciseStaff.
+ */
 export async function exerciseStaff(
   req: Request,
-  exerciseIdParam: string | number
+  exerciseIdParam: string | number,
+  opts: { surface?: ExerciseEvalSurface | 'any' | null } = {}
 ): Promise<ExerciseStaffContext | NextResponse> {
   const auth = await getApiAuthContext(req)
   if (!auth) return new NextResponse('Unauthorized', { status: 401 })
@@ -53,7 +58,7 @@ export async function exerciseStaff(
   const exerciseId = Number(exerciseIdParam)
   if (!Number.isInteger(exerciseId) || exerciseId <= 0) return new NextResponse('Invalid exercise id', { status: 400 })
 
-  const access = await authorizeExerciseStaff(auth.supabase, { userId: auth.user.id, tenantId: auth.tenantId }, exerciseId)
+  const access = await authorizeExerciseStaff(auth.supabase, { userId: auth.user.id, tenantId: auth.tenantId }, exerciseId, opts)
   if ('error' in access) {
     return access.error === 'unsupported_type'
       ? NextResponse.json({ error: 'unsupported_type' }, { status: 409 })
@@ -149,7 +154,7 @@ export async function evalStaffForRow(
   if (row.target_type === 'exercise') {
     // Existing cases and runs stay readable, editable and deletable even if the
     // exercise type changed later; only generating and running enforce the type.
-    const access = await authorizeExerciseStaff(auth.supabase, ctx, row.target_id, { requireGraded: false })
+    const access = await authorizeExerciseStaff(auth.supabase, ctx, row.target_id, { surface: null })
     if ('error' in access) return new NextResponse(access.error, { status: access.status })
     return { ...base, role: access.role, targetType: 'exercise', exercise: access.exercise, row: ref }
   }

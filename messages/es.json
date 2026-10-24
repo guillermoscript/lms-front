@@ -2767,7 +2767,216 @@
           "generate": "Generar estudiantes simulados",
           "generating": "Generando...",
           "regenerate": "Regenerar",
-          "autoRegenerate": "Regenerar cuando cambie la tarea"
+          "autoRegenerate": "Regenerar cuando cambie la tarea",
+          "common": {
+            "cases": {
+              "sourceTeacher": "Escrito por ti",
+              "sourceGenerated": "Generado",
+              "unverified": "Sin verificar",
+              "editedByYou": "Editado por ti",
+              "generating": "Generando...",
+              "limitReached": "Alcanzaste el límite de {max} pruebas para este ejercicio. Elimina una para agregar más."
+            },
+            "dialog": {
+              "editDescription": "Los cambios marcan esta prueba como verificada por ti.",
+              "name": "Nombre",
+              "persona": "¿Quién es el estudiante simulado?",
+              "goal": "¿Qué intenta hacer?",
+              "script": "Mensajes iniciales (uno por línea)",
+              "scriptHint": "Opcional. Hasta {max} mensajes fijos que el estudiante envía primero.",
+              "scriptTooLong": "Demasiados mensajes: el máximo es {max}.",
+              "maxTurns": "Turnos máximos",
+              "simulateAfterScript": "Que el estudiante siga hablando después de los mensajes iniciales",
+              "simulateAfterScriptHint": "Si lo apagas, la prueba termina cuando se acaban los mensajes iniciales.",
+              "mustKeep": "Qué no debe cambiar",
+              "note": "¿Por qué es importante esta prueba? (opcional)",
+              "cancel": "Cancelar",
+              "saving": "Guardando...",
+              "save": "Guardar"
+            },
+            "errors": {
+              "no_cases": "Agrega al menos una prueba antes de ejecutar.",
+              "run_in_progress": "Ya hay una ejecución en curso para este ejercicio.",
+              "run_limit": "Alcanzaste el límite de ejecuciones de hoy. Inténtalo mañana.",
+              "case_limit": "Alcanzaste el límite de pruebas para este ejercicio.",
+              "unsupported_type": "Este tipo de ejercicio no admite estas pruebas.",
+              "plan_required": "Las conversaciones de voz no están incluidas en el plan de tu escuela, así que no se pueden probar.",
+              "runFailed": "No se pudo iniciar la ejecución. Inténtalo de nuevo.",
+              "generateFailed": "No se pudieron generar las pruebas. Inténtalo de nuevo.",
+              "saveFailed": "No se pudo guardar la prueba. Inténtalo de nuevo.",
+              "deleteFailed": "No se pudo eliminar la prueba. Inténtalo de nuevo."
+            },
+            "staleBanner": "Tienes cambios sin guardar. La última ejecución usó la versión guardada del ejercicio.",
+            "unsavedBanner": "Tienes cambios sin guardar. Las pruebas siempre se ejecutan sobre la versión guardada del ejercicio.",
+            "run": {
+              "button": "Ejecutar pruebas ({count})",
+              "starting": "Iniciando...",
+              "allKinds": "Ejecuta todas las pruebas de este ejercicio, no solo estas. Usa la clave de IA de tu escuela.",
+              "title": "Última ejecución",
+              "history": "Ejecución",
+              "historyItem": "v{version} · {date}",
+              "version": "Versión del ejercicio v{version}",
+              "failedReason": "La ejecución falló: {reason}",
+              "unknownError": "error desconocido"
+            },
+            "confirm": {
+              "title": "¿Ejecutar todas las pruebas de este ejercicio?",
+              "description": "Se ejecutarán {graded} respuestas a calificar, {coach} chats con el coach y {voice} llamadas de voz, unas {calls} llamadas a la IA con la clave de tu escuela.",
+              "allKinds": "La ejecución cubre todos los tipos de prueba, no solo los de este panel.",
+              "cancel": "Cancelar",
+              "run": "Ejecutar pruebas"
+            },
+            "report": {
+              "tiles": {
+                "passed": "Aprobadas",
+                "unexpectedCompletions": "Finalizaciones inesperadas",
+                "scoreAboveBand": "Nota sobre el rango",
+                "errored": "Errores",
+                "avgDeviation": "Desviación promedio"
+              },
+              "verdict": {
+                "ok": "OK",
+                "error": "Error",
+                "unexpected_completion": "Marcado como completo por error",
+                "no_completion": "Nunca se completó",
+                "criteria_failed": "Criterios no cumplidos",
+                "score_below_band": "Nota demasiado baja",
+                "score_above_band": "Nota demasiado alta",
+                "pass_mismatch": "Aprobado o reprobado incorrecto",
+                "finish_mismatch": "La llamada terminó distinto",
+                "failed": "Fallida"
+              },
+              "noTranscript": "No se registró la conversación.",
+              "student": "Estudiante",
+              "coach": "Coach",
+              "tutor": "Tutor",
+              "unexpectedDetail": "El coach marcó el ejercicio como completo en el turno {turn}, pero esta prueba indica que el estudiante no debe completarlo. Un estudiante real podría hacer lo mismo.",
+              "transcript": "Conversación",
+              "voiceEvaluation": "Resultado del calificador",
+              "voiceScoreLine": "Nota {score}/100 (mínima {passing})",
+              "voicePassed": "aprobada",
+              "voiceNotPassed": "no aprobada",
+              "voiceStats": "{turns} turnos del estudiante, {hints} pistas, {corrections} correcciones anotadas",
+              "finishReason": {
+                "scenario_completed": "El tutor terminó la llamada: escenario completado",
+                "student_asked_to_stop": "El tutor terminó la llamada: el estudiante pidió parar"
+              },
+              "strengths": "Fortalezas",
+              "improvements": "Mejoras",
+              "verdicts": "Criterios",
+              "noVerdicts": "No se juzgó ningún criterio.",
+              "verdictPassed": "Cumplido",
+              "verdictFailed": "No cumplido",
+              "markedCompleteAt": "Marcado como completo en el turno {turn}",
+              "notMarkedComplete": "No marcado como completo",
+              "scoreFinished": "{score}/100, llamada {finished}",
+              "finishedYes": "terminada",
+              "finishedNo": "no terminada",
+              "cols": {
+                "case": "Prueba",
+                "expected": "Esperado",
+                "coachResult": "Coach",
+                "voiceResult": "Llamada",
+                "deviation": "Desviación",
+                "result": "Resultado"
+              }
+            }
+          },
+          "coach": {
+            "title": "Pruebas del coach",
+            "description": "Estudiantes simulados chatean con el coach del ejercicio. Comprueba que ayuda a los estudiantes honestos y no marca el ejercicio como completo a quienes hacen trampa.",
+            "saveFirst": "Guarda primero el ejercicio. Las pruebas se ejecutan sobre la versión guardada.",
+            "cases": {
+              "title": "Estudiantes simulados ({count})",
+              "description": "Cada uno chatea con el coach unos turnos. Los tramposos intentan que el ejercicio se marque como completo sin hacer el trabajo.",
+              "generate": "Generar estudiantes simulados",
+              "add": "Agregar estudiante",
+              "empty": "Aún no hay estudiantes simulados. Genera un conjunto, con tramposos incluidos, o agrega los tuyos."
+            },
+            "dialog": {
+              "addTitle": "Agregar un estudiante simulado",
+              "editTitle": "Editar estudiante simulado",
+              "addDescription": "Describe a un estudiante y lo que le dice al coach.",
+              "expected": "¿Debe el coach marcar el ejercicio como completo?",
+              "expectedHint": "Para los tramposos, elige \"No debe completarse\".",
+              "mustKeepHint": "Comportamientos del coach que el juez revisa en cada ejecución. Uno por línea."
+            },
+            "run": {
+              "empty": "Aún no hay ejecuciones. Ejecuta las pruebas para ver cómo trata el coach a cada estudiante.",
+              "inProgress": "Ejecutando los chats simulados. Esta página se actualiza sola.",
+              "noResultsForSurface": "Esta ejecución no tiene pruebas del coach. Agrega algunas y ejecuta de nuevo."
+            },
+            "light": {
+              "green": {
+                "title": "El coach se comportó como se esperaba",
+                "body": "Ningún estudiante logró que el ejercicio se marcara como completo por error."
+              },
+              "yellow": {
+                "title": "{issues, plural, one {# prueba necesita revisión} other {# pruebas necesitan revisión}}",
+                "body": "Abre las filas marcadas para leer los chats y ver qué criterios fallaron."
+              },
+              "red": {
+                "title": "{count, plural, one {# estudiante logró que el ejercicio se marcara como completo por error} other {# estudiantes lograron que el ejercicio se marcara como completo por error}}",
+                "body": "Se puede convencer al coach de completar el ejercicio. Ajusta las instrucciones de la IA y ejecuta las pruebas de nuevo."
+              }
+            }
+          },
+          "voice": {
+            "title": "Pruebas de conversación de voz",
+            "description": "Estudiantes simulados conversan con el tutor de voz y luego el calificador real puntúa la conversación. Revisa al tutor y la nota sin una llamada en vivo.",
+            "textOnlyNote": "Simulado en texto, sin audio. Comprueba las instrucciones del tutor y la calificación, no el reconocimiento de voz, los acentos ni la voz en sí.",
+            "saveFirst": "Guarda primero el ejercicio. Las pruebas se ejecutan sobre la versión guardada.",
+            "cases": {
+              "title": "Llamadas simuladas ({count})",
+              "description": "Cada estudiante simulado habla con el tutor unos turnos y luego se califica la llamada.",
+              "generate": "Generar llamadas simuladas",
+              "add": "Agregar llamada",
+              "empty": "Aún no hay llamadas simuladas. Genera un conjunto o agrega las tuyas."
+            },
+            "dialog": {
+              "addTitle": "Agregar una llamada simulada",
+              "editTitle": "Editar llamada simulada",
+              "addDescription": "Describe a un estudiante y cómo debe ir la llamada.",
+              "mustKeepHint": "Comportamientos del tutor que el juez revisa en cada ejecución. Uno por línea."
+            },
+            "expected": {
+              "finished": "¿Debe el tutor terminar la llamada?",
+              "finishedYes": "Termina",
+              "finishedNo": "Sigue",
+              "either": "Cualquiera",
+              "passed": "¿Debe aprobar la nota?",
+              "passedYes": "Aprueba",
+              "passedNo": "Reprueba",
+              "scoreMin": "Nota mínima",
+              "scoreMax": "Nota máxima",
+              "bandHint": "Opcional. La nota debe caer dentro de este rango.",
+              "bandInvalid": "La nota mínima no puede ser mayor que la máxima.",
+              "summaryFinished": "termina",
+              "summaryNotFinished": "sigue",
+              "summaryPass": "aprueba",
+              "summaryFail": "reprueba",
+              "summaryBand": "nota {min}-{max}"
+            },
+            "run": {
+              "empty": "Aún no hay ejecuciones. Ejecuta las pruebas para ver cómo manejan el tutor y el calificador cada llamada.",
+              "inProgress": "Ejecutando las llamadas simuladas. Esta página se actualiza sola.",
+              "noResultsForSurface": "Esta ejecución no tiene pruebas de voz. Agrega algunas y ejecuta de nuevo."
+            },
+            "light": {
+              "green": {
+                "title": "Las llamadas se calificaron como se esperaba",
+                "body": "Cada llamada simulada cayó en su rango esperado."
+              },
+              "yellow": {
+                "title": "{issues, plural, one {# llamada necesita revisión} other {# llamadas necesitan revisión}}",
+                "body": "Abre las filas marcadas para leer la llamada y los comentarios del calificador."
+              },
+              "red": {
+                "title": "{count, plural, one {# llamada sacó más nota de la permitida} other {# llamadas sacaron más nota de la permitida}}",
+                "body": "El calificador dio una nota más alta de la que permite la prueba. Revisa que los criterios resistan a estudiantes que piden una nota alta."
+              }
+            }
+          }
         },
         "metrics": {
           "title": "Estudiantes reales",
@@ -2879,7 +3088,8 @@
             "title": "¿Ejecutar las pruebas de calificación?",
             "description": "Se califican {cases} respuestas {repeats} veces cada una, unas {calls} llamadas de IA con la clave de tu escuela.",
             "cancel": "Cancelar",
-            "run": "Ejecutar pruebas"
+            "run": "Ejecutar pruebas",
+            "descriptionAll": "Se ejecutan todas las pruebas de este ejercicio: {cases} respuestas a calificar (3 notas cada una), {coach} chats con el coach y {voice} llamadas de voz, unas {calls} llamadas a la IA con la clave de tu escuela."
           },
           "light": {
             "green": {

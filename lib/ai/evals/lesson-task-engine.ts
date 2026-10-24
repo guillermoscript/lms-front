@@ -87,20 +87,31 @@ Rules:
 - Never say you are an AI, a simulation or a test.
 `.trim()
 
+/** What the shared student/judge helpers need from an engine context (coach and voice engines reuse them). */
+export interface SimulatorContext {
+  models: { simulator: LanguageModel }
+  onModelCall?: () => void
+}
+export interface JudgeContext {
+  models: { judge: LanguageModel }
+  onModelCall?: () => void
+}
+
 /** The simulated student's next message (tutor messages are its "user" turns). */
-export async function simulateStudent(ctx: EngineContext, scenario: ScenarioInput, transcript: TranscriptMessage[]) {
+export async function simulateStudent(ctx: SimulatorContext, scenario: ScenarioInput, transcript: TranscriptMessage[]) {
   const flipped: ModelMessage[] = transcript.map((m) => ({
     role: m.role === 'user' ? 'assistant' : 'user',
     content: m.text,
   }))
   // The student speaks first, so the flipped history opens on an assistant
   // turn — which some providers reject. Open it with a neutral user turn.
+  // (A call where the tutor speaks first already opens on a user turn.)
   const opener: ModelMessage = { role: 'user', content: '(The lesson task starts. Send your first message to the tutor.)' }
   ctx.onModelCall?.()
   const { text } = await generateText({
     model: ctx.models.simulator,
     system: SIMULATOR_SYSTEM(scenario),
-    messages: [opener, ...flipped],
+    messages: flipped[0]?.role === 'user' ? flipped : [opener, ...flipped],
     experimental_telemetry: { functionId: 'eval-student-simulator' },
   })
   return text.trim().slice(0, EVAL_LIMITS.maxMessageChars) || '...'
@@ -122,7 +133,7 @@ function renderTranscript(transcript: TranscriptMessage[]) {
 
 /** Checks the tutor's side of a transcript against plain-language criteria. */
 export async function judgeTranscript(
-  ctx: EngineContext,
+  ctx: JudgeContext,
   input: { criteria: string[]; transcript: TranscriptMessage[]; reference?: TranscriptMessage[]; importanceNote?: string | null }
 ): Promise<CriterionVerdict[]> {
   const criteria = input.criteria.slice(0, EVAL_LIMITS.maxCriteria)
@@ -147,7 +158,7 @@ export async function judgeTranscript(
   })
 }
 
-function criteriaFor(testCase: EvalCaseRow, isGolden: boolean) {
+function criteriaFor(testCase: Pick<EvalCaseRow, 'must_keep' | 'importance_note'>, isGolden: boolean) {
   const criteria = [...testCase.must_keep]
   if (isGolden && testCase.importance_note) {
     criteria.push('In what the teacher cares about (see "why"), the tutor behaves like the reference conversation.')
@@ -155,9 +166,10 @@ function criteriaFor(testCase: EvalCaseRow, isGolden: boolean) {
   return criteria
 }
 
-async function finish(
-  ctx: EngineContext,
-  testCase: EvalCaseRow,
+/** Judges a finished conversation and folds the verdicts into the deviation. Shared by the coach and voice engines. */
+export async function finish(
+  ctx: JudgeContext,
+  testCase: Pick<EvalCaseRow, 'must_keep' | 'importance_note' | 'expected'> & { golden_output?: EvalCaseRow['golden_output'] },
   transcript: TranscriptMessage[],
   completed: boolean,
   completedTurn: number | null,
@@ -173,7 +185,7 @@ async function finish(
     completed,
     completedTurn,
     expected: testCase.expected,
-    golden: reference ? testCase.golden_output : null,
+    golden: reference ? (testCase.golden_output ?? null) : null,
     verdicts,
   })
   return { transcript, completed, completed_turn: completedTurn, verdicts, deviation, passed }

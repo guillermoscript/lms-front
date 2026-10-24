@@ -5,9 +5,10 @@ import { parseStructuredRequirements } from '@/lib/ai/lesson-requirements'
 import type { LessonTaskConfig, LessonTaskLesson } from '@/lib/ai/lesson-task-preview'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
-import { CLOSED_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
+import { CLOSED_EXERCISE_TYPES, EXTERNAL_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
 import { checkpointPassingScore } from '@/lib/checkpoints/grade-checkpoint-answer'
-import { isGradedEvalExerciseType, type EvalCaseRow, type ExamCaseRow, type GradedCaseRow } from './schema'
+import { parseConversationConfig, type ConversationConfig } from '@/lib/speech/conversation'
+import { isGradedEvalExerciseType, type CoachCaseRow, type EvalCaseRow, type ExamCaseRow, type ExerciseEvalSurface, type GradedCaseRow, type VoiceCaseRow } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -105,6 +106,37 @@ export function toGradedCaseRow(row: Record<string, unknown>): GradedCaseRow {
   return row as unknown as GradedCaseRow
 }
 
+export function toCoachCaseRow(row: Record<string, unknown>): CoachCaseRow {
+  return row as unknown as CoachCaseRow
+}
+
+export function toVoiceCaseRow(row: Record<string, unknown>): VoiceCaseRow {
+  return row as unknown as VoiceCaseRow
+}
+
+/** Whether an exercise type has a test surface: graded answers, coach chat or voice call. */
+export function exerciseSurfaceFits(surface: ExerciseEvalSurface, exerciseType: string): boolean {
+  if (surface === 'graded') return isGradedEvalExerciseType(exerciseType)
+  if (surface === 'voice') return exerciseType === 'real_time_conversation'
+  // The coach chat serves the exercise types without a dedicated flow.
+  return !(EXTERNAL_EXERCISE_TYPES as readonly string[]).includes(exerciseType)
+}
+
+/** The surface a case kind belongs to. */
+export function surfaceOfKind(kind: string): ExerciseEvalSurface | null {
+  if (kind === 'graded_answer') return 'graded'
+  if (kind === 'coach_scenario') return 'coach'
+  if (kind === 'voice_scenario') return 'voice'
+  return null
+}
+
+/** The surface used when a request names none. */
+export function defaultSurfaceForType(exerciseType: string): ExerciseEvalSurface | null {
+  if (isGradedEvalExerciseType(exerciseType)) return 'graded'
+  if (exerciseType === 'real_time_conversation') return 'voice'
+  return exerciseSurfaceFits('coach', exerciseType) ? 'coach' : null
+}
+
 export interface ExerciseTestsExercise {
   id: number
   title: string
@@ -122,7 +154,13 @@ export async function authorizeExerciseStaff(
   supabase: SupabaseClient,
   ctx: { userId: string; tenantId: string },
   exerciseId: number,
-  opts: { requireGraded?: boolean } = {}
+  /**
+   * `surface` names the test surface the call is for (default 'graded', the
+   * pre-F4 behaviour); a type the surface cannot serve is refused with 409
+   * `unsupported_type`. `'any'` accepts a type if some surface serves it,
+   * `null` skips the check.
+   */
+  opts: { surface?: ExerciseEvalSurface | 'any' | null } = {}
 ): Promise<{ role: 'teacher' | 'admin'; exercise: ExerciseTestsExercise } | { error: string; status: number }> {
   const { data: membership } = await supabase
     .from('tenant_users')
@@ -144,7 +182,14 @@ export async function authorizeExerciseStaff(
 
   const course = Array.isArray(exercise.courses) ? exercise.courses[0] : exercise.courses
   if (role !== 'admin' && course?.author_id !== ctx.userId) return { error: 'Forbidden', status: 403 }
-  if ((opts.requireGraded ?? true) && !isGradedEvalExerciseType(exercise.exercise_type)) return { error: 'unsupported_type', status: 409 }
+  const surface = opts.surface === undefined ? 'graded' : opts.surface
+  if (surface === 'any') {
+    if (!(['graded', 'coach', 'voice'] as const).some((s) => exerciseSurfaceFits(s, exercise.exercise_type))) {
+      return { error: 'unsupported_type', status: 409 }
+    }
+  } else if (surface !== null && !exerciseSurfaceFits(surface, exercise.exercise_type)) {
+    return { error: 'unsupported_type', status: 409 }
+  }
 
   return {
     role,
@@ -382,4 +427,47 @@ export async function ensureExamGraderVersion(admin: Admin, examId: number) {
 
 export function toExamCaseRow(row: Record<string, unknown>): ExamCaseRow {
   return row as unknown as ExamCaseRow
+}
+
+export interface ScenarioExercise {
+  title: string
+  description: string
+  instructions: string
+  system_prompt: string | null
+  exercise_type: string
+  exercise_config: Record<string, unknown>
+  /** Parsed voice config (only meaningful for real_time_conversation). */
+  conversation: ConversationConfig
+  passingScore: number
+}
+
+/**
+ * The saved exercise as the coach / voice tutor sees it, grading secrets
+ * merged back (service role), pinned to the authorized tenant. Includes
+ * `description`, which the coach prompt shows.
+ */
+export async function loadScenarioExercise(admin: Admin, exerciseId: number, tenantId: string): Promise<ScenarioExercise | null> {
+  const { data } = await admin
+    .from('exercises')
+    .select(`title, description, instructions, system_prompt, exercise_type, exercise_config, ${GRADING_SECRETS_EMBED}`)
+    .eq('id', exerciseId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!data) return null
+  const merged = withGradingSecrets(data as never as { exercise_config?: unknown; system_prompt?: string | null; exercise_grading_secrets?: unknown }) as {
+    exercise_config?: Record<string, unknown> | null
+    system_prompt?: string | null
+  }
+  const config = merged.exercise_config ?? {}
+  const conversation = parseConversationConfig(config)
+  return {
+    title: data.title,
+    description: (data as { description?: string | null }).description ?? '',
+    instructions: data.instructions ?? '',
+    system_prompt: merged.system_prompt ?? null,
+    exercise_type: data.exercise_type,
+    exercise_config: config,
+    conversation,
+    passingScore: data.exercise_type === 'real_time_conversation' ? conversation.passing_score : typeof config.passing_score === 'number' ? Math.min(100, Math.max(0, config.passing_score)) : 70,
+  }
 }

@@ -11,6 +11,7 @@ const TOOLS = [
   "lms_generate_eval_answers",
   "lms_run_evals",
   "lms_get_eval_run",
+  "lms_compare_eval_runs",
   "lms_list_eval_runs",
   "lms_get_task_version_metrics",
 ];
@@ -247,5 +248,159 @@ describe("exam reports", () => {
     expect(evals.describeEvalError(409, { error: "no_cases" }, "exam")).toMatch(/graded-exam/);
     expect(evals.describeEvalError(400, { error: "unknown_question" })).toMatch(/lms_get_exam/);
     expect(evals.describeEvalError(402, { error: "plan_required" })).toMatch(/AI grading/);
+  });
+});
+
+describe("coach and voice builders", () => {
+  it("builds a coach_scenario body and requires a persona and at most 5 script lines", () => {
+    expect(evals.buildCoachCaseBody({ name: "c", persona: " " }).ok).toBe(false);
+    expect(evals.buildCoachCaseBody({ name: "c", persona: "p", script: ["1", "2", "3", "4", "5", "6"] }).ok).toBe(false);
+    expect(evals.buildCoachCaseBody({ name: "c", persona: "cheater", goal: "get the answer", expected_completed: false, must_keep: ["no answer leak"] })).toEqual({
+      ok: true,
+      body: {
+        kind: "coach_scenario",
+        source: "teacher",
+        name: "c",
+        input: { persona: "cheater", goal: "get the answer", script: [], max_turns: 8 },
+        expected: { completed: false },
+        must_keep: ["no answer leak"],
+      },
+    });
+  });
+
+  it("builds a voice_scenario body with simulate_after_script defaulting to true and a score band", () => {
+    expect(evals.buildVoiceCaseBody({ name: "v", persona: "x", script: Array.from({ length: 11 }, (_, i) => `${i}`) }).ok).toBe(false);
+    expect(evals.buildVoiceCaseBody({ name: "v", persona: "x", score_min: 80, score_max: 60 }).ok).toBe(false);
+    const b = evals.buildVoiceCaseBody({ name: "v", persona: "one-word learner", expected_finished: true, expected_passed: false, score_min: 0, score_max: 69 });
+    expect(b).toMatchObject({
+      ok: true,
+      body: {
+        kind: "voice_scenario",
+        input: { persona: "one-word learner", simulate_after_script: true, max_turns: 8 },
+        expected: { finished: true, passed: false, score_min: 0, score_max: 69 },
+      },
+    });
+    const bare = evals.buildVoiceCaseBody({ name: "v", persona: "x" });
+    expect(bare.ok && bare.body.expected).toEqual({ finished: null, passed: null });
+  });
+
+  it("words unsupported_type per surface", () => {
+    expect(evals.describeEvalError(409, { error: "unsupported_type" }, "exercise", "voice")).toMatch(/real_time_conversation/);
+    expect(evals.describeEvalError(409, { error: "unsupported_type" }, "exercise", "coach")).toMatch(/Coach scenarios/);
+    expect(evals.describeEvalError(409, { error: "unsupported_type" }, "exercise")).toMatch(/essay/);
+  });
+
+  it("formats coach and voice cases with their expectations", () => {
+    const coach = evals.formatCase({ id: "c1", kind: "coach_scenario", name: "Cheater", expected: { completed: false }, input: { persona: "cheater", script: ["I'm done"] } } as never);
+    expect(coach).toContain("coach scenario");
+    expect(coach).toContain("should NOT");
+    const voice = evals.formatCase({ id: "v1", kind: "voice_scenario", name: "Bright", expected: { finished: true, passed: true, score_min: 70, score_max: 100 }, input: { persona: "on-level" } } as never);
+    expect(voice).toContain("text-simulated");
+    expect(voice).toContain("score band 70–100");
+  });
+
+  it("flags an unexpected coach completion and reports voice outcomes against the band", () => {
+    const results = [
+      { case_name: "Cheater", case_kind: "coach_scenario", completed: true, completed_turn: 2, expected: { completed: false }, output: { kind: "coach", completed: true, reasons: ["unexpected_completion"] }, deviation: null, passed: false, error: null },
+      { case_name: "Shy", case_kind: "voice_scenario", completed: true, completed_turn: null, expected: { finished: true, score_min: 70, score_max: 100 }, score: 55, output: { kind: "voice", finished: true, hints: 2, corrections_logged: 1, reasons: ["score_below_band"] }, deviation: null, passed: false, error: null },
+    ];
+    const md = evals.formatRunReport("r9", { status: "done", summary: { scenario: { total: 2, unexpected_completions: 1 } } }, results as never, false);
+    expect(md).toContain("FAILURE: the coach completed the exercise");
+    expect(md).toContain("score 55 (expected band 70–100)");
+    expect(md).toContain("hints 2, corrections 1");
+    expect(md).toContain("score_below_band");
+    expect(md).toContain("Voice cases are TEXT-simulated");
+    expect(md).toContain("Coach and voice scenarios:");
+  });
+});
+
+describe("compareRuns", () => {
+  const bundle = (id: string, results: unknown[], over: Record<string, unknown> = {}) => ({
+    id,
+    run: { status: "done", target_type: "exercise", target_id: 7, model_ids: { tutor: "openai/gpt" }, ai_config_versions: { version_no: 3 }, version_id: "ver-3", ...over },
+    results,
+  });
+  const row = (over: Record<string, unknown>) => ({
+    case_id: null, case_name: "c", case_kind: "graded_answer", completed: null, completed_turn: null,
+    expected: null, score: null, deviation: null, passed: true, error: null, output: null, ...over,
+  });
+
+  it("classifies regressions, fixes and unchanged by case id and reports score deltas", () => {
+    const a = bundle("ra", [
+      row({ case_id: "1", case_name: "x", score: 80, passed: true }),
+      row({ case_id: "2", case_name: "y", score: 40, passed: false }),
+      row({ case_id: "3", case_name: "z", score: 90, passed: true }),
+    ]);
+    const b = bundle("rb", [
+      row({ case_id: "1", case_name: "x renamed", score: 60, passed: false }),
+      row({ case_id: "2", case_name: "y", score: 85, passed: true }),
+      row({ case_id: "3", case_name: "z", score: 90, passed: true }),
+    ], { ai_config_versions: { version_no: 4 }, version_id: "ver-4" });
+    const c = evals.compareRuns(a, b);
+    expect(c.regressions.map((r) => r.case_name)).toEqual(["x"]);
+    expect(c.fixes.map((r) => r.case_name)).toEqual(["y"]);
+    expect(c.unchanged.map((r) => r.case_name)).toEqual(["z"]);
+    expect(c.deltas.find((d) => d.case_name === "x")?.score).toEqual({ a: 80, b: 60, diff: -20 });
+    expect(c.deltas.find((d) => d.case_name === "y")?.score?.diff).toBe(45);
+    expect(c.deltas.find((d) => d.case_name === "z")).toBeUndefined();
+    expect(c.a).toEqual({ id: "ra", version_no: 3, version_id: "ver-3", model_ids: { tutor: "openai/gpt" } });
+    expect(c.b.version_no).toBe(4);
+  });
+
+  it("falls back to the case name when ids are missing and lists only-in and errored cases", () => {
+    const a = bundle("ra", [row({ case_name: "shared", passed: true }), row({ case_name: "gone", passed: true }), row({ case_name: "broken", passed: true })]);
+    const b = bundle("rb", [row({ case_name: "shared", passed: false }), row({ case_name: "new" }), row({ case_name: "broken", passed: false, error: "grader timeout" })]);
+    const c = evals.compareRuns(a, b);
+    expect(c.regressions.map((r) => r.case_name)).toEqual(["shared"]);
+    expect(c.only_in_a).toEqual(["gone"]);
+    expect(c.only_in_b).toEqual(["new"]);
+    expect(c.errored).toEqual([{ case_name: "broken", side: "b", error: "grader timeout" }]);
+    expect(c.regressions.some((r) => r.case_name === "broken")).toBe(false);
+  });
+
+  it("does not match cases by name when both sides have different ids", () => {
+    const a = bundle("ra", [row({ case_id: "1", case_name: "same" })]);
+    const b = bundle("rb", [row({ case_id: "2", case_name: "same" })]);
+    const c = evals.compareRuns(a, b);
+    expect(c.only_in_a).toEqual(["same"]);
+    expect(c.only_in_b).toEqual(["same"]);
+  });
+
+  it("refuses runs that are not done or that test different targets", () => {
+    const done = bundle("ra", []);
+    expect(() => evals.compareRuns(done, bundle("rb", [], { status: "running" }))).toThrow(/running, not done/);
+    expect(() => evals.compareRuns(bundle("ra", [], { status: "failed" }), done)).toThrow(/failed, not done/);
+    expect(() => evals.compareRuns(done, bundle("rb", [], { target_id: 8 }))).toThrow(/different targets/);
+    expect(() => evals.compareRuns(done, bundle("rb", [], { target_type: "lesson" }))).toThrow(/different targets/);
+  });
+
+  it("reports completion flips, voice score and exam per-question deltas", () => {
+    const a = bundle("ra", [
+      row({ case_id: "1", case_name: "coach", case_kind: "coach_scenario", completed: true, passed: true }),
+      row({ case_id: "2", case_name: "voice", case_kind: "voice_scenario", score: 70, output: { kind: "voice", evaluation: { score: 70 } } }),
+      row({ case_id: "3", case_name: "exam", case_kind: "graded_exam", output: { questions: [{ question_id: "q1", median: 2 }, { question_id: "q2", median: 5 }] } }),
+    ]);
+    const b = bundle("rb", [
+      row({ case_id: "1", case_name: "coach", case_kind: "coach_scenario", completed: false, passed: true }),
+      row({ case_id: "2", case_name: "voice", case_kind: "voice_scenario", score: 85, output: { kind: "voice", evaluation: { score: 85 } } }),
+      row({ case_id: "3", case_name: "exam", case_kind: "graded_exam", output: { questions: [{ question_id: "q1", median: 2 }, { question_id: "q2", median: 3 }] } }),
+    ]);
+    const c = evals.compareRuns(a, b);
+    expect(c.deltas.find((d) => d.case_name === "coach")?.completed).toEqual({ a: true, b: false });
+    expect(c.deltas.find((d) => d.case_name === "voice")?.voice_score).toEqual({ a: 70, b: 85, diff: 15 });
+    expect(c.deltas.find((d) => d.case_name === "exam")?.questions).toEqual([{ question_id: "q2", a: 5, b: 3, diff: -2 }]);
+  });
+
+  it("formats the comparison with regressions first and large deltas", () => {
+    const a = bundle("ra", [row({ case_id: "1", case_name: "x", score: 80, passed: true }), row({ case_id: "2", case_name: "pipe | name", score: 10, passed: false })]);
+    const b = bundle("rb", [row({ case_id: "1", case_name: "x", score: 60, passed: false }), row({ case_id: "2", case_name: "pipe | name", score: 90, passed: true })], {
+      ai_config_versions: { version_no: 4 },
+    });
+    const md = evals.formatCompareReport(evals.compareRuns(a, b));
+    expect(md).toContain("# A v3 (tutor openai/gpt) vs B v4 (tutor openai/gpt)");
+    expect(md.indexOf("## Regressions")).toBeLessThan(md.indexOf("## Fixes"));
+    expect(md).toContain("| x | graded_answer | pass (80) | fail (60) |");
+    expect(md).toContain("pipe \\| name");
+    expect(md).toContain("## Score changes over 10 points");
   });
 });
