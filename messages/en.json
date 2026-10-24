@@ -3079,6 +3079,7 @@
             "history": "Run",
             "historyItem": "v{version} · {date}",
             "empty": "No runs yet. Run the tests to see how the AI grades your sample answers.",
+            "noResults": "This run had no sample answers. Add some and run again.",
             "version": "Exercise version v{version}",
             "failedReason": "The run failed: {reason}",
             "unknownError": "unknown error",

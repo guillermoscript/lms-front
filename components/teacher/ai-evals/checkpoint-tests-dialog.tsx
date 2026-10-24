@@ -18,7 +18,7 @@ export function CheckpointTestsDialog({ checkpointId }: { checkpointId: number }
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto pt-10 sm:max-w-3xl">
           <DialogTitle className="sr-only">{t('dialogTitle')}</DialogTitle>
           {open && <CheckpointTestsPanel checkpointId={checkpointId} />}
         </DialogContent>
