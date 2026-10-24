@@ -317,6 +317,8 @@ export default async function ExercisePage({ params }: PageProps) {
         <ExerciseChat
             apiEndpoint="/api/chat/exercises/student"
             exerciseId={exerciseId}
+            exerciseTitle={exercise.title}
+            exerciseDescription={exercise.description}
             initialMessages={initialMessages}
             isExerciseCompleted={isExerciseCompleted}
             profile={profile}

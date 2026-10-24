@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { IconRobot, IconPlayerPlay, IconRotateClockwise2, IconSparkles, IconStar } from '@tabler/icons-react'
+import { IconRobot, IconPlayerPlay, IconRotateClockwise2, IconStar } from '@tabler/icons-react'
 import {
   Conversation,
   ConversationContent,
@@ -36,7 +36,8 @@ import {
   useChatAttachmentInputProps,
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
-import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
+import { structuredRequirementsSummary, type StructuredRequirements } from '@/lib/ai/lesson-requirements'
+import { ChatKickoff, useExerciseKickoff, useLessonKickoff } from '@/components/ai/chat-kickoff'
 import { SaveGoldenDialog } from './ai-evals/save-golden-dialog'
 import type { EvalsProp } from './ai-evals/types'
 
@@ -69,6 +70,18 @@ function InnerAIPreviewModal({ type, config, evals }: AIPreviewModalProps) {
   const [open, setOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const { textInput } = usePromptInputController()
+
+  // Built from the live draft, so the opener tracks unsaved edits — the same
+  // text the student will see once it is saved.
+  const draftRequirements = config.requirements?.requirements.filter((requirement) => requirement.text.trim()) ?? []
+  const lessonKickoff = useLessonKickoff({
+    task: config.requirements && draftRequirements.length > 0
+      ? structuredRequirementsSummary({ ...config.requirements, requirements: draftRequirements })
+      : config.task_description ?? '',
+    requirementsCount: draftRequirements.length,
+  })
+  const exerciseKickoff = useExerciseKickoff({ title: config.exercise?.title, description: config.exercise?.description })
+  const kickoff = type === 'lesson' ? lessonKickoff : exerciseKickoff
 
   // What a student might actually say — including the two that must NOT work.
   const suggestions = [
@@ -183,14 +196,11 @@ function InnerAIPreviewModal({ type, config, evals }: AIPreviewModalProps) {
             <Conversation className="flex-1 bg-muted/10">
               <ConversationContent>
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-12 text-center">
-                    <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-5">
-                      <IconSparkles className="h-10 w-10 opacity-30" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">{t('readyTitle')}</h3>
-                    <p className="text-sm max-w-sm mx-auto leading-relaxed">{t('readyDesc')}</p>
-                  </div>
+                  <p className="mx-auto max-w-md text-center text-xs leading-relaxed text-muted-foreground">
+                    {t('readyDesc')}
+                  </p>
                 )}
+                <ChatKickoff text={kickoff} />
 
                 {messages.map((message) => (
                   <Message key={message.id} from={message.role as ComponentProps<typeof Message>['from']}>

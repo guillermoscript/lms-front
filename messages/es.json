@@ -2395,7 +2395,6 @@
         "buttonText": "Previsualizar IA",
         "modalTitle": "Modo de Vista Previa IA",
         "modalSubtitle": "Tú eres el estudiante. Esta es la conversación que tendrá.",
-        "readyTitle": "Listo para Previsualizar",
         "readyDesc": "Escribe como lo haría un estudiante. El tutor usa tus prompts actuales, aún sin guardar, y completa la lección por sí solo cuando la tarea está hecha.",
         "placeholder": "Responde como lo haría tu estudiante...",
         "placeholderCompleted": "Tarea completada. Reinicia para probar de nuevo.",
@@ -5950,10 +5949,6 @@
         "restarting": "Reiniciando...",
         "tryAgain": "Intentar de Nuevo"
       },
-      "emptyState": {
-        "title": "Tutor de IA listo",
-        "description": "¡Estoy listo para revisar tu trabajo! Escribe tu respuesta a continuación según la descripción de la tarea."
-      },
       "targetAchieved": "¡Objetivo Logrado!",
       "generating": "Generando respuesta...",
       "placeholders": {
@@ -8363,8 +8358,6 @@
       "ready": "Escribe tu respuesta o pide ayuda",
       "completed": "Completado",
       "restart": "Reiniciar conversación",
-      "emptyTitle": "Escribe tu respuesta aquí.",
-      "emptyBody": "El tutor puede explicarte la tarea o darte una pista, y califica tu trabajo cuando le pides que revise tu respuesta.",
       "markedComplete": "Ejercicio completado",
       "placeholder": "Escribe tu respuesta…",
       "suggestions": {
@@ -10851,5 +10844,16 @@
     "noResults": "No se encontraron resultados.",
     "clearFilters": "Quitar filtros",
     "columnActions": "Acciones de columna"
+  },
+  "aiKickoff": {
+    "lessonGreeting": "¡Hola! 👋 Soy tu tutor para esta lección.",
+    "taskHeading": "**Tu tarea:**",
+    "taskAbove": "Tu tarea está justo encima de este chat; dale una lectura rápida primero.",
+    "requirements": "Tienes que cubrir {count, plural, one {# punto} other {# puntos}}; la barra de arriba muestra tu progreso.",
+    "lessonStart": "**Cómo empezar:** envíame tu primer intento directamente, no hace falta saludar. Si te atascas, pídeme una pista (no te daré la respuesta). La lección se completa sola cuando demuestres que lo dominas.",
+    "exerciseGreeting": "¡Hola! 👋 Soy tu coach para **{title}**.",
+    "exerciseGreetingGeneric": "¡Hola! 👋 Soy tu coach para este ejercicio.",
+    "exerciseInstructions": "Las instrucciones completas están junto a este chat; léelas antes de empezar.",
+    "exerciseStart": "**Cómo empezar:** escribe aquí tu respuesta o un primer borrador. Te daré retroalimentación y pistas (no la respuesta) y marcaré el ejercicio como completado cuando cumpla el objetivo."
   }
 }

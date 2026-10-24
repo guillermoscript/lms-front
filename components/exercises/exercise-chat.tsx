@@ -37,12 +37,15 @@ import {
 } from "@/components/ai/chat-attachments";
 import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
 import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
+import { ChatKickoff, useExerciseKickoff } from "@/components/ai/chat-kickoff";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import type { ComponentProps } from "react";
 
 interface ExerciseChatProps {
     apiEndpoint: string;
     exerciseId: string;
+    exerciseTitle: string;
+    exerciseDescription?: string | null;
     initialMessages: UIMessage[];
     isExerciseCompleted: boolean;
     profile: { full_name?: string | null } | null;
@@ -53,6 +56,8 @@ const SUGGESTION_KEYS = ['start', 'explain', 'check', 'hint'] as const;
 function InnerExerciseChat({
     apiEndpoint,
     exerciseId,
+    exerciseTitle,
+    exerciseDescription,
     initialMessages,
     isExerciseCompleted: initialCompleted,
 }: ExerciseChatProps) {
@@ -64,6 +69,7 @@ function InnerExerciseChat({
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
     const { textInput } = usePromptInputController();
+    const kickoff = useExerciseKickoff({ title: exerciseTitle, description: exerciseDescription });
 
     const {
         messages,
@@ -183,16 +189,7 @@ function InnerExerciseChat({
             {/* Messages Area */}
             <Conversation>
                 <ConversationContent className="gap-4 sm:gap-8 p-3 sm:p-4">
-                    {messages.length === 0 && (
-                        // Says what the box is for. It used to be a robot tile
-                        // and a "Hi {name}!" over a paragraph about itself.
-                        <div className="flex min-h-full flex-col items-center justify-center p-4 text-center">
-                            <p className="max-w-sm text-base font-medium">{t('emptyTitle')}</p>
-                            <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                                {t('emptyBody')}
-                            </p>
-                        </div>
-                    )}
+                    <ChatKickoff text={kickoff} />
 
                     {messages.filter((m) => m.role !== 'system').map((message) => (
                         <Message
