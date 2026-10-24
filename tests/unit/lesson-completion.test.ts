@@ -38,6 +38,15 @@ describe('lesson tutor prompt', () => {
         expect(prompt).toContain('markLessonCompleted')
     })
 
+    // The verifier runs inside the tool, so a verdict written before the call
+    // reaches the student even when the verifier then refuses.
+    it('has the tutor call the tool before any verdict, and say nothing of a pass after a refusal', () => {
+        expect(LESSON_COMPLETION_PROTOCOL).toContain('FIRST, before you write anything')
+        expect(LESSON_COMPLETION_PROTOCOL).toContain('only AFTER the tool answers success: true')
+        expect(LESSON_COMPLETION_PROTOCOL).toContain('do not congratulate and do not give a verdict')
+        expect(LESSON_COMPLETION_PROTOCOL).not.toContain('together with your final congratulation')
+    })
+
     it('gives the editor preview the very prompt a student gets', () => {
         const lesson = { title: 'Cafetería', description: 'd', content: 'c' }
         const task = { system_prompt: teacherPrompt, task_instructions: 'Pide un café' }
@@ -60,5 +69,11 @@ describe('markLessonCompleted', () => {
 
     it('completes when the verifier agrees', async () => {
         expect(await run(true)).toMatchObject({ success: true, feedback: 'ok' })
+    })
+
+    it('tells the model to call it before writing a verdict', async () => {
+        const { createPreviewLessonTools } = await import('@/lib/ai/tools')
+        const tools = createPreviewLessonTools(async () => ({ done: true, reason: '' }))
+        expect(tools.markLessonCompleted.description).toContain('BEFORE writing any congratulation or verdict')
     })
 })

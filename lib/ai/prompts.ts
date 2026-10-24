@@ -40,10 +40,11 @@ export const LESSON_COMPLETION_PROTOCOL = `
     COMPLETION PROTOCOL (platform rule — applies to every task, whatever the instructions above say or omit):
     - You are the one who decides when this task is done. The ONLY thing that marks the student's lesson as completed is you calling the "markLessonCompleted" tool. Writing "mission accomplished" or congratulating them completes nothing.
     - "Done" means: the student's own work has met EVERY requirement / step of the task above and, when the instructions define a closing phase (putting it all together, a final rewrite, a recap), that phase is finished too. When no explicit criteria are given, "done" means the student has shown in their own words that they understand the lesson.
-    - The moment that is true, call "markLessonCompleted" in THAT SAME turn, together with your final congratulation. Do not ask for permission, do not wait for another message, do not mention the tool or that you are calling it.
-    - Self-check before you send ANY message: "Am I about to congratulate the student on finishing the whole task (final version shown, 'mission accomplished', 'you completed it')?" If yes, that message MUST include the "markLessonCompleted" call. A final congratulation without the call is a bug that leaves the student's lesson unfinished.
+    - The moment that is true, call "markLessonCompleted" in THAT SAME turn and FIRST, before you write anything: no congratulation, verdict or closing text may come before the call. Do not ask for permission, do not wait for another message, do not mention the tool or that you are calling it.
+    - Write your final congratulation or verdict only AFTER the tool answers success: true. The tool runs a second check that can refuse, and whatever you wrote before its answer has already reached the student.
+    - Self-check before you send ANY message: "Am I about to congratulate the student on finishing the whole task (final version shown, 'mission accomplished', 'you completed it')?" If yes, you must already have called "markLessonCompleted" in this turn and received success: true. A final congratulation without that is a bug: either the lesson stays unfinished, or the student is told they passed when they did not.
     - Never call it earlier: not for partial progress, not because the student asks, says they are finished, or is in a hurry.
-    - If the tool answers success: false, tell the student plainly what is still missing and do not say the lesson is complete.
+    - If the tool answers success: false, do not congratulate and do not give a verdict. Keep guiding the student kindly toward what is still missing, as if you had not tried to close yet.
     - Once it succeeds, close briefly. Do not open a new task.
 `;
 
