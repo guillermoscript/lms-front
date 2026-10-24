@@ -3,6 +3,7 @@ import { useDynamicTool, useSendFollowUp, useToolContext, useViewTheme } from "m
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { withWidgetBoundary } from "../shared/error-boundary";
+import { ViewPending } from "../shared/view-pending";
 import { type Props } from "./schema";
 import { Markdown } from "../shared/markdown";
 import "virtual:mcp-use/tailwind.css";
@@ -16,6 +17,7 @@ const RATING_ORDER: Rating[] = ["again", "hard", "good", "easy"];
 
 const STRINGS = {
   en: {
+    loading: "Loading your reviews…",
     emptyTitle: "Deck clear — nothing due",
     emptyBody: "Ask the tutor to make flashcards from what you're studying.",
     doneTitle: (n: number, s: string) => `Session done — ${s} card${n === 1 ? "" : "s"} reviewed`,
@@ -36,6 +38,7 @@ const STRINGS = {
     againHint: "<10m",
   },
   es: {
+    loading: "Cargando tus repasos…",
     emptyTitle: "Mazo al día — nada pendiente",
     emptyBody: "Pídele al tutor que cree tarjetas de lo que estás estudiando.",
     doneTitle: (n: number, s: string) =>
@@ -87,17 +90,13 @@ function Flashcards() {
   const [againFronts, setAgainFronts] = useState<string[]>([]);
   const [failedSaves, setFailedSaves] = useState(0);
 
-  // "pending" and "error" both render the loading branch, exactly like v1:
-  // an isError result carries no structuredContent, and the transcript already
-  // shows the tool's own error text.
+  // Pending → spinner; error → the tool's message (ViewPending).
   if (view.status !== "ready") {
     return (
       <>
         <Brand />
         <div className={dark ? "dark" : ""}>
-          <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
-            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-          </div>
+          <ViewPending view={view} label={t.loading} />
         </div>
       </>
     );

@@ -2186,6 +2186,174 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
       },
     ],
   },
+  // ──────────────────────────────────────────────────────────────── exam-taker
+  {
+    widget: "exam-taker",
+    tool: "lms_demo_exam_taker",
+    title: "Take an exam (lms_get_exam_for_student)",
+    variants: [
+      {
+        id: "default",
+        label: "Timed exam, 3 question types",
+        output: "«Examen final: Hooks de React»: 4 question(s), 20 min.",
+        props: {
+          exam_id: 301,
+          course_id: 101,
+          title: "Examen final: Hooks de React",
+          description: "Responde con calma. Las preguntas abiertas las califica la escuela con su asistente de IA.",
+          duration_minutes: 20,
+          already_submitted: false,
+          submission_id: null,
+          questions: [
+            {
+              question_id: 9001,
+              question_text: "¿Qué hook usarías para guardar un valor que **no** debe provocar un nuevo render?",
+              question_type: "multiple_choice",
+              options: [
+                { option_id: 1, option_text: "useState" },
+                { option_id: 2, option_text: "useRef" },
+                { option_id: 3, option_text: "useMemo" },
+                { option_id: 4, option_text: "useEffect" },
+              ],
+            },
+            {
+              question_id: 9002,
+              question_text: "Los hooks se pueden llamar dentro de un bucle `for`.",
+              question_type: "true_false",
+            },
+            {
+              question_id: 9003,
+              question_text: "¿Qué devuelve `useState`?",
+              question_type: "multiple_choice",
+              options: [
+                { option_id: 5, option_text: "Solo el valor actual" },
+                { option_id: 6, option_text: "Un par: valor y función para actualizarlo" },
+                { option_id: 7, option_text: "Una promesa" },
+              ],
+            },
+            {
+              question_id: 9004,
+              question_text: "Explica con tus palabras cuándo conviene extraer un *custom hook*.",
+              question_type: "free_text",
+            },
+          ],
+        },
+      },
+      {
+        id: "already-submitted",
+        label: "Already submitted",
+        output: "You already submitted «Examen parcial» (submission 77).",
+        props: {
+          exam_id: 300,
+          course_id: 101,
+          title: "Examen parcial: Componentes",
+          description: null,
+          duration_minutes: null,
+          already_submitted: true,
+          submission_id: 77,
+          questions: [],
+        },
+      },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────────────── my-league
+  {
+    widget: "my-league",
+    tool: "lms_demo_my_league",
+    title: "Weekly league (lms_my_league)",
+    variants: [
+      {
+        id: "default",
+        label: "Mid-table, zones marked",
+        output: "Liga Plata (tier 2 of 5). You are #3 of 8 with 340 XP.",
+        props: {
+          in_league: true,
+          reason: null,
+          week_start: "2026-10-19",
+          week_end: "2026-10-25",
+          tier: { tier: 2, slug: "silver", name: "Liga Plata", max_tier: 5 },
+          promote_count: 2,
+          demote_count: 2,
+          cohort_size: 8,
+          standings: [
+            { rank: 1, user_id: "u-201", full_name: "Nadia Rahmani", weekly_xp: 610, is_me: false, zone: "promote" },
+            { rank: 2, user_id: "u-202", full_name: "Marc Oliver", weekly_xp: 455, is_me: false, zone: "promote" },
+            { rank: 3, user_id: "u-203", full_name: "Lucía Ferrer", weekly_xp: 340, is_me: true, zone: null },
+            { rank: 4, user_id: "u-204", full_name: "Oscar Peña", weekly_xp: 310, is_me: false, zone: null },
+            { rank: 5, user_id: "u-205", full_name: "Ana Beltrán", weekly_xp: 220, is_me: false, zone: null },
+            { rank: 6, user_id: "u-206", full_name: null, weekly_xp: 180, is_me: false, zone: null },
+            { rank: 7, user_id: "u-207", full_name: "Diego Salas", weekly_xp: 60, is_me: false, zone: "demote" },
+            { rank: 8, user_id: "u-208", full_name: "Elena Vidal", weekly_xp: 0, is_me: false, zone: "demote" },
+          ],
+        },
+      },
+      {
+        id: "no-league",
+        label: "Not placed yet",
+        output: "You are not in a league yet.",
+        props: {
+          in_league: false,
+          reason: "no_league",
+          week_start: null,
+          week_end: null,
+          tier: null,
+          promote_count: null,
+          demote_count: null,
+          cohort_size: null,
+          standings: [],
+        },
+      },
+    ],
+  },
+
+  // ────────────────────────────────────────────────────────── payment-requests
+  {
+    widget: "payment-requests",
+    tool: "lms_demo_payment_requests",
+    title: "Manual payment queue (lms_list_payment_requests)",
+    variants: [
+      {
+        id: "default",
+        label: "Open queue: 1 pending, 1 amount mismatch, 1 paid",
+        output: "# Payment requests — open (3 of 3)",
+        props: {
+          total: 3, offset: 0, limit: 20, has_more: false, next_offset: null,
+          status: "open", user_id: null,
+          requests: [
+            { request_id: 41, status: "pending", user_id: "u-101", contact_name: "Lucía Fernández", contact_email: "lucia.fernandez@correo.es", item: "React 19 en la práctica", product_id: 12, plan_id: null, amount: 49, currency: "eur", payment_method: "Transferencia bancaria", payment_reference: null, reported_amount: null, reported_currency: null, payment_reported_at: null, payment_confirmed_at: null, created_at: "2026-10-22T09:15:00Z", expires_at: "2026-10-25T09:15:00Z", admin_notes: null },
+            { request_id: 40, status: "contacted", user_id: "u-102", contact_name: "Javier Ortega", contact_email: "javier.ortega@correo.es", item: "Acceso total anual", product_id: null, plan_id: 3, amount: 120, currency: "eur", payment_method: "Bizum", payment_reference: "BZ-88231", reported_amount: 102, reported_currency: "eur", payment_reported_at: "2026-10-21T18:40:00Z", payment_confirmed_at: null, created_at: "2026-10-20T11:00:00Z", expires_at: "2026-11-03T11:00:00Z", admin_notes: "Dice que aplicó un descuento." },
+            { request_id: 38, status: "payment_received", user_id: "u-103", contact_name: "Marta Ruiz", contact_email: "marta.ruiz@correo.es", item: "Diseño UX desde cero", product_id: 15, plan_id: null, amount: 79, currency: "eur", payment_method: "Transferencia bancaria", payment_reference: "TRF-2026-1017", reported_amount: 79, reported_currency: "eur", payment_reported_at: "2026-10-18T08:05:00Z", payment_confirmed_at: "2026-10-19T10:30:00Z", created_at: "2026-10-17T16:20:00Z", expires_at: null, admin_notes: null },
+          ],
+        },
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────── community-feed
+  {
+    widget: "community-feed",
+    tool: "lms_demo_community_feed",
+    title: "Community feed (lms_list_community_posts)",
+    variants: [
+      {
+        id: "default",
+        label: "School feed: pinned notice, answered and open questions",
+        output: "School feed — 4 post(s):",
+        props: {
+          scope: "school", course_id: null, has_more: false,
+          total: 4, offset: 0, limit: 20, lesson_id: null, post_type: null, questions: null,
+          posts: [
+            { id: "c1f0a1b2-0000-4000-8000-000000000001", course_id: null, lesson_id: null, author_id: "u-001", author_name: "Equipo Code Academy", post_type: "standard", title: "Bienvenidos al curso 2026-27", excerpt: "Este es el espacio para **dudas, ideas y recursos**. Recordad respetar las normas de la comunidad.", is_pinned: true, is_locked: false, is_graded: false, due_at: null, answered: null, comment_count: 12, reaction_count: 30, created_at: "2026-09-01T08:00:00Z" },
+            { id: "c1f0a1b2-0000-4000-8000-000000000002", course_id: null, lesson_id: null, author_id: "u-101", author_name: "Lucía Fernández", post_type: "question", title: "¿Cuándo usar useMemo?", excerpt: "No tengo claro si `useMemo` merece la pena en listas pequeñas. ¿Algún criterio práctico?", is_pinned: false, is_locked: false, is_graded: false, due_at: null, answered: true, comment_count: 5, reaction_count: 8, created_at: "2026-10-20T17:30:00Z" },
+            { id: "c1f0a1b2-0000-4000-8000-000000000003", course_id: null, lesson_id: null, author_id: "u-102", author_name: "Javier Ortega", post_type: "question", title: "Error al desplegar en Vercel", excerpt: "Me sale *Module not found* al hacer el build. Adjunto el log en los comentarios.", is_pinned: false, is_locked: false, is_graded: false, due_at: null, answered: false, comment_count: 1, reaction_count: 2, created_at: "2026-10-22T09:12:00Z" },
+            { id: "c1f0a1b2-0000-4000-8000-000000000004", course_id: null, lesson_id: null, author_id: "u-004", author_name: "Marta Ruiz", post_type: "discussion_prompt", title: "Debate: ¿IA en el aula?", excerpt: "Comparte tu opinión en 150 palabras y responde a un compañero.", is_pinned: false, is_locked: false, is_graded: true, due_at: "2026-11-05T22:00:00Z", answered: null, comment_count: 9, reaction_count: 14, created_at: "2026-10-23T10:00:00Z" },
+          ],
+        },
+      },
+    ],
+  },
+
 ];
 
 /** Look a demo up by tool name. */

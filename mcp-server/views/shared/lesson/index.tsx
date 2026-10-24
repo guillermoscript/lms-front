@@ -1,5 +1,6 @@
 import { getEmbedUrl, VideoFallbackLink } from "./components";
 import { LessonMdxContent } from "./renderer";
+import { useStrings } from "../i18n";
 
 export { LessonMdxContent } from "./renderer";
 export { getEmbedUrl } from "./components";
@@ -9,6 +10,11 @@ export { getEmbedUrl } from "./components";
  * (`app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/lesson-content.tsx`):
  * video first, then the custom embed when there is no video, then the MDX content.
  */
+const STRINGS = {
+  en: { video: "Video", embed: "Embedded content" },
+  es: { video: "Vídeo", embed: "Contenido incrustado" },
+};
+
 export function LessonBody({
   content,
   videoUrl,
@@ -20,6 +26,7 @@ export function LessonBody({
   embedCode?: string | null;
   emptyMessage?: string;
 }) {
+  const t = useStrings(STRINGS);
   const videoEmbedUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
   const hasContent = Boolean(content && content.trim());
 
@@ -38,7 +45,7 @@ export function LessonBody({
           <div className="aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-zinc-200 dark:ring-zinc-800">
             <iframe
               src={videoEmbedUrl}
-              title="Video"
+              title={t.video}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="h-full w-full border-0"
@@ -74,7 +81,7 @@ export function LessonBody({
         <iframe
           srcDoc={`<style>html,body{margin:0;height:100%}</style>${embedCode}`}
           sandbox="allow-scripts allow-popups"
-          title="Embedded content"
+          title={t.embed}
           className="aspect-video w-full overflow-hidden rounded-xl border-0"
         />
       )}

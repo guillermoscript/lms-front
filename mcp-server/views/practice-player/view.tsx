@@ -3,6 +3,7 @@ import { useDynamicTool, useSendFollowUp, useToolContext, useViewTheme } from "m
 import { Brand } from "../shared/branding";
 import { useStrings } from "../shared/i18n";
 import { withWidgetBoundary } from "../shared/error-boundary";
+import { ViewPending } from "../shared/view-pending";
 import { type Props, type Question } from "./schema";
 import "virtual:mcp-use/tailwind.css";
 
@@ -234,9 +235,7 @@ function PracticePlayer() {
       <>
         <Brand />
         <div className={dark ? "dark" : ""}>
-          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            {t.loading}
-          </div>
+          <ViewPending view={view} label={t.loading} />
         </div>
       </>
     );

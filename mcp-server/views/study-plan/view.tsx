@@ -3,6 +3,7 @@ import { useDynamicTool, useSendFollowUp, useToolContext, useViewTheme } from "m
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { withWidgetBoundary } from "../shared/error-boundary";
+import { ViewPending } from "../shared/view-pending";
 import { type Props, type Goal } from "./schema";
 import "virtual:mcp-use/tailwind.css";
 
@@ -17,6 +18,7 @@ const KIND_ORDER: Goal["kind"][] = ["lesson", "practice", "review", "exam_prep",
 
 const STRINGS = {
   en: {
+    loading: "Loading your study plan…",
     kinds: {
       lesson: "Lessons",
       practice: "Practice",
@@ -40,6 +42,7 @@ const STRINGS = {
     planNextWeek: "Plan next week with me",
   },
   es: {
+    loading: "Cargando tu plan de estudio…",
     kinds: {
       lesson: "Lecciones",
       practice: "Práctica",
@@ -80,16 +83,13 @@ function StudyPlan() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [saveError, setSaveError] = useState(false);
 
-  // "pending" and "error" both render the loading branch, exactly like v1:
-  // an isError result carries no structuredContent.
+  // Pending → spinner; error → the tool's message (ViewPending).
   if (view.status !== "ready") {
     return (
       <>
         <Brand />
         <div className={dark ? "dark" : ""}>
-          <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
-            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-          </div>
+          <ViewPending view={view} label={t.loading} />
         </div>
       </>
     );

@@ -3,7 +3,12 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
-import { errorResult } from "../format.js";
+import { text as textOutput } from "mcp-use";
+import { errorResult, viewResult as widget } from "../format.js";
+import {
+  PostSummarySchema,
+  propsSchema as listPostsPropsSchema,
+} from "../../views/community-feed/schema.js";
 import {
   CREATABLE_POST_TYPES,
   FEED_POST_TYPES,
@@ -227,31 +232,8 @@ function postText(post: Pick<PostRow, "post_type" | "content" | "milestone_type"
 
 // ── output schemas (exported for the unit tests) ────────────────────────────
 
-export const PostSummarySchema = z.object({
-  id: z.string(),
-  course_id: z.number().nullable(),
-  lesson_id: z.number().nullable(),
-  author_id: z.string(),
-  author_name: z.string().nullable(),
-  post_type: z.string(),
-  title: z.string().nullable(),
-  excerpt: z.string(),
-  is_pinned: z.boolean(),
-  is_locked: z.boolean(),
-  is_graded: z.boolean(),
-  due_at: z.string().nullable(),
-  answered: z.boolean().nullable().describe("Questions only: an answer has been accepted"),
-  comment_count: z.number(),
-  reaction_count: z.number(),
-  created_at: z.string(),
-});
-
-export const ListPostsOutput = z.object({
-  scope: z.enum(["school", "course"]),
-  course_id: z.number().nullable(),
-  posts: z.array(PostSummarySchema),
-  has_more: z.boolean(),
-});
+export { PostSummarySchema };
+export const ListPostsOutput = listPostsPropsSchema;
 
 export const GradeSchema = z.object({
   score: z.number(),
@@ -569,6 +551,7 @@ export function registerCommunityTools(server: LmsServer) {
         "List posts in the school's community feed, or a course's feed (course_id). Pinned first, then newest. Filter by post type, lesson, or unanswered/answered questions. Read one post and its comments with lms_get_community_post. Course feeds show students the posts of courses they are actively enrolled in.",
       inputSchema: ListPostsInput,
       outputSchema: ListPostsOutput,
+      view: { name: "community-feed" },
       annotations: READ,
     },
     async (input, ctx) =>
@@ -583,7 +566,7 @@ export function registerCommunityTools(server: LmsServer) {
         const supabase = session.getClient();
         let query = supabase
           .from("community_posts")
-          .select(POST_COLUMNS)
+          .select(POST_COLUMNS, { count: "exact" })
           .eq("tenant_id", session.getTenantId())
           .eq("is_hidden", false);
         query = input.course_id === undefined ? query.is("course_id", null) : query.eq("course_id", input.course_id);
@@ -598,7 +581,7 @@ export function registerCommunityTools(server: LmsServer) {
           query = query.eq("post_type", input.post_type);
         }
 
-        const { data, error } = await query
+        const { data, error, count } = await query
           .order("is_pinned", { ascending: false })
           .order("created_at", { ascending: false })
           .range(input.offset, input.offset + input.limit); // one extra row → has_more
@@ -616,10 +599,22 @@ export function registerCommunityTools(server: LmsServer) {
           posts.length === 0
             ? `${where}: no posts${input.offset ? " on this page" : " yet"}.`
             : `${where} — ${posts.length} post(s)${hasMore ? ` (more: offset=${input.offset + input.limit})` : ""}:\n${posts.map(summaryLine).join("\n")}`;
-        return result(
-          { scope, course_id: input.course_id ?? null, posts, has_more: hasMore } as z.infer<typeof ListPostsOutput>,
-          text
-        );
+        return widget({
+          props: {
+            scope,
+            course_id: input.course_id ?? null,
+            posts,
+            has_more: hasMore,
+            total: Math.max(count ?? 0, input.offset + posts.length),
+            // Echoed so "load more" keeps the same page size and filters.
+            offset: input.offset,
+            limit: input.limit,
+            lesson_id: input.lesson_id ?? null,
+            post_type: input.post_type ?? null,
+            questions: input.questions ?? null,
+          } as z.infer<typeof ListPostsOutput>,
+          output: textOutput(text),
+        });
       })
   );
 

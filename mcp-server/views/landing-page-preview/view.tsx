@@ -10,6 +10,7 @@ import {
 } from "../shared/contrast";
 import type { CSSProperties } from "react";
 import { withWidgetBoundary } from "../shared/error-boundary";
+import { ViewPending } from "../shared/view-pending";
 import { type Props, type Section } from "./schema";
 import "virtual:mcp-use/tailwind.css";
 
@@ -357,10 +358,7 @@ function LandingPagePreview() {
       <>
         <Brand />
         <div className={dark ? "dark" : ""}>
-          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-zinc-500 dark:border-zinc-800 dark:border-t-zinc-400" />
-            <p className="m-0 text-sm">{t.loading}</p>
-          </div>
+          <ViewPending view={view} label={t.loading} />
         </div>
       </>
     );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { propsSchema as myLeaguePropsSchema } from "../../views/my-league/schema.js";
 import { getLeagueStandings } from "@lms/core";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
@@ -58,28 +59,8 @@ export const markNotificationsReadOutput = z.object({
   marked: z.number(),
 });
 
-const standingSchema = z.object({
-  rank: z.number(),
-  user_id: z.string(),
-  full_name: z.string().nullable(),
-  weekly_xp: z.number(),
-  is_me: z.boolean(),
-  zone: z.enum(["promote", "demote"]).nullable(),
-});
-
-export const myLeagueOutput = z.object({
-  in_league: z.boolean(),
-  reason: z.string().nullable().describe("no_league or opted_out when not in a league"),
-  week_start: z.string().nullable(),
-  week_end: z.string().nullable(),
-  tier: z
-    .object({ tier: z.number(), slug: z.string(), name: z.string(), max_tier: z.number() })
-    .nullable(),
-  promote_count: z.number().nullable(),
-  demote_count: z.number().nullable(),
-  cohort_size: z.number().nullable(),
-  standings: z.array(standingSchema),
-});
+// The league widget owns the shape; re-exported for the tool and its tests.
+export const myLeagueOutput = myLeaguePropsSchema;
 
 type LeagueOutput = z.infer<typeof myLeagueOutput>;
 
@@ -327,6 +308,7 @@ export function registerNotificationTools(server: LmsServer) {
         "Show the caller's weekly league in this school: tier, week, their rank and XP, the standings, and who is in the promotion/demotion zone if the week ended now.",
       inputSchema: z.object({}),
       outputSchema: myLeagueOutput,
+      view: { name: "my-league" },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

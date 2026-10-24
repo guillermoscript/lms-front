@@ -28,6 +28,10 @@ import { propsSchema as artifactSandboxPropsSchema } from "../../views/artifact-
 import { propsSchema as landingPagePreviewPropsSchema } from "../../views/landing-page-preview/schema.js";
 import { propsSchema as myCertificatesPropsSchema } from "../../views/my-certificates/schema.js";
 import { propsSchema as courseCertificatesPropsSchema } from "../../views/course-certificates/schema.js";
+import { propsSchema as examTakerPropsSchema } from "../../views/exam-taker/schema.js";
+import { propsSchema as myLeaguePropsSchema } from "../../views/my-league/schema.js";
+import { propsSchema as paymentRequestsPropsSchema } from "../../views/payment-requests/schema.js";
+import { propsSchema as communityFeedPropsSchema } from "../../views/community-feed/schema.js";
 
 /**
  * Every demo tool renders a different, runtime-chosen widget (`demo.widget`
@@ -56,6 +60,10 @@ const WIDGET_PROPS_SCHEMAS: Record<string, z.ZodTypeAny> = {
   "landing-page-preview": landingPagePreviewPropsSchema,
   "my-certificates": myCertificatesPropsSchema,
   "course-certificates": courseCertificatesPropsSchema,
+  "exam-taker": examTakerPropsSchema,
+  "my-league": myLeaguePropsSchema,
+  "payment-requests": paymentRequestsPropsSchema,
+  "community-feed": communityFeedPropsSchema,
 };
 
 /**

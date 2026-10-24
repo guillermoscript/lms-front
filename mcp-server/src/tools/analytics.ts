@@ -14,6 +14,38 @@ import { propsSchema as studentProgressRosterPropsSchema } from "../../views/stu
 import { propsSchema as schoolOverviewPropsSchema } from "../../views/school-overview/schema.js";
 import { propsSchema as confusionHotspotsPropsSchema } from "../../views/confusion-hotspots/schema.js";
 
+/** PostgREST caps every response at `max_rows` (1000) without an error. */
+const PAGE_ROWS = 1000;
+/** Ids per `.in()` filter — keeps the request URL well under proxy limits. */
+const IN_CHUNK = 200;
+
+/**
+ * Read every row of a query instead of the first 1000. `page(from, to)` must
+ * build the query with a stable `.order()` and apply `.range(from, to)`.
+ * Ids are split into `.in()`-sized chunks first when given.
+ */
+async function fetchAllRows<T>(
+  page: (
+    from: number,
+    to: number,
+    ids: number[]
+  ) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
+  ids: number[] = [0]
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const chunk = ids.slice(i, i + IN_CHUNK);
+    for (let from = 0; ; from += PAGE_ROWS) {
+      const { data, error } = await page(from, from + PAGE_ROWS - 1, chunk);
+      if (error) throw new Error(error.message);
+      const batch = (data ?? []) as T[];
+      rows.push(...batch);
+      if (batch.length < PAGE_ROWS) break;
+    }
+  }
+  return rows;
+}
+
 /**
  * Resolve student display names by user id.
  *
@@ -417,6 +449,8 @@ export function registerAnalyticsTools(server: LmsServer) {
                 `question_id, question_text, question_type, question_options(option_id, option_text), ${EXAM_GRADING_SECRETS_EMBED}`
               )
               .eq("exam_id", sub.exam_id)
+              // Same order the student and the exam editor see (sequence, #1020).
+              .order("sequence", { ascending: true, nullsFirst: false })
               .order("question_id"),
             supabase
               .from("exam_question_scores")
@@ -1009,60 +1043,89 @@ export function registerAnalyticsTools(server: LmsServer) {
           if (c.status in byStatus) (byStatus as any)[c.status] += 1;
         }
 
-        // Bulk fetch (no N+1): enrollments, published lessons, completions, exams, submissions.
-        const [
-          { data: enrollments },
-          { data: lessons },
-          { data: exams },
-        ] = await Promise.all([
-          supabase
-            .from("enrollments")
-            .select("course_id, user_id, status")
-            .in("course_id", courseIds),
-          supabase
-            .from("lessons")
-            .select("id, course_id")
-            .eq("status", "published")
-            .in("course_id", courseIds),
-          supabase.from("exams").select("exam_id, course_id").in("course_id", courseIds),
+        // Bulk fetch (no N+1): enrollments, published lessons, completions,
+        // exams, submissions — every one paged past PostgREST's 1000-row cap,
+        // which otherwise truncates a real school's totals silently.
+        const [enrollments, lessonRows, examRows] = await Promise.all([
+          fetchAllRows<{ course_id: number; user_id: string; status: string }>(
+            (from, to, ids) =>
+              supabase
+                .from("enrollments")
+                .select("course_id, user_id, status")
+                .in("course_id", ids)
+                .order("enrollment_id")
+                .range(from, to),
+            courseIds
+          ),
+          fetchAllRows<{ id: number; course_id: number }>(
+            (from, to, ids) =>
+              supabase
+                .from("lessons")
+                .select("id, course_id")
+                .eq("status", "published")
+                .in("course_id", ids)
+                .order("id")
+                .range(from, to),
+            courseIds
+          ),
+          fetchAllRows<{ exam_id: number; course_id: number }>(
+            (from, to, ids) =>
+              supabase
+                .from("exams")
+                .select("exam_id, course_id")
+                .in("course_id", ids)
+                .order("exam_id")
+                .range(from, to),
+            courseIds
+          ),
         ]);
 
-        const lessonRows = (lessons as any[]) ?? [];
         const lessonToCourse = new Map<number, number>();
         const publishedByCourse = new Map<number, number>();
         for (const l of lessonRows) {
           lessonToCourse.set(l.id, l.course_id);
           publishedByCourse.set(l.course_id, (publishedByCourse.get(l.course_id) ?? 0) + 1);
         }
-        const lessonIds = lessonRows.map((l) => l.id as number);
+        const lessonIds = lessonRows.map((l) => l.id);
 
-        const examRows = (exams as any[]) ?? [];
         const examToCourse = new Map<number, number>();
         for (const e of examRows) examToCourse.set(e.exam_id, e.course_id);
-        const examIds = examRows.map((e) => e.exam_id as number);
+        const examIds = examRows.map((e) => e.exam_id);
 
         // Completions + submissions depend on the id lists above.
-        const [{ data: completions }, { data: submissions }] = await Promise.all([
+        const [completions, submissions] = await Promise.all([
           lessonIds.length > 0
-            ? supabase
-                .from("lesson_completions")
-                .select("user_id, lesson_id")
-                .in("lesson_id", lessonIds)
-            : Promise.resolve({ data: [] as any[] }),
+            ? fetchAllRows<{ user_id: string; lesson_id: number }>(
+                (from, to, ids) =>
+                  supabase
+                    .from("lesson_completions")
+                    .select("user_id, lesson_id")
+                    .in("lesson_id", ids)
+                    .order("id")
+                    .range(from, to),
+                lessonIds
+              )
+            : [],
           examIds.length > 0
-            ? supabase
-                .from("exam_submissions")
-                .select("exam_id, score")
-                .in("exam_id", examIds)
-                .not("score", "is", null)
-            : Promise.resolve({ data: [] as any[] }),
+            ? fetchAllRows<{ exam_id: number; score: number | null }>(
+                (from, to, ids) =>
+                  supabase
+                    .from("exam_submissions")
+                    .select("exam_id, score")
+                    .in("exam_id", ids)
+                    .not("score", "is", null)
+                    .order("submission_id")
+                    .range(from, to),
+                examIds
+              )
+            : [],
         ]);
 
         // Per-course accumulators.
         const activeEnrollByCourse = new Map<number, number>();
         const studentSet = new Set<string>();
         const activeEnrollPairs: { user: string; course: number }[] = [];
-        for (const e of (enrollments as any[]) ?? []) {
+        for (const e of enrollments) {
           if (e.status === "active") {
             activeEnrollByCourse.set(
               e.course_id,
@@ -1075,7 +1138,7 @@ export function registerAnalyticsTools(server: LmsServer) {
 
         const completionsByCourse = new Map<number, number>();
         const completedPair = new Set<string>(); // `${user}|${course}`
-        for (const c of (completions as any[]) ?? []) {
+        for (const c of completions) {
           const courseId = lessonToCourse.get(c.lesson_id);
           if (courseId == null) continue;
           completionsByCourse.set(courseId, (completionsByCourse.get(courseId) ?? 0) + 1);
@@ -1086,7 +1149,7 @@ export function registerAnalyticsTools(server: LmsServer) {
         const scoreCountByCourse = new Map<number, number>();
         let schoolScoreSum = 0;
         let schoolScoreCount = 0;
-        for (const s of (submissions as any[]) ?? []) {
+        for (const s of submissions) {
           const courseId = examToCourse.get(s.exam_id);
           if (courseId == null || s.score == null) continue;
           scoreSumByCourse.set(courseId, (scoreSumByCourse.get(courseId) ?? 0) + Number(s.score));
@@ -1296,7 +1359,7 @@ export function registerAnalyticsTools(server: LmsServer) {
         const evalsRes = await supabase
           .from("exercise_evaluations")
           .select(
-            "exercise_id, user_id, attempt_number, passed, score, created_at, exercises!inner(title, course_id)"
+            "exercise_id, user_id, attempt_number, passed, teacher_passed, score, created_at, exercises!inner(title, course_id)"
           )
           .eq("tenant_id", tenantId)
           .eq("exercises.course_id", input.course_id)
@@ -1311,6 +1374,8 @@ export function registerAnalyticsTools(server: LmsServer) {
             user_id: string;
             attempt_number: number;
             passed: boolean;
+            /** A teacher's regrade overrides the AI verdict (F5). */
+            teacher_passed: boolean | null;
             exercises: { title: string } | null;
           };
           const rows = (evalsRes.data ?? []) as unknown as EvalRow[];
@@ -1338,7 +1403,7 @@ export function registerAnalyticsTools(server: LmsServer) {
             };
             b.total.add(r.user_id);
             b.attempts.push(maxAttempts.get(key) ?? 1);
-            if (!r.passed) b.stuck.add(r.user_id);
+            if (!(r.teacher_passed ?? r.passed)) b.stuck.add(r.user_id);
             byExercise.set(r.exercise_id, b);
           }
           for (const [exerciseId, b] of byExercise) {
