@@ -3,8 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createTenantAi } from '@/lib/ai/tenant-ai'
 import { DRIFT_THRESHOLD } from './deviation'
 import { draftScenarios, runCase, type EngineContext } from './lesson-task-engine'
-import { CASE_COLUMNS, loadGradingExercise, snapshotToConfig, toCaseRow, toGradedCaseRow } from './store'
-import { runGradedCase } from './graded-answer-engine'
+import { CASE_COLUMNS, loadCheckpointGradingExercise, loadGradingExercise, snapshotToConfig, toCaseRow, toGradedCaseRow } from './store'
+import { runGradedCase, type GradedEngineContext } from './graded-answer-engine'
+import { gradeCheckpointAnswer } from '@/lib/checkpoints/grade-checkpoint-answer'
+import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
+import type { LanguageModel } from 'ai'
 import { EVAL_LIMITS, type CaseOutcome, type EvalCaseRow, type GradedCaseRow, type GradedOutcome, type GradedRunSummary, type RunSummary } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -30,7 +33,7 @@ function errorMessage(error: unknown) {
 export const STALE_RUN_MS = 20 * 60 * 1000
 
 /** Fails queued/running runs of a target that outlived their process, freeing its single active slot. */
-export async function freeStaleRuns(admin: Admin, tenantId: string, targetType: 'lesson_ai_task' | 'exercise', targetId: number) {
+export async function freeStaleRuns(admin: Admin, tenantId: string, targetType: 'lesson_ai_task' | 'exercise' | 'checkpoint', targetId: number) {
   await admin
     .from('ai_eval_runs')
     .update({ status: 'failed', error: 'Interrupted', finished_at: new Date().toISOString() })
@@ -124,6 +127,11 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
 
   if (run.target_type === 'exercise') {
     await executeExerciseRun(admin, { runId, tenantId, exerciseId: run.target_id, actorId: opts.actorId ?? null })
+    return
+  }
+
+  if (run.target_type === 'checkpoint') {
+    await executeCheckpointRun(admin, { runId, tenantId, checkpointId: run.target_id, actorId: opts.actorId ?? null })
     return
   }
 
@@ -235,20 +243,67 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
  * Graded-answer run: every case is graded GRADED_REPEATS times by the school's
  * exercise grader on the SAVED exercise; repeats fold into one result row.
  */
-async function executeExerciseRun(
+function executeExerciseRun(admin: Admin, run: { runId: string; tenantId: string; exerciseId: number; actorId: string | null }) {
+  return executeGradedRun(admin, {
+    runId: run.runId,
+    tenantId: run.tenantId,
+    targetType: 'exercise',
+    targetId: run.exerciseId,
+    actorId: run.actorId,
+    feature: 'exercise_grader',
+    load: () => loadGradingExercise(admin, run.exerciseId, run.tenantId),
+    missing: 'The exercise no longer exists.',
+  })
+}
+
+/** Checkpoint text-grader run: same engine, graded by the checkpoint's own prompt. */
+function executeCheckpointRun(admin: Admin, run: { runId: string; tenantId: string; checkpointId: number; actorId: string | null }) {
+  return executeGradedRun(admin, {
+    runId: run.runId,
+    tenantId: run.tenantId,
+    targetType: 'checkpoint',
+    targetId: run.checkpointId,
+    actorId: run.actorId,
+    feature: 'checkpoint_grader',
+    load: () => loadCheckpointGradingExercise(admin, run.checkpointId, run.tenantId),
+    missing: 'The checkpoint no longer exists.',
+    toGrade: (exercise, model) => async (content) => {
+      const graded = await gradeCheckpointAnswer(exercise, content, model)
+      const passingScore = exercise.passingScore
+      return {
+        score: graded.score,
+        passed: graded.score >= passingScore,
+        passingScore,
+        evaluation: { score: graded.score, feedback: graded.feedback, strengths: [], improvements: graded.next_step_hint ? [graded.next_step_hint] : [] },
+      }
+    },
+  })
+}
+
+async function executeGradedRun(
   admin: Admin,
-  run: { runId: string; tenantId: string; exerciseId: number; actorId: string | null }
+  run: {
+    runId: string
+    tenantId: string
+    targetType: 'exercise' | 'checkpoint'
+    targetId: number
+    actorId: string | null
+    feature: 'exercise_grader' | 'checkpoint_grader'
+    load: () => Promise<(WrittenGradingExercise & { passingScore: number }) | null>
+    missing: string
+    toGrade?: (exercise: WrittenGradingExercise & { passingScore: number }, model: LanguageModel) => GradedEngineContext['grade']
+  }
 ) {
-  const { runId, tenantId, exerciseId } = run
+  const { runId, tenantId, targetType, targetId } = run
   let modelCalls = 0
 
   try {
-    const exercise = await loadGradingExercise(admin, exerciseId, tenantId)
-    if (!exercise) throw new Error('The exercise no longer exists.')
+    const exercise = await run.load()
+    if (!exercise) throw new Error(run.missing)
 
     // A missing key fails here, before any case runs.
     const ai = createTenantAi(tenantId, { actorId: run.actorId })
-    const grader = await ai.getModelForFeature('exercise_grader')
+    const grader = await ai.getModelForFeature(run.feature)
     await admin
       .from('ai_eval_runs')
       .update({ model_ids: { grader: `${grader.providerId}/${grader.modelId}` } })
@@ -258,15 +313,20 @@ async function executeExerciseRun(
     const { data } = await admin
       .from('ai_eval_cases')
       .select(CASE_COLUMNS)
-      .eq('target_type', 'exercise')
-      .eq('target_id', exerciseId)
+      .eq('target_type', targetType)
+      .eq('target_id', targetId)
       .eq('tenant_id', tenantId)
       .eq('kind', 'graded_answer')
       .order('created_at')
       .limit(EVAL_LIMITS.maxCasesPerTarget)
     const cases = (data ?? []).map((row) => toGradedCaseRow(row as Record<string, unknown>))
 
-    const ctx = { grader: grader.model, exercise, onModelCall: () => { modelCalls++ } }
+    const ctx: GradedEngineContext = {
+      grader: grader.model,
+      exercise,
+      grade: run.toGrade?.(exercise, grader.model),
+      onModelCall: () => { modelCalls++ },
+    }
     const outcomes: { testCase: GradedCaseRow; outcome: GradedOutcome | null; error?: string }[] = []
 
     await mapLimit(cases, EVAL_LIMITS.concurrency, async (testCase) => {

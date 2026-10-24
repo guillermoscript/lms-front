@@ -2923,7 +2923,8 @@
               "median": "Mediana",
               "deviation": "Desviación",
               "result": "Resultado"
-            }
+            },
+            "nextStep": "Siguiente paso"
           },
           "errors": {
             "no_cases": "Añade al menos una respuesta de ejemplo antes de ejecutar las pruebas.",
@@ -2935,6 +2936,18 @@
             "generateFailed": "No se pudieron generar las respuestas de ejemplo. Inténtalo de nuevo.",
             "saveFailed": "No se pudo guardar el cambio. Inténtalo de nuevo.",
             "deleteFailed": "No se pudo eliminar el caso. Inténtalo de nuevo."
+          },
+          "checkpoint": {
+            "trigger": "Pruebas de calificación",
+            "dialogTitle": "Pruebas de calificación del checkpoint",
+            "title": "Pruebas de calificación del checkpoint",
+            "description": "Comprueba que la IA califica las respuestas de los estudiantes a este checkpoint como lo harías tú. Guarda respuestas de ejemplo con la nota que deberían recibir y ejecútalas.",
+            "unsupported": "El ejercicio de este checkpoint no admite respuestas escritas, por lo que no tiene pruebas de calificación.",
+            "errors": {
+              "run_in_progress": "Ya hay una ejecución en curso para este checkpoint.",
+              "case_limit": "Alcanzaste el límite de casos de prueba de este checkpoint.",
+              "unsupported_type": "El ejercicio de este checkpoint no admite respuestas escritas."
+            }
           }
         }
       }
