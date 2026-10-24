@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { generateText, Output } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -8,6 +7,7 @@ import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
 import { classifyProviderError, isAiError, markCredentialInvalid } from '@/lib/ai/errors'
 import { redact } from '@/lib/ai/byok/redact'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
+import { gradeCheckpointAnswer } from '@/lib/checkpoints/grade-checkpoint-answer'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -40,13 +40,6 @@ const bodySchema = z.discriminatedUnion('kind', [
   // Sync a completion produced by the exercise's own flow (code/media/artifact/conversation).
   z.object({ kind: z.literal('external') }),
 ])
-
-const aiEvaluationSchema = z.object({
-  score: z.number().min(0).max(100),
-  meets_expectations: z.boolean(),
-  feedback: z.string(),
-  next_step_hint: z.string(),
-})
 
 /** Logs name, status and a redacted message only, never a provider body or key. */
 function logAiFailure(err: unknown, code: string) {
@@ -221,15 +214,8 @@ export async function POST(
       aiUnavailable = true
     } else {
       try {
-        const systemPrompt =
-          exercise.system_prompt ??
-          (typeof config.system_prompt === 'string' ? config.system_prompt : null)
-        const criteria =
-          typeof config.evaluation_criteria === 'string'
-            ? config.evaluation_criteria
-            : ''
         const gradingModel = resolved
-        const { output: object } = await propagateAttributes(
+        const object = await propagateAttributes(
           {
             userId: user.id,
             metadata: {
@@ -241,18 +227,10 @@ export async function POST(
               modelId: gradingModel.modelId,
             },
           },
-          () => generateText({
-          model: gradingModel.model,
-          output: Output.object({ schema: aiEvaluationSchema }),
-          system: systemPrompt
-            ? `${systemPrompt}\n\nYou are evaluating one short student checkpoint answer. Be fair, concise, and formative.`
-            : 'You are an expert educational evaluator. Evaluate the student answer fairly and constructively. Be concise and formative.',
-          prompt: `## Exercise: ${exercise.title}\n\n## Instructions given to the student:\n${exercise.instructions}\n${criteria ? `\n## Evaluation criteria:\n${criteria}\n` : ''}\n## Student answer:\n${body.text}\n\nScore 0-100. "feedback" is 2-4 sentences of explanatory feedback; "next_step_hint" is one actionable next step. Respond in the language of the student's answer.`,
-          experimental_telemetry: { functionId: 'checkpoint-evaluator' },
-          }),
+          () => gradeCheckpointAnswer(exercise, body.text, gradingModel.model),
         )
         evaluatorType = 'ai'
-        score = Math.max(0, Math.min(100, Math.round(object.score)))
+        score = object.score
         passed = score >= passingScore
         feedback = object.feedback
         nextStepHint = object.next_step_hint

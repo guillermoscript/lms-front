@@ -23,6 +23,7 @@ import {
   type TeacherLessonCheckpoint,
   type CheckpointExerciseOption,
 } from '@/app/actions/teacher/lesson-checkpoints'
+import { CheckpointTestsDialog } from '@/components/teacher/ai-evals/checkpoint-tests-dialog'
 
 export interface CheckpointContext {
   courseId: number
@@ -200,6 +201,7 @@ export function CheckpointBlockEditor({ block, onChange, checkpointContext }: Ch
               disabled={saving}
             />
           </div>
+          <CheckpointTestsDialog checkpointId={selected.id} />
         </div>
       )}
 

@@ -2,7 +2,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
-import { authorizeExerciseStaff, authorizeLessonTaskStaff, type ExerciseTestsExercise } from './store'
+import { authorizeCheckpointStaff, authorizeExerciseStaff, authorizeLessonTaskStaff, type CheckpointTestsTarget, type ExerciseTestsExercise } from './store'
 
 export interface LessonTaskStaffContext {
   supabase: SupabaseClient
@@ -62,9 +62,38 @@ export async function exerciseStaff(
   return { supabase: auth.supabase, user: auth.user, tenantId: auth.tenantId, role: access.role, exercise: access.exercise }
 }
 
+export interface CheckpointStaffContext {
+  supabase: SupabaseClient
+  user: User
+  tenantId: string
+  role: 'teacher' | 'admin'
+  checkpoint: CheckpointTestsTarget
+}
+
+/** Cookie or Bearer (MCP) auth, then staff access to the checkpoint (text-graded ones only). */
+export async function checkpointStaff(
+  req: Request,
+  checkpointIdParam: string | number
+): Promise<CheckpointStaffContext | NextResponse> {
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new NextResponse('Unauthorized', { status: 401 })
+
+  const checkpointId = Number(checkpointIdParam)
+  if (!Number.isInteger(checkpointId) || checkpointId <= 0) return new NextResponse('Invalid checkpoint id', { status: 400 })
+
+  const access = await authorizeCheckpointStaff(auth.supabase, { userId: auth.user.id, tenantId: auth.tenantId }, checkpointId)
+  if ('error' in access) {
+    return access.error === 'unsupported_type'
+      ? NextResponse.json({ error: 'unsupported_type' }, { status: 409 })
+      : new NextResponse(access.error, { status: access.status })
+  }
+  return { supabase: auth.supabase, user: auth.user, tenantId: auth.tenantId, role: access.role, checkpoint: access.checkpoint }
+}
+
 export type EvalRowContext = { supabase: SupabaseClient; user: User; tenantId: string; role: 'teacher' | 'admin' } & (
   | { targetType: 'lesson_ai_task'; lesson: LessonTaskStaffContext['lesson']; row: { id: string; target_id: number } }
   | { targetType: 'exercise'; exercise: ExerciseTestsExercise; row: { id: string; target_id: number } }
+  | { targetType: 'checkpoint'; checkpoint: CheckpointTestsTarget; row: { id: string; target_id: number } }
 )
 
 /**
@@ -98,6 +127,12 @@ export async function evalStaffForRow(
     const access = await authorizeExerciseStaff(auth.supabase, ctx, row.target_id, { requireGraded: false })
     if ('error' in access) return new NextResponse(access.error, { status: access.status })
     return { ...base, role: access.role, targetType: 'exercise', exercise: access.exercise, row: ref }
+  }
+
+  if (row.target_type === 'checkpoint') {
+    const access = await authorizeCheckpointStaff(auth.supabase, ctx, row.target_id, { requireGraded: false })
+    if ('error' in access) return new NextResponse(access.error, { status: access.status })
+    return { ...base, role: access.role, targetType: 'checkpoint', checkpoint: access.checkpoint, row: ref }
   }
 
   const access = await authorizeLessonTaskStaff(auth.supabase, ctx, row.target_id)

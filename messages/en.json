@@ -2923,7 +2923,8 @@
               "median": "Median",
               "deviation": "Deviation",
               "result": "Result"
-            }
+            },
+            "nextStep": "Next step"
           },
           "errors": {
             "no_cases": "Add at least one sample answer before running tests.",
@@ -2935,6 +2936,18 @@
             "generateFailed": "Could not generate sample answers. Try again.",
             "saveFailed": "Could not save the change. Try again.",
             "deleteFailed": "Could not delete the case. Try again."
+          },
+          "checkpoint": {
+            "trigger": "Grading tests",
+            "dialogTitle": "Checkpoint grading tests",
+            "title": "Checkpoint grading tests",
+            "description": "Check that the AI grades student answers to this checkpoint the way you would. Save sample answers with the score they should get, then run them.",
+            "unsupported": "This checkpoint's exercise does not accept written answers, so it has no grading tests.",
+            "errors": {
+              "run_in_progress": "A run is already in progress for this checkpoint.",
+              "case_limit": "You reached the limit of test cases for this checkpoint.",
+              "unsupported_type": "This checkpoint's exercise does not accept written answers."
+            }
           }
         }
       }

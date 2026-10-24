@@ -8179,6 +8179,10 @@ export type Database = {
       }
     }
     Functions: {
+      ensure_checkpoint_grader_version: {
+        Args: { _checkpoint_id: number }
+        Returns: string
+      }
       ensure_exercise_grader_version: {
         Args: { _exercise_id: number }
         Returns: string
