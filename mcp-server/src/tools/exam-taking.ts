@@ -1,8 +1,12 @@
 import { z } from "zod";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
-import { ok, errorResult } from "../format.js";
+import { errorResult, structured } from "../format.js";
 import { getAppOrigin } from "../env.js";
+import {
+  propsSchema as examTakerPropsSchema,
+  submitResultSchema,
+} from "../../views/exam-taker/schema.js";
 
 /**
  * Take and submit a REAL exam as the caller (student tier).
@@ -195,14 +199,20 @@ export function registerExamTakingTools(server: LmsServer) {
       name: "lms_get_exam_for_student",
       description:
         "Fetch a published exam the caller may take, for presenting it to the student: title, duration (minutes), and each question with its type and options (option_id + text). Never includes answers or grading criteria. Requires course access. If the caller already submitted this exam, returns that fact (and the submission id) instead of the questions — exams are taken once; use lms_my_exam_results for the outcome. Answer format for lms_submit_exam: multiple_choice → the chosen option_id as a string; true_false → \"true\" or \"false\"; free_text → the student's text verbatim.",
-      schema: z.object({
+      inputSchema: z.object({
         exam_id: z.number().int().positive().describe("The exam to take"),
       }),
+      outputSchema: examTakerPropsSchema,
+      view: { name: "exam-taker" },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
+      },
+      _meta: {
+        "openai/toolInvocation/invoking": "Opening the exam...",
+        "openai/toolInvocation/invoked": "Exam ready",
       },
     },
     async (input, ctx) => {
@@ -221,12 +231,16 @@ export function registerExamTakingTools(server: LmsServer) {
         const existing = await existingSubmissionId(session, exam.exam_id);
         if ("error" in existing) return errorResult(existing.error);
         if (existing.id !== null) {
-          return ok(
+          return structured(
             {
               exam_id: exam.exam_id,
+              course_id: exam.course_id,
               title: exam.title,
+              description: exam.description,
+              duration_minutes: exam.duration,
               already_submitted: true,
               submission_id: existing.id,
+              questions: [],
             },
             `You already submitted "${exam.title}" (submission ${existing.id}). Use lms_my_exam_results for the outcome.`
           );
@@ -255,7 +269,7 @@ export function registerExamTakingTools(server: LmsServer) {
               : undefined,
         }));
 
-        return ok(
+        return structured(
           {
             exam_id: exam.exam_id,
             course_id: exam.course_id,
@@ -263,11 +277,12 @@ export function registerExamTakingTools(server: LmsServer) {
             description: exam.description,
             duration_minutes: exam.duration,
             already_submitted: false,
+            submission_id: null,
             questions,
           },
           questions.length === 0
             ? `"${exam.title}" has no questions yet.`
-            : `"${exam.title}": ${questions.length} question(s)${exam.duration ? `, ${exam.duration} min` : ""}. Present them to the student, collect THEIR answers, then call lms_submit_exam once. The exam can only be submitted one time, and you must never answer on their behalf.`
+            : `"${exam.title}": ${questions.length} question(s)${exam.duration ? `, ${exam.duration} min` : ""}. The exam is shown to the student in an interactive widget where they answer and submit it themselves. If the host cannot show the widget, present the questions, collect THEIR answers, then call lms_submit_exam once. The exam can only be submitted one time, and you must never answer on their behalf.`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -281,7 +296,7 @@ export function registerExamTakingTools(server: LmsServer) {
       name: "lms_submit_exam",
       description:
         "Submit the STUDENT'S OWN answers to an exam (from lms_get_exam_for_student) and have the platform grade it. Send exactly what the student answered — never guesses or your own answers; omit a question the student left blank. The attempt is one-time and counts (score, XP, certificates). The platform grades with the school's AI (you never choose the score): the result is the score and feedback, or status 'pending' when grading could not run (no AI key / provider down / needs teacher review) — the answers are saved either way; check lms_my_exam_results later. Only call when the student confirms they want to submit.",
-      schema: z.object({
+      inputSchema: z.object({
         exam_id: z.number().int().positive().describe("The exam being submitted"),
         answers: z
           .array(
@@ -298,6 +313,7 @@ export function registerExamTakingTools(server: LmsServer) {
           .max(200)
           .describe("One entry per answered question"),
       }),
+      outputSchema: submitResultSchema,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -363,16 +379,16 @@ export function registerExamTakingTools(server: LmsServer) {
           .eq("student_id", session.getUserId())
           .maybeSingle();
         if (!scored.error && scored.data && scored.data.score !== null) {
-          return ok(
-            { ...base, status: "graded", score: Number(scored.data.score) },
+          return structured(
+            { ...base, status: "graded" as const, score: Number(scored.data.score), overall_feedback: null },
             `"${exam.title}" was already submitted and graded: ${Number(scored.data.score)}. Use lms_my_exam_results for the per-question breakdown.`
           );
         }
 
         const appOrigin = getAppOrigin();
         if (!appOrigin) {
-          return ok(
-            { ...base, status: "pending", score: null },
+          return structured(
+            { ...base, status: "pending" as const, score: null, overall_feedback: null },
             `Answers for "${exam.title}" are saved (submission ${submissionId}) but grading is unavailable here: this MCP server has no LMS app address. The score will appear in the LMS app / lms_my_exam_results once graded.`
           );
         }
@@ -388,16 +404,16 @@ export function registerExamTakingTools(server: LmsServer) {
           const reason = outcome.ok
             ? "It was sent to the teacher for review."
             : outcome.reason;
-          return ok(
-            { ...base, status: "pending", score: null },
+          return structured(
+            { ...base, status: "pending" as const, score: null, overall_feedback: null },
             `Answers for "${exam.title}" are saved (submission ${submissionId}) and the exam counts as submitted, but it is not graded yet. ${reason} Check lms_my_exam_results later; do not estimate a score.`
           );
         }
 
-        return ok(
+        return structured(
           {
             ...base,
-            status: "graded",
+            status: "graded" as const,
             score: outcome.score,
             overall_feedback: outcome.overall_feedback,
           },

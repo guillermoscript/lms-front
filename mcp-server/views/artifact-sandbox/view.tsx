@@ -3,6 +3,7 @@ import { useDynamicTool, useToolContext, useViewTheme } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { withWidgetBoundary } from "../shared/error-boundary";
+import { ViewPending } from "../shared/view-pending";
 import { type Props } from "./schema";
 import "virtual:mcp-use/tailwind.css";
 
@@ -103,18 +104,13 @@ function ArtifactSandbox() {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // "pending" and "error" both render the loading branch, exactly like v1:
-  // an isError result carries no structuredContent, and the transcript already
-  // shows the tool's own error text.
+  // Pending → spinner; error → the tool's message (ViewPending).
   if (view.status !== "ready") {
     return (
       <>
         <Brand />
         <div className={dark ? "dark" : ""}>
-          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">{t.loading}</p>
-          </div>
+          <ViewPending view={view} label={t.loading} />
         </div>
       </>
     );

@@ -2,11 +2,13 @@ import { useSendFollowUp, useToolContext, useViewTheme } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { withWidgetBoundary } from "../shared/error-boundary";
+import { ViewPending } from "../shared/view-pending";
 import { type Props } from "./schema";
 import "virtual:mcp-use/tailwind.css";
 
 const STRINGS = {
   en: {
+    loading: "Checking your exam readiness…",
     title: (course: string) => `Exam readiness — ${course}`,
     noSignal: "No signal yet",
     noSignalHint: "Take a practice quiz to calibrate your readiness.",
@@ -22,6 +24,7 @@ const STRINGS = {
     today: "today",
   },
   es: {
+    loading: "Comprobando tu preparación para el examen…",
     title: (course: string) => `Preparación para el examen — ${course}`,
     noSignal: "Sin datos todavía",
     noSignalHint:
@@ -75,17 +78,13 @@ function ExamReadiness() {
   const t = useStrings(STRINGS);
   const fmt = useFormat();
 
-  // "pending" and "error" both render the loading branch, exactly like v1:
-  // an isError result carries no structuredContent, and the transcript already
-  // shows the tool's own error text.
+  // Pending → spinner; error → the tool's message (ViewPending).
   if (view.status !== "ready") {
     return (
       <>
         <Brand />
         <div className={dark ? "dark" : ""}>
-          <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
-            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-          </div>
+          <ViewPending view={view} label={t.loading} />
         </div>
       </>
     );

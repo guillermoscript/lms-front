@@ -2,7 +2,9 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
-import { errorResult } from "../format.js";
+import { text } from "mcp-use";
+import { errorResult, viewResult as widget } from "../format.js";
+import { propsSchema as paymentRequestsPropsSchema } from "../../views/payment-requests/schema.js";
 import { getTenantPlanUsage } from "../plan-limits.js";
 import {
   effectiveSchoolPercentage,
@@ -303,33 +305,6 @@ export const emptyInput = z.object({});
 
 
 
-const paymentRequestRow = z.object({
-  request_id: z.number(),
-  status: z.string(),
-  user_id: z.string(),
-  contact_name: z.string().nullable(),
-  contact_email: z.string().nullable(),
-  item: z.string().nullable(),
-  product_id: z.number().nullable(),
-  plan_id: z.number().nullable(),
-  amount: z.number().nullable(),
-  currency: z.string().nullable(),
-  payment_method: z.string().nullable(),
-  payment_reference: z.string().nullable(),
-  reported_amount: z.number().nullable(),
-  reported_currency: z.string().nullable(),
-  payment_reported_at: z.string().nullable(),
-  payment_confirmed_at: z.string().nullable(),
-  created_at: z.string().nullable(),
-  expires_at: z.string().nullable(),
-  admin_notes: z.string().nullable(),
-});
-
-const paymentRequestsOutput = z.object({
-  ...paginationOut,
-  requests: z.array(paymentRequestRow),
-});
-
 const transitionOutput = z.object({
   request_id: z.number(),
   previous_status: z.string(),
@@ -544,7 +519,8 @@ export function registerCommerceTools(server: LmsServer) {
       description:
         "Admin: list manual/offline payment requests (bank transfers etc.). Default shows the open queue (pending → contacted → payment_received). Shows what the student reported paying (reference, amount) next to what was asked.",
       inputSchema: listPaymentRequestsInput,
-      outputSchema: paymentRequestsOutput,
+      outputSchema: paymentRequestsPropsSchema,
+      view: { name: "payment-requests" },
       annotations: READ_ONLY,
     },
     async (input, ctx) => {
@@ -593,7 +569,14 @@ export function registerCommerceTools(server: LmsServer) {
             admin_notes: (r.admin_notes as string | null) ?? null,
           };
         });
-        const out = { ...page(count ?? requests.length, input.offset, requests.length), requests };
+        const out = {
+          ...page(count ?? requests.length, input.offset, requests.length),
+          // Echoed so the widget's "load more" repeats the same page size + filters.
+          limit: input.limit,
+          status: input.status,
+          user_id: input.user_id ?? null,
+          requests,
+        };
 
         const lines = [`# Payment requests — ${input.status} (${requests.length} of ${out.total})`, ""];
         for (const r of requests) {
@@ -605,7 +588,7 @@ export function registerCommerceTools(server: LmsServer) {
           );
         }
         if (requests.length === 0) lines.push("No payment requests found.");
-        return structured(out, lines.join("\n"));
+        return widget({ props: out, output: text(lines.join("\n")) });
       } catch (err) {
         return errorResult(message(err));
       }
