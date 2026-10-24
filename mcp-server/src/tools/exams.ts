@@ -140,6 +140,7 @@ export function registerExamTools(server: LmsServer) {
             )`
           )
           .eq("exam_id", exam_id)
+          .order("sequence", { referencedTable: "exam_questions", nullsFirst: false })
           .order("question_id", { referencedTable: "exam_questions" })
           .single();
 

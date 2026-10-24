@@ -58,6 +58,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
       .eq('exam_id', parseInt(examId))
       // exam_questions has no tenant_id column; isolation is enforced by RLS
       // via the parent exam (already validated above).
+      .order('sequence', { ascending: true, nullsFirst: false })
       .order('question_id', { ascending: true }),
     supabase
       .from('exam_answers')
@@ -131,11 +132,10 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
 
   // SubmissionReview reads `questions` and `answers` as their own props (not
   // nested under submission). It keys overrides by question id, so `id` must
-  // equal the answer's question_id. exam_questions has no `sequence` column,
-  // so fall back to question_id for ordering.
-  const questionsForReview = questionData.map(q => ({
+  // equal the answer's question_id. The query already returns exam order.
+  const questionsForReview = questionData.map((q, idx) => ({
     id: q.question_id,
-    sequence: q.question_id,
+    sequence: idx + 1,
     question_type: q.question_type,
     question_text: q.question_text,
     points_possible: q.points_possible,

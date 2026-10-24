@@ -84,6 +84,7 @@ export default async function ExamReviewPage({ params }: PageProps) {
         )
       `)
       .eq('exam_id', parseInt(examId))
+      .order('sequence', { ascending: true, nullsFirst: false })
       .order('question_id', { ascending: true }),
     supabase.rpc('get_exam_answer_key', { p_submission_id: submission.submission_id }),
   ])

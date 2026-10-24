@@ -239,6 +239,7 @@ export function registerExamTakingTools(server: LmsServer) {
             "question_id, question_text, question_type, question_options(option_id, option_text)"
           )
           .eq("exam_id", exam.exam_id)
+          .order("sequence", { ascending: true, nullsFirst: false })
           .order("question_id", { ascending: true });
         if (qRes.error) return errorResult(`Loading questions: ${qRes.error.message}`);
 

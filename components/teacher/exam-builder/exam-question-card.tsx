@@ -71,7 +71,9 @@ export function ExamQuestionCard({ question: q, index: qIdx }: ExamQuestionCardP
               size="sm"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => removeQuestion(q.id)}
-              aria-label={t('removeQuestion')}
+              disabled={q.answered}
+              aria-label={q.answered ? t('removeQuestionAnswered') : t('removeQuestion')}
+              title={q.answered ? t('removeQuestionAnswered') : undefined}
             >
               <IconTrash className="h-4 w-4" />
             </Button>

@@ -64,6 +64,7 @@ export default async function TakeExamPage({ params }: PageProps) {
     .eq('exam_id', parseInt(examId))
     .eq('status', 'published')
     .eq('tenant_id', tenantId)
+    .order('sequence', { foreignTable: 'exam_questions', ascending: true, nullsFirst: false })
     .order('question_id', { foreignTable: 'exam_questions', ascending: true })
     .single()
 
@@ -75,11 +76,11 @@ export default async function TakeExamPage({ params }: PageProps) {
   }
 
   // Format questions for the client component
-  const formattedQuestions = (exam.exam_questions || []).map((q: any) => ({
+  const formattedQuestions = (exam.exam_questions || []).map((q) => ({
     id: q.question_id,
     text: q.question_text,
     type: q.question_type as 'multiple_choice' | 'true_false' | 'free_text',
-    options: (q.question_options || []).map((o: any) => ({
+    options: (q.question_options || []).map((o) => ({
       id: o.option_id,
       text: o.option_text,
     })),
