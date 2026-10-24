@@ -95,7 +95,7 @@ export const createExerciseTools = (
 // the exact same tool in the editor preview as in the student's lesson.
 const MARK_LESSON_COMPLETED = {
     description:
-        'Marks this lesson as completed for the student. Call it in the same turn the student has met every requirement of the task (including any closing phase the instructions define). Never call it for partial progress or because the student asks.',
+        'Marks this lesson as completed for the student. Call it in the same turn the student has met every requirement of the task (including any closing phase the instructions define), BEFORE writing any congratulation or verdict: a second check can refuse, so write those only after it answers success: true. Never call it for partial progress or because the student asks.',
     inputSchema: z.object({
         feedback: z.string().describe('Brief positive feedback about the completion, in the language you use with the student.'),
     }),

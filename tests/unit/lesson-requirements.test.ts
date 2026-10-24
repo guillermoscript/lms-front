@@ -191,6 +191,35 @@ describe('lesson-completion-verifier min_student_turns rule', () => {
     })
 })
 
+describe('lesson-completion-verifier structured bar', () => {
+    // The tutor accepts an idea spread over several informal messages; the
+    // verifier must use the same bar or it refuses what the tutor just passed.
+    it('reads every student message and judges the idea, not the latest message alone', async () => {
+        vi.resetModules()
+        const generateTextSpy = vi.fn().mockResolvedValue({
+            output: { requirement_status: [{ id: 'r1', met: true }, { id: 'r2', met: true }], closing_phase: 'none_defined' },
+        })
+        vi.doMock('ai', () => ({ generateText: generateTextSpy, Output: { object: () => ({}) } }))
+        const { verifyLessonCompletion } = await import('@/lib/ai/lesson-completion-verifier')
+
+        const structured = structuredRequirementsSchema.parse({ ...validStructured, min_student_turns: 0, closing_phase: undefined })
+        const messages = [
+            { role: 'user', parts: [{ type: 'text', text: 'quiero una pagina con mis tortas' }] },
+            { role: 'assistant', parts: [{ type: 'text', text: 'Bien. ¿Y antes de que empiece?' }] },
+            { role: 'user', parts: [{ type: 'text', text: 'que me muestre el plan primero' }] },
+        ]
+
+        await verifyLessonCompletion({ model: FAKE_MODEL, structuredRequirements: structured, messages })
+        const { system, prompt } = generateTextSpy.mock.calls[0][0]
+        expect(system).toContain('Read ALL of the student')
+        expect(system).toContain('never demand more than it says')
+        expect(prompt).toContain('quiero una pagina con mis tortas')
+        expect(prompt).toContain('que me muestre el plan primero')
+        vi.doUnmock('ai')
+        vi.resetModules()
+    })
+})
+
 describe('lesson-completion-verifier failure policy', () => {
     const structured = structuredRequirementsSchema.parse({ ...validStructured, min_student_turns: 0, closing_phase: undefined })
     const messages = [{ role: 'user', parts: [{ type: 'text', text: 'I would like a large latte please' }] }]
