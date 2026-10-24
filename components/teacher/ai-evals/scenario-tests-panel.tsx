@@ -76,7 +76,7 @@ function PanelHeading({ surface, action }: { surface: ScenarioSurface; action?: 
   const Icon = surface === 'voice' ? IconMicrophone : IconFlask
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
+      <div className="flex min-w-64 flex-1 items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
           <Icon aria-hidden="true" className="h-5 w-5 text-brand-text" />
         </div>
@@ -87,7 +87,7 @@ function PanelHeading({ surface, action }: { surface: ScenarioSurface; action?: 
           <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
       </div>
-      {action}
+      {action && <div className="ms-auto shrink-0">{action}</div>}
     </div>
   )
 }

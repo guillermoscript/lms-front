@@ -77,7 +77,7 @@ function PanelHeading({ action, kind, embedded }: { action?: React.ReactNode; ki
   const Heading = embedded ? 'h2' : 'h3'
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
+      <div className="flex min-w-64 flex-1 items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
           <IconFlask aria-hidden="true" className="h-5 w-5 text-brand-text" />
         </div>
@@ -88,7 +88,7 @@ function PanelHeading({ action, kind, embedded }: { action?: React.ReactNode; ki
           <p className="text-sm text-muted-foreground">{t(`${p}description`)}</p>
         </div>
       </div>
-      {action}
+      {action && <div className="ms-auto shrink-0">{action}</div>}
     </div>
   )
 }
@@ -412,8 +412,10 @@ function SavedTests({ target, hasUnsavedChanges, embedded = false }: { target: E
             )}
             {isActive(detail.data.run) ? (
               <p className="text-xs text-muted-foreground">{t('run.inProgress')}</p>
+            ) : detailRun?.status === 'done' && results.length === 0 ? (
+              <p className="rounded-lg border border-dashed px-4 py-5 text-sm text-muted-foreground">{t('run.noResults')}</p>
             ) : (
-              detailRun?.status === 'done' && results.length > 0 && <TrafficLight summary={detailRun.summary} />
+              detailRun?.status === 'done' && <TrafficLight summary={detailRun.summary} />
             )}
             {(results.length > 0 || isActive(detail.data.run)) && <GradedSummaryTiles summary={detail.data.run.summary} />}
             {results.length > 0 && <GradedResultsTable results={results} nextStep={kind === 'checkpoint'} />}

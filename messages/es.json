@@ -3079,6 +3079,7 @@
             "history": "Ejecución",
             "historyItem": "v{version} · {date}",
             "empty": "Aún no hay ejecuciones. Ejecuta las pruebas para ver cómo la IA califica tus respuestas de ejemplo.",
+            "noResults": "Esta ejecución no tenía respuestas de muestra. Agrega algunas y ejecuta de nuevo.",
             "version": "Versión del ejercicio v{version}",
             "failedReason": "La ejecución falló: {reason}",
             "unknownError": "error desconocido",

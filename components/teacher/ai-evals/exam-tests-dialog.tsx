@@ -27,7 +27,7 @@ export function ExamTestsDialog({
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto pt-10 sm:max-w-4xl">
           <DialogTitle className="sr-only">{t('dialogTitle')}</DialogTitle>
           {open && <ExamTestsPanel examId={examId} questions={questions} hasUnsavedChanges={hasUnsavedChanges} />}
         </DialogContent>
