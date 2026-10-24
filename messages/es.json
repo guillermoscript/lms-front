@@ -2948,6 +2948,117 @@
               "case_limit": "Alcanzaste el límite de casos de prueba de este checkpoint.",
               "unsupported_type": "El ejercicio de este checkpoint no admite respuestas escritas."
             }
+          },
+          "exam": {
+            "trigger": "Pruebas de calificación",
+            "dialogTitle": "Pruebas de calificación del examen",
+            "title": "Pruebas de calificación del examen",
+            "description": "Comprueba que la IA califica las respuestas escritas de este examen como lo harías tú. Guarda entregas de ejemplo con los puntos que debe recibir cada respuesta y ejecútalas. Las preguntas de opción múltiple y de verdadero o falso se puntúan de forma exacta, sin IA.",
+            "unsavedBanner": "Las pruebas siempre se ejecutan sobre el examen guardado. Tus cambios sin guardar no se incluyen hasta que guardes.",
+            "staleBanner": "Cambiaste el examen desde la última ejecución. Guárdalo y vuelve a ejecutar las pruebas para revisar la nueva versión.",
+            "confirm": {
+              "description": "Esto califica {cases} entregas de ejemplo {repeats} veces cada una, unas {calls} llamadas a la IA con la clave de tu escuela."
+            },
+            "run": {
+              "empty": "Aún no hay ejecuciones. Ejecuta las pruebas para ver cómo la IA califica tus entregas de ejemplo.",
+              "version": "Versión del examen v{version}"
+            },
+            "cases": {
+              "title": "Entregas de ejemplo ({count}/{max})",
+              "description": "Cada entrega se califica 3 veces para medir la consistencia. Solo las {written} preguntas de respuesta escrita pasan por la IA; el resto se puntúa automáticamente.",
+              "generate": "Generar entregas de ejemplo",
+              "add": "Añadir entrega",
+              "empty": "Aún no hay entregas de ejemplo. Genera un conjunto, añade las tuyas o usa Probar calificación para guardar una.",
+              "summary": "{count} respuestas escritas · tolerancia ±{tolerance}%",
+              "categories": {
+                "strong": "Respuestas sólidas",
+                "mixed": "Respuestas mixtas",
+                "weak": "Respuestas débiles",
+                "injection": "Inyección de prompt",
+                "custom": "Personalizada"
+              },
+              "source": {
+                "preview": "De Probar calificación",
+                "teacher": "Escrita por ti",
+                "generated": "Generada"
+              },
+              "unverified": "Sin verificar",
+              "editedByYou": "Editada por ti",
+              "editAria": "Editar {name}",
+              "whyItMatters": "Por qué importa"
+            },
+            "editor": {
+              "addTitle": "Añadir una entrega de ejemplo",
+              "addDescription": "Responde las preguntas como lo haría un estudiante y define los puntos que debe recibir cada respuesta escrita.",
+              "editTitle": "Editar entrega de ejemplo",
+              "editDescription": "Los cambios marcan esta entrega como verificada por ti.",
+              "name": "Nombre",
+              "questionLabel": "Pregunta {n}",
+              "pointsLabel": "{points} pts",
+              "aiGraded": "Calificada por IA",
+              "autoScored": "Puntuación automática",
+              "answer": "Respuesta del estudiante",
+              "expectedPoints": "Puntos esperados (máx. {max})",
+              "closedHint": "Se puntúa automáticamente con la clave de respuestas. No se usa la IA.",
+              "true": "Verdadero",
+              "false": "Falso",
+              "emptyOption": "(opción vacía)",
+              "tolerance": "Tolerancia (%)",
+              "toleranceHint": "Cuánto pueden diferir los puntos de la IA de los tuyos, como porcentaje de los puntos de cada pregunta y del total.",
+              "note": "¿Por qué es importante esta entrega? (opcional)",
+              "tryHint": "Probar calificación ejecuta la IA una vez sobre tus respuestas escritas, sin guardar nada. Después puedes guardar el resultado como caso de prueba.",
+              "tryGrading": "Probar calificación",
+              "trying": "Calificando...",
+              "tryResult": "La IA calificaría esta entrega con {score}%.",
+              "aiPoints": "{earned}/{possible} pts",
+              "saveWithAi": "Guardar como caso de prueba",
+              "saveWithAiHint": "Guarda los puntos de la IA como puntos esperados. Revísalos: el caso queda sin verificar hasta que lo edites.",
+              "nameFirst": "Añade un nombre arriba para guardarlo como caso de prueba.",
+              "cancel": "Cancelar",
+              "saving": "Guardando...",
+              "save": "Guardar",
+              "errors": {
+                "previewFailed": "No se pudo calificar esta entrega. Inténtalo de nuevo.",
+                "plan_required": "Las pruebas de calificación con IA no están incluidas en tu plan actual.",
+                "no_ai_questions": "Este examen no tiene preguntas de respuesta escrita que calificar.",
+                "unknown_question": "Una pregunta de esta entrega ya no existe en el examen guardado. Guarda el examen e inténtalo de nuevo."
+              }
+            },
+            "report": {
+              "cols": {
+                "case": "Entrega",
+                "question": "Pregunta",
+                "expected": "Esperado",
+                "grades": "Notas (x{count})",
+                "median": "Mediana",
+                "deviation": "Desviación",
+                "flags": "Alertas",
+                "result": "Resultado"
+              },
+              "questionShort": "P{n}",
+              "questionUnknown": "Pregunta",
+              "points": "{earned}/{possible} pts",
+              "removed": "Pregunta eliminada del examen",
+              "total": "Total",
+              "flags": {
+                "auto": "Auto",
+                "flip": "Veredicto erróneo",
+                "inflated": "Inflada",
+                "unstable": "Inestable",
+                "removed": "Eliminada"
+              },
+              "overallFeedback": "Retroalimentación general",
+              "feedbackByQuestion": "Retroalimentación por pregunta"
+            },
+            "errors": {
+              "plan_required": "Las pruebas de calificación con IA no están incluidas en tu plan actual. Mejora tu plan para probar cómo la IA califica este examen.",
+              "no_ai_questions": "Este examen no tiene preguntas de respuesta escrita. Solo esas las califica la IA, así que no hay nada que probar.",
+              "unknown_question": "Una pregunta de esa entrega no está en el examen guardado. Guarda el examen e inténtalo de nuevo.",
+              "case_limit": "Alcanzaste el límite de casos de prueba de este examen.",
+              "run_in_progress": "Ya hay una ejecución en curso para este examen.",
+              "run_limit": "Alcanzaste el límite de ejecuciones de hoy. Inténtalo de nuevo mañana.",
+              "no_cases": "Añade al menos una entrega de ejemplo antes de ejecutar las pruebas."
+            }
           }
         }
       }

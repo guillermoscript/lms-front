@@ -111,3 +111,141 @@ describe("graded answers (exercise target)", () => {
     expect(evals.describeEvalError(409, { error: "unsupported_type" })).toMatch(/essay/);
   });
 });
+
+function captureHandlers() {
+  const handlers: Record<string, (input: Record<string, unknown>, ctx: unknown) => Promise<{ isError?: boolean; content: { text: string }[] }>> = {};
+  evals.registerEvalTools({
+    tool: (d: { name: string }, h: never) => {
+      handlers[d.name] = h as never;
+      return d;
+    },
+  } as never);
+  return handlers;
+}
+
+describe("exam target (exam_id)", () => {
+  it("resolves exam_id as a third target, exactly one of the three", () => {
+    expect(evals.resolveEvalTarget({ exam_id: 9 })).toMatchObject({ ok: true, kind: "exam", id: 9, base: "/exam/9" });
+    expect(evals.resolveEvalTarget({ exam_id: 9, lesson_id: 1 }).ok).toBe(false);
+    expect(evals.resolveEvalTarget({ exam_id: 9, exercise_id: 2 }).ok).toBe(false);
+    expect(evals.resolveEvalTarget({ lesson_id: 1, exercise_id: 2, exam_id: 3 }).ok).toBe(false);
+    expect(evals.resolveEvalTarget({}).ok).toBe(false);
+  });
+  it("maps each target to its ownership owner", () => {
+    expect(evals.ownerOfTarget({ kind: "exam", id: 9 })).toEqual({ exam: 9 });
+    expect(evals.ownerOfTarget({ kind: "exercise", id: 7 })).toEqual({ exercise: 7 });
+    expect(evals.ownerOfTarget({ kind: "lesson", id: 3 })).toBe(3);
+  });
+  it("builds the graded_exam case contract with tolerance defaults", () => {
+    const b = evals.buildExamCaseBody({ name: "c", answers: { q1: "text", q2: "A" }, expected_points: { q1: 4, q2: 2 } });
+    expect(b).toMatchObject({
+      ok: true,
+      body: {
+        kind: "graded_exam",
+        name: "c",
+        input: { answers: { q1: "text", q2: "A" } },
+        expected: {
+          questions: { q1: { points_earned: 4, tolerance: 10 }, q2: { points_earned: 2, tolerance: 10 } },
+          total_tolerance: 10,
+        },
+      },
+    });
+    const custom = evals.buildExamCaseBody({ name: "inj", answers: { q1: "x" }, expected_points: { q1: 0 }, tolerance: 5, category: "injection" });
+    expect(custom).toMatchObject({
+      ok: true,
+      body: { expected: { total_tolerance: 5, category: "injection", questions: { q1: { points_earned: 0, tolerance: 5 } } } },
+    });
+  });
+  it("requires both answers and expected_points", () => {
+    expect(evals.buildExamCaseBody({ name: "c", answers: {}, expected_points: { q1: 1 } }).ok).toBe(false);
+    expect(evals.buildExamCaseBody({ name: "c", answers: { q1: "x" }, expected_points: {} }).ok).toBe(false);
+  });
+  it("rejects mixing exam params with lesson or exercise params in the create tool", async () => {
+    const create = captureHandlers().lms_create_eval_case;
+    const examWithContent = await create(
+      { exam_id: 9, name: "n", answers: { q1: "x" }, expected_points: { q1: 1 }, content: "x" },
+      {}
+    );
+    expect(examWithContent.isError).toBe(true);
+    expect(examWithContent.content[0].text).toMatch(/don't apply to exam cases/);
+
+    const examWithKind = await create({ exam_id: 9, kind: "golden_chat", name: "n", answers: { q1: "x" }, expected_points: { q1: 1 } }, {});
+    expect(examWithKind.content[0].text).toMatch(/Exams only support kind 'graded_exam'/);
+
+    const examMissingPoints = await create({ exam_id: 9, name: "n", answers: { q1: "x" } }, {});
+    expect(examMissingPoints.content[0].text).toMatch(/expected_points/);
+
+    const lessonWithAnswers = await create(
+      { lesson_id: 1, kind: "golden_chat", name: "n", messages: [{ role: "user", text: "hi" }], answers: { q1: "x" } },
+      {}
+    );
+    expect(lessonWithAnswers.content[0].text).toMatch(/use exam_id/);
+
+    const exerciseWithPoints = await create(
+      { exercise_id: 2, name: "n", content: "x", expected_score: 50, expected_points: { q1: 1 } },
+      {}
+    );
+    expect(exerciseWithPoints.content[0].text).toMatch(/use exam_id/);
+
+    const mixedTargets = await create({ lesson_id: 1, exam_id: 9, kind: "golden_chat", name: "n", messages: [{ role: "user", text: "hi" }] }, {});
+    expect(mixedTargets.isError).toBe(true);
+    expect(mixedTargets.content[0].text).toMatch(/exactly one/);
+  });
+});
+
+describe("exam reports", () => {
+  it("formats a graded_exam case with per-question expectations", () => {
+    const md = evals.formatCase({
+      id: "c9",
+      kind: "graded_exam",
+      source: "teacher",
+      name: "Mid exam",
+      expected: { questions: { q1: { points_earned: 4, tolerance: 10 } }, total_tolerance: 10, category: "mixed" },
+      input: { answers: { q1: "a long answer" } },
+    } as never);
+    expect(md).toContain("graded exam, mixed");
+    expect(md).toContain("total tolerance ±10");
+    expect(md).toContain("question `q1`: expected 4 pts ±10 — answer: a long answer");
+  });
+  it("renders a per-question table for exam results", () => {
+    const results = [
+      {
+        case_name: "Mid exam",
+        case_kind: "graded_exam",
+        completed: null,
+        completed_turn: null,
+        expected: { questions: { q1: { points_earned: 4, tolerance: 10 }, q2: { points_earned: 2 } }, total_tolerance: 10, category: "mixed" },
+        scores: [50, 60, 55],
+        score: 55,
+        score_stddev: 5,
+        deviation: 3,
+        passed: true,
+        error: null,
+        output: {
+          overall_feedback: "solid",
+          questions: [
+            { question_id: "q1", auto: false, points_possible: 10, expected_points: 4, points_per_repeat: [4, 5, 4], median: 4, deviation: 0, flip: false, unstable: true, inflated: false },
+            { question_id: "q2", auto: true, points_possible: 5, expected_points: 2, points_per_repeat: [2], median: 2, deviation: 0, flip: false },
+            { question_id: "q3", auto: true, points_possible: 5, expected_points: 0, points_per_repeat: [0], median: 0, deviation: null, removed: true },
+          ],
+        },
+      },
+    ];
+    const md = evals.formatRunReport("r2", { status: "completed" }, results as never, false);
+    expect(md).toContain("**Mid exam** (graded exam, mixed) — expected total 40%");
+    expect(md).toContain("(repeats: 50, 60, 55, stddev 5)");
+    expect(md).toContain("| Question | Auto | Expected | Median | Deviation | Flags |");
+    expect(md).toContain("| `q1` | no | 4/10 | 4 | 0% | unstable |");
+    expect(md).toContain("| `q2` | yes | 2/5 | 2 | 0% | — |");
+    expect(md).toContain("| `q3` | yes | 0/5 | 0 | — | question removed |");
+    expect(md).toContain("solid");
+    expect(md).toContain("lms_update_exam_question");
+    expect(md).not.toContain("## Transcripts");
+  });
+  it("words the exam-specific errors", () => {
+    expect(evals.describeEvalError(409, { error: "no_ai_questions" }, "exam")).toMatch(/lms_add_exam_question/);
+    expect(evals.describeEvalError(409, { error: "no_cases" }, "exam")).toMatch(/graded-exam/);
+    expect(evals.describeEvalError(400, { error: "unknown_question" })).toMatch(/lms_get_exam/);
+    expect(evals.describeEvalError(402, { error: "plan_required" })).toMatch(/AI grading/);
+  });
+});
