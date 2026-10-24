@@ -2008,7 +2008,8 @@
         "aiTaskClosingPhasePlaceholder": "e.g. Ask the student to recap the order before paying",
         "aiTaskClosingPhaseHint": "Only needed if there is a final step after every requirement is met — a recap, a full rewrite, a summary.",
         "aiTaskMinTurnsLabel": "Minimum student messages",
-        "aiTaskMinTurnsHint": "The lesson can't be marked complete before the student has sent this many messages. Set to 0 to allow a complete answer on the first try."
+        "aiTaskMinTurnsHint": "The lesson can't be marked complete before the student has sent this many messages. Set to 0 to allow a complete answer on the first try.",
+        "aiEvalsSaveFirst": "Save the lesson to create tests."
       },
       "exerciseBuilder": {
         "details": "Details",
@@ -2410,7 +2411,8 @@
           "giveAnswer": "Just give me the answer",
           "claimDone": "I'm done, mark it as completed"
         },
-        "scoreLabel": "Score: {score}/100"
+        "scoreLabel": "Score: {score}/100",
+        "saveGolden": "Save as golden"
       },
       "activity": {
         "title": "Recent Activity",
@@ -2613,6 +2615,170 @@
       "imagePicker": {
         "title": "Choose an image",
         "description": "Reuse an image you already uploaded or add a new one."
+      },
+      "aiEvals": {
+        "title": "Task tests",
+        "description": "Save conversations you trust and simulate students, then run them against your task to see what changes before your students do.",
+        "staleBanner": "You changed the task: run the tests again to compare.",
+        "saveGolden": {
+          "title": "Save as golden",
+          "description": "A golden is a reference case: a conversation that went the way you want. Future versions of the task are compared against it.",
+          "nameLabel": "Name",
+          "noteLabel": "Why is this case important?",
+          "noteHint": "The judge uses this when comparing a new run against the saved chat.",
+          "expectedLabel": "What must always happen?",
+          "whatHappenedCompleted": "In this chat the student completed the task at turn {turn}.",
+          "whatHappenedNotCompleted": "In this chat the student did not complete the task.",
+          "expected": {
+            "complete": "Must complete",
+            "not_complete": "Must not complete",
+            "either": "Either"
+          },
+          "mustKeepLabel": "What must not change",
+          "mustKeepHint": "The tutor behaviours the judge checks in every run.",
+          "defaults": {
+            "reveal": "Does not reveal the answer",
+            "questions": "Guides with questions",
+            "onTask": "Stays on the task",
+            "language": "Replies in the course language and level"
+          },
+          "addCriterionPlaceholder": "Add your own criterion",
+          "addCriterion": "Add",
+          "cancel": "Cancel",
+          "saving": "Saving...",
+          "save": "Save golden",
+          "saved": "Golden saved",
+          "errors": {
+            "caseLimit": "You reached the limit of test cases for this task. Delete one first.",
+            "generic": "Could not save the golden. Try again.",
+            "tooManyCriteria": "Select at most 8 criteria."
+          }
+        },
+        "expected": {
+          "complete": "Must complete",
+          "not_complete": "Must not complete",
+          "either": "Either"
+        },
+        "cases": {
+          "deleteAria": "Delete {name}",
+          "deleteTitle": "Delete this case?",
+          "deleteDescription": "\"{name}\" will no longer be part of the tests. Past reports keep their results.",
+          "cancel": "Cancel",
+          "delete": "Delete",
+          "messageCount": "{count, plural, one {# message} other {# messages}}",
+          "source": {
+            "preview": "From preview",
+            "real_chat": "From a real student",
+            "teacher": "Written by you"
+          },
+          "whyItMatters": "Why it matters",
+          "mustKeep": "Must not change",
+          "expectedLabel": "Expected",
+          "editedByYou": "Edited by you",
+          "editAria": "Edit {name}",
+          "kindGolden": "Golden",
+          "kindScenario": "Simulation",
+          "edit": {
+            "title": "Edit simulated student",
+            "description": "Changes mark this case as yours, so it is not replaced when scenarios are regenerated.",
+            "name": "Name",
+            "persona": "Who is this student?",
+            "goal": "What do they try to do?",
+            "expected": "What must always happen?",
+            "mustKeep": "What must not change",
+            "mustKeepHint": "One criterion per line.",
+            "cancel": "Cancel",
+            "saving": "Saving...",
+            "save": "Save"
+          }
+        },
+        "errors": {
+          "no_cases": "Add at least one golden or simulation before running tests.",
+          "run_in_progress": "A run is already in progress for this task.",
+          "no_task": "This lesson has no AI task to test yet.",
+          "run_limit": "You reached today's limit of test runs. Try again tomorrow.",
+          "case_limit": "You reached the limit of test cases for this task.",
+          "runFailed": "Could not start the run. Try again.",
+          "generateFailed": "Could not generate simulated students. Try again.",
+          "saveFailed": "Could not save the change. Try again.",
+          "deleteFailed": "Could not delete the case. Try again.",
+          "load": "Could not load this section.",
+          "retry": "Retry"
+        },
+        "run": {
+          "button": "Run tests ({count})",
+          "starting": "Starting...",
+          "byok": "Runs on your school's AI key",
+          "title": "Latest run",
+          "history": "Run",
+          "historyItem": "v{version} · {date}",
+          "empty": "No runs yet. Run the tests to see how your task behaves.",
+          "version": "Task version v{version}",
+          "failedReason": "The run failed: {reason}",
+          "unknownError": "unknown error",
+          "inProgress": "Running the cases. This page updates by itself.",
+          "status": {
+            "queued": "Queued",
+            "running": "Running",
+            "done": "Done",
+            "failed": "Failed"
+          },
+          "tiles": {
+            "passed": "Passed",
+            "verdictChanges": "Verdict changes",
+            "avgDeviation": "Average deviation",
+            "modelCalls": "Model calls"
+          },
+          "deviation": {
+            "error": "Error",
+            "failed": "failed",
+            "drifted": "drifted",
+            "ok": "ok"
+          },
+          "student": "Student",
+          "tutor": "Tutor",
+          "noTranscript": "No conversation recorded.",
+          "transcript": "Conversation",
+          "verdicts": "Criteria",
+          "noVerdicts": "No criteria were checked.",
+          "verdictPassed": "Passed",
+          "verdictFailed": "Failed",
+          "cols": {
+            "case": "Case",
+            "kind": "Type",
+            "expected": "Expected",
+            "result": "Result",
+            "deviation": "Deviation"
+          },
+          "completedAt": "Completed at turn {turn}",
+          "notCompleted": "Not completed"
+        },
+        "goldens": {
+          "title": "Goldens",
+          "description": "Reference cases: chats you saved from the preview. Open the preview and use \"Save as golden\".",
+          "empty": "No goldens yet. Preview the task, have a conversation that went well and save it as a golden."
+        },
+        "scenarios": {
+          "title": "Simulations",
+          "description": "AI-simulated students with a persona and a goal. Nothing is generated unless you ask for it, and it uses your school's AI key.",
+          "empty": "No simulated students yet.",
+          "generate": "Generate simulated students",
+          "generating": "Generating...",
+          "regenerate": "Regenerate",
+          "autoRegenerate": "Regenerate when the task changes"
+        },
+        "metrics": {
+          "title": "Real students",
+          "description": "How students did with each version of this task.",
+          "empty": "No student has used this task yet.",
+          "cols": {
+            "version": "Version",
+            "students": "Students",
+            "completed": "Completed",
+            "median": "Median turns to complete",
+            "abandoned": "Abandoned"
+          }
+        }
       }
     },
     "admin": {
@@ -9421,6 +9587,18 @@
       "image_generation": {
         "name": "Image generation",
         "description": "Creates cover and lesson images."
+      },
+      "eval_simulator": {
+        "name": "Test student simulator",
+        "description": "Plays a simulated student when a teacher tests an AI task."
+      },
+      "eval_judge": {
+        "name": "Test judge",
+        "description": "Checks simulated and saved test conversations against the teacher’s criteria."
+      },
+      "eval_generator": {
+        "name": "Test case generator",
+        "description": "Drafts simulated students for a teacher’s AI task tests."
       }
     },
     "billing": {

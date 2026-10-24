@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { ImprovedTemplateSelector } from '../improved-template-selector'
 import { AIPreviewModal } from '../ai-preview-modal'
 import { useLessonEditor } from './lesson-editor-context'
+import { LessonTaskTestsPanel } from '../ai-evals/lesson-task-tests-panel'
 import { MarkdownField } from './markdown-field'
 import {
   DEFAULT_MIN_STUDENT_TURNS,
@@ -45,7 +46,7 @@ const emptyStructured = (): StructuredRequirements => ({
 })
 
 export function LessonAITaskStep() {
-  const { formData, savedTask, updateField, setFormData } = useLessonEditor()
+  const { formData, savedTask, updateField, setFormData, initialData } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
 
   const structured = formData.ai_task_requirements
@@ -71,6 +72,17 @@ export function LessonAITaskStep() {
   const state: TaskState = !hasDraft && !hasSaved ? 'none' : isDirty ? 'unsaved' : 'saved'
   const StateIcon =
     state === 'saved' ? IconCheck : state === 'unsaved' ? IconPencil : IconCircleDashed
+
+  const lessonId = initialData?.id
+  // The full config, exactly the fields the save action stores: a test version
+  // is keyed by a hash of all three, so an unchanged draft lands on the saved
+  // version. (The prompt builder already lets `requirements` take over.)
+  const evalDraft = {
+    task_instructions: formData.ai_task_description,
+    system_prompt: formData.ai_task_instructions,
+    requirements: structured ?? null,
+  }
+  const evals = lessonId ? { lessonId, draft: evalDraft } : undefined
 
   const setStructured = (next: StructuredRequirements) => updateField('ai_task_requirements', next)
 
@@ -196,6 +208,7 @@ export function LessonAITaskStep() {
               </div>
               <AIPreviewModal
                 type="lesson"
+                evals={evals}
                 config={{
                   task_description: formData.ai_task_description,
                   system_prompt: formData.ai_task_instructions,
@@ -244,6 +257,7 @@ export function LessonAITaskStep() {
               />
               <AIPreviewModal
                 type="lesson"
+                evals={evals}
                 config={{
                   requirements: structured,
                   lesson: {
@@ -377,6 +391,12 @@ export function LessonAITaskStep() {
           </div>
         </div>
       ) : null}
+
+      {lessonId ? (
+        <LessonTaskTestsPanel lessonId={lessonId} draft={evalDraft} hasUnsavedChanges={isDirty} />
+      ) : (
+        <p className="mt-10 border-t pt-6 text-sm text-muted-foreground">{t('aiEvalsSaveFirst')}</p>
+      )}
     </div>
   )
 }

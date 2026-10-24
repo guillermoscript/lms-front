@@ -24,6 +24,9 @@ export type AiFeature =
   | 'course_architect'
   | 'landing_builder'
   | 'image_generation'
+  | 'eval_simulator'
+  | 'eval_judge'
+  | 'eval_generator'
 
 export type AiFeatureKind = 'language' | 'object' | 'stt' | 'realtime' | 'image'
 
@@ -59,6 +62,12 @@ export const AI_FEATURES: Record<AiFeature, AiFeatureDef> = {
   // stays `landing_builder` so existing per-school model mappings carry over (no migration).
   landing_builder: { kind: 'language', needs: { tools: true }, area: 'admin', longRunning: true },
   image_generation: { kind: 'image', providers: ['openai', 'google'], area: 'teacher' },
+  // AI task tests (docs/plans/AI_EVALS_AND_SCENARIOS.md): the simulated student,
+  // the judge that checks a transcript, and the scenario drafter. The tutor and
+  // verifier under test always run on their own real features.
+  eval_simulator: { kind: 'language', inherits: 'lesson_tutor', area: 'teacher', longRunning: true },
+  eval_judge: { kind: 'object', needs: { structured: true }, inherits: 'lesson_verifier', area: 'teacher' },
+  eval_generator: { kind: 'object', needs: { structured: true }, inherits: 'question_generator', area: 'teacher' },
 }
 
 export const AI_FEATURE_IDS = Object.keys(AI_FEATURES) as AiFeature[]
