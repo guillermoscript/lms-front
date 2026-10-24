@@ -334,3 +334,160 @@ export interface GradedRunSummary {
   max_stddev: number
   model_calls: number
 }
+
+// ---------------------------------------------------------------------------
+// F3: exam grading (the AI grader of free-text exam questions)
+// ---------------------------------------------------------------------------
+
+export const EXAM_ANSWERS_MAX_QUESTIONS = 60
+export const EXAM_ANSWER_MAX_CHARS = 5000
+export const EXAM_ANSWERS_TOTAL_MAX_CHARS = 60000
+export const DEFAULT_EXAM_TOLERANCE = 10
+
+export const EXAM_CATEGORIES = ['strong', 'mixed', 'weak', 'injection', 'custom'] as const
+export type ExamCategory = (typeof EXAM_CATEGORIES)[number]
+
+/** `{ "<question_id>": "<free text, or the chosen option_id / true|false for closed questions>" }`. */
+export const examAnswersSchema = z
+  .record(z.string().regex(/^\d{1,10}$/, 'question ids are numeric'), z.string().max(EXAM_ANSWER_MAX_CHARS))
+  .superRefine((answers, ctx) => {
+    const entries = Object.values(answers)
+    if (entries.length === 0) ctx.addIssue({ code: 'custom', message: 'answers is empty' })
+    if (entries.length > EXAM_ANSWERS_MAX_QUESTIONS) ctx.addIssue({ code: 'custom', message: 'too many answers' })
+    if (entries.reduce((sum, a) => sum + a.length, 0) > EXAM_ANSWERS_TOTAL_MAX_CHARS) {
+      ctx.addIssue({ code: 'custom', message: 'answers too large' })
+    }
+  })
+export type ExamAnswers = z.infer<typeof examAnswersSchema>
+
+export const examQuestionExpectedSchema = z.object({
+  /** Points the grader should award (the median of the repeats is judged against it). */
+  points_earned: z.number().min(0).max(1000),
+  /** null/omitted = only the points are judged. */
+  is_correct: z.boolean().optional(),
+  /** Allowed gap, as a percentage of the question's points. */
+  tolerance: z.number().int().min(0).max(50).default(DEFAULT_EXAM_TOLERANCE),
+})
+export type ExamQuestionExpected = z.infer<typeof examQuestionExpectedSchema>
+
+const examQuestionExpectedMapSchema = z
+  .record(z.string().regex(/^\d{1,10}$/), examQuestionExpectedSchema)
+  .refine((m) => Object.keys(m).length > 0 && Object.keys(m).length <= EXAM_ANSWERS_MAX_QUESTIONS, 'expected needs 1-60 questions')
+
+export const examExpectedSchema = z.object({
+  /** Only free-text questions are judged; closed questions are scored exactly. */
+  questions: examQuestionExpectedMapSchema,
+  /** Allowed gap on the total percent score. */
+  total_tolerance: z.number().int().min(0).max(50).default(DEFAULT_EXAM_TOLERANCE),
+  category: z.enum(EXAM_CATEGORIES).optional(),
+})
+export type ExamExpected = z.infer<typeof examExpectedSchema>
+
+export const createExamCaseSchema = z.object({
+  kind: z.literal('graded_exam'),
+  source: z.enum(['preview', 'teacher']).default('teacher'),
+  name: caseBase.name,
+  importance_note: caseBase.importance_note,
+  input: z.object({ answers: examAnswersSchema }),
+  expected: examExpectedSchema,
+})
+export type CreateExamCaseInput = z.infer<typeof createExamCaseSchema>
+
+/** Partial: answers and expected.questions merge into what is stored. */
+export const updateExamCaseSchema = z.object({
+  name: caseBase.name.optional(),
+  importance_note: caseBase.importance_note,
+  input: z.object({ answers: z.record(z.string().regex(/^\d{1,10}$/), z.string().max(EXAM_ANSWER_MAX_CHARS)) }).optional(),
+  expected: z
+    .object({
+      questions: z.record(z.string().regex(/^\d{1,10}$/), examQuestionExpectedSchema).optional(),
+      total_tolerance: z.number().int().min(0).max(50).optional(),
+      category: z.enum(EXAM_CATEGORIES).optional(),
+    })
+    .optional(),
+})
+export type UpdateExamCaseInput = z.infer<typeof updateExamCaseSchema>
+
+/** A graded_exam row as the cases routes return it. */
+export interface ExamCaseRow {
+  id: string
+  kind: 'graded_exam'
+  source: 'preview' | 'generated' | 'teacher'
+  name: string
+  importance_note: string | null
+  expected: ExamExpected
+  input: { answers: ExamAnswers }
+  golden_output: null
+  generated_for_version_id: string | null
+  teacher_edited: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ExamQuestionOutcome {
+  question_id: number
+  question_type: string
+  /** Closed question scored exactly, no AI. */
+  auto: boolean
+  points_possible: number
+  /** null for auto rows (nothing was expected of the AI). */
+  expected_points: number | null
+  points_per_repeat: number[]
+  median: number
+  /** Gap to expected_points as a percentage of points_possible (0 for auto rows). */
+  deviation: number
+  is_correct_majority: boolean
+  /** The majority is_correct differs from the expected is_correct. */
+  flip: boolean
+  /** Some repeat disagreed with the expected is_correct (or strayed beyond tolerance) while the majority held. */
+  unstable: boolean
+  /** Injection case where a repeat scored above expected + tolerance. */
+  inflated?: boolean
+  feedback: string
+  /** The case holds an answer for a question deleted from the exam since. */
+  removed?: boolean
+}
+
+export type ExamReason = 'out_of_tolerance' | 'total_out_of_tolerance' | 'flip' | 'inflated'
+
+export interface ExamOutput {
+  questions: ExamQuestionOutcome[]
+  overall_feedback: string
+  reasons?: ExamReason[]
+}
+
+export interface ExamOutcome {
+  /** Total percent score (rounded) per repeat. */
+  scores: number[]
+  /** Median of scores. */
+  score: number
+  score_stddev: number
+  /** Total deviation: |median percent - expected percent|, 0-100. */
+  deviation: number
+  /** Number of free-text questions whose majority is_correct flipped. */
+  question_flips: number
+  ok: boolean
+  reasons: ExamReason[]
+  output: ExamOutput | null
+  error?: string
+}
+
+export interface ExamRunSummary extends GradedRunSummary {
+  question_flips: number
+}
+
+export interface ExamPreviewQuestion {
+  question_id: number
+  question_type: string
+  auto: boolean
+  points_earned: number
+  points_possible: number
+  is_correct: boolean
+  feedback: string
+}
+
+export interface ExamPreviewResult {
+  questions: ExamPreviewQuestion[]
+  score: number
+  overall_feedback: string
+}
