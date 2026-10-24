@@ -3,10 +3,8 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { reportStreamError, streamErrorText } from '@/lib/ai/errors'
-import { PROMPTS } from '@/lib/ai/prompts'
-import { createPreviewLessonTools } from '@/lib/ai/tools'
-import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
-import { requirementIds, structuredRequirementsSchema } from '@/lib/ai/lesson-requirements'
+import { buildPreviewLessonTask } from '@/lib/ai/lesson-task-preview'
+import { structuredRequirementsSchema } from '@/lib/ai/lesson-requirements'
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { lastUserMessageHasAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
@@ -97,22 +95,13 @@ export async function POST(req: Request) {
         },
         () => streamText({
           model: tutor.model,
-          system: PROMPTS.previewLesson(lesson ?? {}, {
-            task_instructions: task_description || undefined,
-            system_prompt: system_prompt || undefined,
-            requirements: structuredRequirements,
+          ...buildPreviewLessonTask({
+            verifierModel: verifier.model,
+            lesson: lesson ?? {},
+            config: { task_instructions: task_description, system_prompt, requirements: structuredRequirements },
+            messages,
           }),
           messages: modelMessages,
-          tools: createPreviewLessonTools(
-            () => verifyLessonCompletion({
-              model: verifier.model,
-              taskInstructions: task_description,
-              teacherPrompt: system_prompt,
-              structuredRequirements,
-              messages,
-            }),
-            requirementIds(structuredRequirements)
-          ),
           experimental_telemetry: { functionId: 'preview-lesson-task' },
           onError: ({ error }) =>
             reportStreamError(error, { feature: 'lesson_tutor', tenantId, userId: user.id, providerId: tutor.providerId }),

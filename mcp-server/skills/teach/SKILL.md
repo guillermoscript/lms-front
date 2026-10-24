@@ -138,3 +138,15 @@ Glossaries, in particular, are an essential reference. Once one is created, it s
 ## `NOTES.md`
 
 The user will sometimes express preferences of how they want to be taught, or things you should keep in mind. This is the place to record those preferences, so you can refer back to them when designing lessons or working with the user.
+
+## Testing an AI task
+
+When a lesson uses an AI task (a tutor the student chats with to complete an activity), test it before students do, and again after every prompt change. The tools delegate to the platform; you never call a model yourself.
+
+1. Read the task with `lms_get_lesson_ai_task`; create or edit it with `lms_upsert_lesson_ai_task`.
+2. Build cases: `lms_generate_eval_scenarios` drafts simulated students; `lms_create_eval_case` saves a golden chat (a conversation that must keep working) or a hand-written scenario. Set `expected_completed` and short `must_keep` criteria. Cover typical, struggling, off-topic and trying-to-skip students.
+3. `lms_run_evals`, wait 1–3 minutes, then `lms_get_eval_run` (add `include_transcripts: true` to read the conversations).
+4. Fix the prompt only for what the failures show, run again, and compare with `lms_list_eval_runs`. Never edit a case just to make it pass.
+5. Once real students use it, `lms_get_task_version_metrics` shows completion and abandonment per version.
+
+If a tool says the school's AI is not configured, an admin must add the school's AI key in the dashboard.

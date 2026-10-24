@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { IconRobot, IconPlayerPlay, IconRotateClockwise2, IconSparkles } from '@tabler/icons-react'
+import { IconRobot, IconPlayerPlay, IconRotateClockwise2, IconSparkles, IconStar } from '@tabler/icons-react'
 import {
   Conversation,
   ConversationContent,
@@ -37,6 +37,8 @@ import {
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
 import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
+import { SaveGoldenDialog } from './ai-evals/save-golden-dialog'
+import type { EvalsProp } from './ai-evals/types'
 
 interface AIPreviewModalProps {
   type: 'lesson' | 'exercise'
@@ -51,6 +53,8 @@ interface AIPreviewModalProps {
     /** Lesson draft the tutor grounds itself in — same context a student's tutor gets. */
     lesson?: { title?: string; description?: string; content?: string }
   }
+  /** Lesson tasks only: enables "Save as golden" (AI task tests). */
+  evals?: EvalsProp
 }
 
 // The exercise coach's dry-run `markExerciseCompleted`, once it has answered.
@@ -59,10 +63,11 @@ function exerciseCompletion(part: { type: string; state?: string; output?: unkno
   return (part.output ?? {}) as { success?: boolean; feedback?: string; score?: number }
 }
 
-function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
+function InnerAIPreviewModal({ type, config, evals }: AIPreviewModalProps) {
   const t = useTranslations('dashboard.teacher.aiPreview')
   const tChatLimits = useTranslations('aiChatLimits')
   const [open, setOpen] = useState(false)
+  const [saveOpen, setSaveOpen] = useState(false)
   const { textInput } = usePromptInputController()
 
   // What a student might actually say — including the two that must NOT work.
@@ -87,6 +92,14 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
 
   const isBusy = status === 'submitted' || status === 'streaming'
   const isCompleted = Boolean(findLessonCompletion(messages)) || messages.some((message) => message.parts.some((part) => exerciseCompletion(part)?.success))
+
+  // A golden is a reference for the tutor's behaviour: it needs at least one
+  // tutor reply (a chat whose replies all failed would save student text only).
+  const hasText = (m: (typeof messages)[number]) => m.parts.some((p) => p.type === 'text' && p.text.trim())
+  const canSaveGolden =
+    type === 'lesson' && Boolean(evals) && !isBusy &&
+    messages.some((m) => m.role === 'user' && hasText(m)) &&
+    messages.some((m) => m.role === 'assistant' && hasText(m))
 
   const handleRestart = () => {
     stop()
@@ -139,6 +152,18 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                     {t('previewSession')}
                   </span>
                 </div>
+                {canSaveGolden && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setSaveOpen(true)}
+                    disabled={isBusy}
+                  >
+                    <IconStar aria-hidden="true" className="h-4 w-4" />
+                    {t('saveGolden')}
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
@@ -270,6 +295,16 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {saveOpen && evals && (
+        <SaveGoldenDialog
+          open
+          onOpenChange={setSaveOpen}
+          lessonId={evals.lessonId}
+          draft={evals.draft}
+          messages={messages}
+        />
+      )}
     </>
   )
 }

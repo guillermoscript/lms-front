@@ -16,13 +16,13 @@ import {
 import { PROVIDER_IDS } from '@/lib/ai/provider-ids'
 
 describe('AI_FEATURES', () => {
-  it('declares the 16 agreed features', () => {
+  it('declares the 19 agreed features', () => {
     expect([...AI_FEATURE_IDS].sort()).toEqual(
       [
         'aristotle', 'aristotle_summary', 'lesson_tutor', 'lesson_verifier', 'checkpoint_grader',
         'exercise_coach', 'exercise_grader', 'speech_coach', 'speech_stt', 'voice_conversation',
         'exam_grader', 'question_generator', 'starter_course', 'course_architect', 'landing_builder',
-        'image_generation',
+        'image_generation', 'eval_simulator', 'eval_judge', 'eval_generator',
       ].sort(),
     )
   })
@@ -33,6 +33,9 @@ describe('AI_FEATURES', () => {
     expect(featureChain('checkpoint_grader')).toEqual(['checkpoint_grader', 'exercise_grader'])
     expect(featureChain('speech_coach')).toEqual(['speech_coach', 'exercise_grader'])
     expect(featureChain('exam_grader')).toEqual(['exam_grader'])
+    expect(featureChain('eval_simulator')).toEqual(['eval_simulator', 'lesson_tutor'])
+    expect(featureChain('eval_judge')).toEqual(['eval_judge', 'lesson_verifier', 'lesson_tutor'])
+    expect(featureChain('eval_generator')).toEqual(['eval_generator', 'question_generator'])
     for (const f of AI_FEATURE_IDS) {
       const parent = AI_FEATURES[f].inherits
       if (parent) expect(isAiFeature(parent)).toBe(true)

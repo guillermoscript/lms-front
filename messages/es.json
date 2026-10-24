@@ -2008,7 +2008,8 @@
         "aiTaskClosingPhasePlaceholder": "p. ej. Pedir al estudiante que resuma el pedido antes de pagar",
         "aiTaskClosingPhaseHint": "Solo hace falta si hay un paso final después de cumplir todos los requisitos — un resumen, una versión final, un recap.",
         "aiTaskMinTurnsLabel": "Mensajes mínimos del estudiante",
-        "aiTaskMinTurnsHint": "La lección no puede marcarse completa antes de que el estudiante haya enviado esta cantidad de mensajes. Usa 0 para permitir una respuesta completa desde el primer intento."
+        "aiTaskMinTurnsHint": "La lección no puede marcarse completa antes de que el estudiante haya enviado esta cantidad de mensajes. Usa 0 para permitir una respuesta completa desde el primer intento.",
+        "aiEvalsSaveFirst": "Guarda la lección para crear pruebas."
       },
       "exerciseBuilder": {
         "details": "Detalles",
@@ -2410,7 +2411,8 @@
           "giveAnswer": "Dame la respuesta y ya",
           "claimDone": "Ya terminé, márcala como completada"
         },
-        "scoreLabel": "Nota: {score}/100"
+        "scoreLabel": "Nota: {score}/100",
+        "saveGolden": "Guardar como golden"
       },
       "activity": {
         "title": "Actividad Reciente",
@@ -2613,6 +2615,170 @@
       "imagePicker": {
         "title": "Elige una imagen",
         "description": "Reutiliza una imagen que ya subiste o agrega una nueva."
+      },
+      "aiEvals": {
+        "title": "Pruebas de la tarea",
+        "description": "Guarda conversaciones que te sirven y simula estudiantes; córrelas contra tu tarea para ver qué cambia antes de que lo noten tus estudiantes.",
+        "staleBanner": "Cambiaste la tarea: vuelve a correr las pruebas para comparar.",
+        "saveGolden": {
+          "title": "Guardar como golden",
+          "description": "Un golden es un caso de referencia: una conversación que salió como quieres. Las versiones futuras de la tarea se comparan contra él.",
+          "nameLabel": "Nombre",
+          "noteLabel": "¿Por qué es importante este caso?",
+          "noteHint": "El juez lo usa al comparar una nueva corrida con el chat guardado.",
+          "expectedLabel": "¿Qué debe pasar siempre?",
+          "whatHappenedCompleted": "En este chat el estudiante completó la tarea en el turno {turn}.",
+          "whatHappenedNotCompleted": "En este chat el estudiante no completó la tarea.",
+          "expected": {
+            "complete": "Debe completar",
+            "not_complete": "No debe completar",
+            "either": "Cualquiera"
+          },
+          "mustKeepLabel": "Qué no debe cambiar",
+          "mustKeepHint": "Los comportamientos del tutor que el juez revisa en cada corrida.",
+          "defaults": {
+            "reveal": "No revela la respuesta",
+            "questions": "Guía con preguntas",
+            "onTask": "Se mantiene en la tarea",
+            "language": "Responde en el idioma y nivel del curso"
+          },
+          "addCriterionPlaceholder": "Agrega tu propio criterio",
+          "addCriterion": "Agregar",
+          "cancel": "Cancelar",
+          "saving": "Guardando...",
+          "save": "Guardar golden",
+          "saved": "Golden guardado",
+          "errors": {
+            "caseLimit": "Llegaste al límite de casos de prueba de esta tarea. Elimina uno primero.",
+            "generic": "No se pudo guardar el golden. Inténtalo de nuevo.",
+            "tooManyCriteria": "Selecciona 8 criterios como máximo."
+          }
+        },
+        "expected": {
+          "complete": "Debe completar",
+          "not_complete": "No debe completar",
+          "either": "Cualquiera"
+        },
+        "cases": {
+          "deleteAria": "Eliminar {name}",
+          "deleteTitle": "¿Eliminar este caso?",
+          "deleteDescription": "\"{name}\" dejará de formar parte de las pruebas. Los reportes anteriores conservan sus resultados.",
+          "cancel": "Cancelar",
+          "delete": "Eliminar",
+          "messageCount": "{count, plural, one {# mensaje} other {# mensajes}}",
+          "source": {
+            "preview": "Desde la vista previa",
+            "real_chat": "De un estudiante real",
+            "teacher": "Escrito por ti"
+          },
+          "whyItMatters": "Por qué importa",
+          "mustKeep": "No debe cambiar",
+          "expectedLabel": "Esperado",
+          "editedByYou": "Editado por ti",
+          "editAria": "Editar {name}",
+          "kindGolden": "Golden",
+          "kindScenario": "Simulación",
+          "edit": {
+            "title": "Editar estudiante simulado",
+            "description": "Al editarlo, el caso pasa a ser tuyo y no se reemplaza cuando se regeneren los escenarios.",
+            "name": "Nombre",
+            "persona": "¿Quién es este estudiante?",
+            "goal": "¿Qué intenta hacer?",
+            "expected": "¿Qué debe pasar siempre?",
+            "mustKeep": "Qué no debe cambiar",
+            "mustKeepHint": "Un criterio por línea.",
+            "cancel": "Cancelar",
+            "saving": "Guardando...",
+            "save": "Guardar"
+          }
+        },
+        "errors": {
+          "no_cases": "Agrega al menos un golden o una simulación antes de correr las pruebas.",
+          "run_in_progress": "Ya hay una corrida en curso para esta tarea.",
+          "no_task": "Esta lección aún no tiene una tarea de IA que probar.",
+          "run_limit": "Llegaste al límite de corridas de hoy. Inténtalo mañana.",
+          "case_limit": "Llegaste al límite de casos de prueba de esta tarea.",
+          "runFailed": "No se pudo iniciar la corrida. Inténtalo de nuevo.",
+          "generateFailed": "No se pudieron generar los estudiantes simulados. Inténtalo de nuevo.",
+          "saveFailed": "No se pudo guardar el cambio. Inténtalo de nuevo.",
+          "deleteFailed": "No se pudo eliminar el caso. Inténtalo de nuevo.",
+          "load": "No se pudo cargar esta sección.",
+          "retry": "Reintentar"
+        },
+        "run": {
+          "button": "Correr pruebas ({count})",
+          "starting": "Iniciando...",
+          "byok": "Se ejecuta con la clave de IA de tu escuela",
+          "title": "Última corrida",
+          "history": "Corrida",
+          "historyItem": "v{version} · {date}",
+          "empty": "Aún no hay corridas. Corre las pruebas para ver cómo se comporta tu tarea.",
+          "version": "Versión de la tarea v{version}",
+          "failedReason": "La corrida falló: {reason}",
+          "unknownError": "error desconocido",
+          "inProgress": "Ejecutando los casos. Esta página se actualiza sola.",
+          "status": {
+            "queued": "En cola",
+            "running": "En curso",
+            "done": "Lista",
+            "failed": "Fallida"
+          },
+          "tiles": {
+            "passed": "Aprobados",
+            "verdictChanges": "Cambios de veredicto",
+            "avgDeviation": "Desviación promedio",
+            "modelCalls": "Llamadas al modelo"
+          },
+          "deviation": {
+            "error": "Error",
+            "failed": "falló",
+            "drifted": "se desvió",
+            "ok": "ok"
+          },
+          "student": "Estudiante",
+          "tutor": "Tutor",
+          "noTranscript": "No hay conversación registrada.",
+          "transcript": "Conversación",
+          "verdicts": "Criterios",
+          "noVerdicts": "No se revisó ningún criterio.",
+          "verdictPassed": "Cumplido",
+          "verdictFailed": "No cumplido",
+          "cols": {
+            "case": "Caso",
+            "kind": "Tipo",
+            "expected": "Esperado",
+            "result": "Resultado",
+            "deviation": "Desviación"
+          },
+          "completedAt": "Completó en el turno {turn}",
+          "notCompleted": "No completó"
+        },
+        "goldens": {
+          "title": "Goldens",
+          "description": "Casos de referencia: chats que guardaste desde la vista previa. Abre la vista previa y usa \"Guardar como golden\".",
+          "empty": "Aún no hay goldens. Prueba la tarea, ten una conversación que salga bien y guárdala como golden."
+        },
+        "scenarios": {
+          "title": "Simulaciones",
+          "description": "Estudiantes simulados por IA con un perfil y una meta. No se genera nada si no lo pides, y usa la clave de IA de tu escuela.",
+          "empty": "Aún no hay estudiantes simulados.",
+          "generate": "Generar estudiantes simulados",
+          "generating": "Generando...",
+          "regenerate": "Regenerar",
+          "autoRegenerate": "Regenerar cuando cambie la tarea"
+        },
+        "metrics": {
+          "title": "Estudiantes reales",
+          "description": "Cómo les fue a los estudiantes con cada versión de esta tarea.",
+          "empty": "Ningún estudiante ha usado esta tarea todavía.",
+          "cols": {
+            "version": "Versión",
+            "students": "Estudiantes",
+            "completed": "Completaron",
+            "median": "Mediana de turnos para completar",
+            "abandoned": "Abandonaron"
+          }
+        }
       }
     },
     "admin": {
@@ -9421,6 +9587,18 @@
       "image_generation": {
         "name": "Generación de imágenes",
         "description": "Crea imágenes de portada y de lecciones."
+      },
+      "eval_simulator": {
+        "name": "Simulador de estudiante de prueba",
+        "description": "Hace de estudiante simulado cuando un profesor prueba una tarea con IA."
+      },
+      "eval_judge": {
+        "name": "Juez de pruebas",
+        "description": "Revisa las conversaciones de prueba contra los criterios del profesor."
+      },
+      "eval_generator": {
+        "name": "Generador de casos de prueba",
+        "description": "Propone estudiantes simulados para las pruebas de una tarea con IA."
       }
     },
     "billing": {

@@ -505,4 +505,30 @@ The source questions' \`correct_answer\` and option flags (present only once the
 ${TUTOR_GUARDRAILS}`
       )
   );
+
+  // ── test-my-task ───────────────────────────────────────────────────────────
+  server.prompt(
+    {
+      name: "test-my-task",
+      description:
+        "Test and improve a lesson's AI task: save golden chats or generate simulated students, run the tests, read the report, fix the prompt, run again and compare.",
+      schema: z.object({
+        lesson_id: z.string().describe("The lesson whose AI task to test"),
+      }),
+    },
+    async ({ lesson_id }) =>
+      text(
+        `Test and improve the AI task of lesson ${lesson_id}.
+
+1. Call \`lms_get_lesson_ai_task\` (lesson_id ${lesson_id}) and read the instructions and prompt. If there is no AI task, create one with \`lms_upsert_lesson_ai_task\` first.
+2. Call \`lms_list_eval_cases\`. If there are no cases, add some: \`lms_generate_eval_scenarios\` drafts simulated students (review them, and tweak with \`lms_update_eval_case\`), and/or \`lms_create_eval_case\` saves golden chats I describe (kind 'golden_chat') or hand-written scenarios (kind 'scenario'). Set \`expected_completed\` and short \`must_keep\` criteria (e.g. "Tutor never gives the answer"). Cover typical, struggling, off-topic and trying-to-skip students.
+3. Call \`lms_run_evals\`. It runs in the background on the school's AI key and takes about 1–3 minutes — tell me, then call \`lms_get_eval_run\` with the run id (again after a minute if it is still running).
+4. Read the report. For each failed case, look at the failed criteria and evidence (re-read with include_transcripts: true when the cause is unclear) and explain what went wrong in plain words.
+5. Propose a targeted prompt change and, once I agree, apply it with \`lms_upsert_lesson_ai_task\` (only change what the failures justify).
+6. Run again with \`lms_run_evals\`, then compare the new report with the previous one (\`lms_list_eval_runs\`). Repeat until the cases pass, and never edit a case just to make it pass.
+7. After students have used the task, \`lms_get_task_version_metrics\` shows whether the new version helps real learners.
+
+If a tool reports the school's AI is not configured, tell me an admin must add the school's AI key in the dashboard.`
+      )
+  );
 }

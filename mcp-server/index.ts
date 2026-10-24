@@ -7,6 +7,7 @@ import { installToolPolicy } from "./src/tool-policy.js";
 import { installAuthRoutes } from "./src/auth-routes.js";
 import { registerCourseTools } from "./src/tools/courses.js";
 import { registerLessonTools } from "./src/tools/lessons.js";
+import { registerEvalTools } from "./src/tools/evals.js";
 import { registerExerciseTools } from "./src/tools/exercises.js";
 import { registerExamTools } from "./src/tools/exams.js";
 import { registerAnalyticsTools } from "./src/tools/analytics.js";
@@ -117,6 +118,7 @@ if (demoWidgetsEnabled()) {
   // Register all MCP primitives.
   registerCourseTools(server);
   registerLessonTools(server);
+  registerEvalTools(server);
   registerExerciseTools(server);
   registerExamTools(server);
   registerAnalyticsTools(server);
