@@ -8183,9 +8183,17 @@ export type Database = {
         Args: { _checkpoint_id: number }
         Returns: string
       }
+      ensure_exam_grader_version: {
+        Args: { _exam_id: number }
+        Returns: string
+      }
       ensure_exercise_grader_version: {
         Args: { _exercise_id: number }
         Returns: string
+      }
+      exam_grader_config_snapshot: {
+        Args: { _exam_id: number }
+        Returns: Json
       }
       exercise_grader_config_snapshot: {
         Args: { _exercise_id: number }
