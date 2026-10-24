@@ -7,7 +7,7 @@ import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/gradi
 import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
 import { CLOSED_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
 import { checkpointPassingScore } from '@/lib/checkpoints/grade-checkpoint-answer'
-import { isGradedEvalExerciseType, type EvalCaseRow, type GradedCaseRow } from './schema'
+import { isGradedEvalExerciseType, type EvalCaseRow, type ExamCaseRow, type GradedCaseRow } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -298,4 +298,88 @@ export async function ensureCheckpointGraderVersion(admin: Admin, checkpointId: 
   const { data, error } = await admin.rpc('ensure_checkpoint_grader_version', { _checkpoint_id: checkpointId })
   if (error || !data) throw new Error(`Could not record the grader version: ${error?.message ?? 'no id'}`)
   return data as string
+}
+
+export interface ExamTestsTarget {
+  id: number
+  course_id: number
+  title: string
+}
+
+/**
+ * Staff access to one exam's grader tests: an active teacher/admin of the
+ * caller's tenant, the exam in that tenant, and — for teachers — the author of
+ * the exam's course (the same rule as the exam builder).
+ */
+export async function authorizeExamStaff(
+  supabase: SupabaseClient,
+  ctx: { userId: string; tenantId: string },
+  examId: number
+): Promise<{ role: 'teacher' | 'admin'; exam: ExamTestsTarget } | { error: string; status: number }> {
+  const { data: membership } = await supabase
+    .from('tenant_users')
+    .select('role')
+    .eq('user_id', ctx.userId)
+    .eq('tenant_id', ctx.tenantId)
+    .eq('status', 'active')
+    .maybeSingle()
+  const role = membership?.role
+  if (role !== 'teacher' && role !== 'admin') return { error: 'Forbidden', status: 403 }
+
+  const { data: exam } = await supabase
+    .from('exams')
+    .select('exam_id, title, course_id, courses!inner(author_id, tenant_id)')
+    .eq('exam_id', examId)
+    .eq('tenant_id', ctx.tenantId)
+    .maybeSingle()
+  if (!exam) return { error: 'Exam not found', status: 404 }
+
+  const course = Array.isArray(exam.courses) ? exam.courses[0] : exam.courses
+  if (!course || course.tenant_id !== ctx.tenantId) return { error: 'Exam not found', status: 404 }
+  if (role !== 'admin' && course.author_id !== ctx.userId) return { error: 'Forbidden', status: 403 }
+
+  return { role, exam: { id: exam.exam_id, title: exam.title, course_id: exam.course_id } }
+}
+
+/** A question as the case editor and validators see it: structure only, never the key. */
+export interface ExamQuestionMeta {
+  question_id: number
+  question_type: string
+  points: number
+  option_ids: number[]
+}
+
+/**
+ * The exam's question ids, types, points and option ids, with no key material
+ * (the staff-only secrets are not selected). Read through the caller's RLS
+ * client and pinned to the tenant through the exam.
+ */
+export async function loadExamQuestionsForCases(
+  supabase: SupabaseClient,
+  examId: number,
+  tenantId: string
+): Promise<ExamQuestionMeta[]> {
+  const { data } = await supabase
+    .from('exam_questions')
+    .select('question_id, question_type, points, options:question_options(option_id), exams!inner(tenant_id)')
+    .eq('exam_id', examId)
+    .eq('exams.tenant_id', tenantId)
+    .order('question_id')
+  return (data ?? []).map((q) => ({
+    question_id: q.question_id,
+    question_type: q.question_type,
+    points: q.points || 10,
+    option_ids: ((q.options ?? []) as { option_id: number }[]).map((o) => o.option_id),
+  }))
+}
+
+/** Version id for the exam's current grader config (created when new). Caller has verified the tenant. */
+export async function ensureExamGraderVersion(admin: Admin, examId: number) {
+  const { data, error } = await admin.rpc('ensure_exam_grader_version', { _exam_id: examId })
+  if (error || !data) throw new Error(`Could not record the grader version: ${error?.message ?? 'no id'}`)
+  return data as string
+}
+
+export function toExamCaseRow(row: Record<string, unknown>): ExamCaseRow {
+  return row as unknown as ExamCaseRow
 }

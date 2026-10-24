@@ -2948,6 +2948,117 @@
               "case_limit": "You reached the limit of test cases for this checkpoint.",
               "unsupported_type": "This checkpoint's exercise does not accept written answers."
             }
+          },
+          "exam": {
+            "trigger": "Grading tests",
+            "dialogTitle": "Exam grading tests",
+            "title": "Exam grading tests",
+            "description": "Check that the AI grades written answers in this exam the way you would. Save sample submissions with the points each answer should get, then run them. Multiple choice and true/false questions are scored exactly, without the AI.",
+            "unsavedBanner": "Tests always run on the saved exam. Your unsaved changes are not included until you save.",
+            "staleBanner": "You changed the exam since the last run. Save it and run the tests again to check the new version.",
+            "confirm": {
+              "description": "This grades {cases} sample submissions {repeats} times each, about {calls} AI calls on your school's key."
+            },
+            "run": {
+              "empty": "No runs yet. Run the tests to see how the AI grades your sample submissions.",
+              "version": "Exam version v{version}"
+            },
+            "cases": {
+              "title": "Sample submissions ({count}/{max})",
+              "description": "Each submission is graded 3 times to measure consistency. Only the {written} written-answer questions go to the AI; the rest are auto-scored.",
+              "generate": "Generate sample submissions",
+              "add": "Add submission",
+              "empty": "No sample submissions yet. Generate a set or add your own, or use Try grading to save one.",
+              "summary": "{count} written answers · tolerance ±{tolerance}%",
+              "categories": {
+                "strong": "Strong answers",
+                "mixed": "Mixed answers",
+                "weak": "Weak answers",
+                "injection": "Prompt injection",
+                "custom": "Custom"
+              },
+              "source": {
+                "preview": "From Try grading",
+                "teacher": "Written by you",
+                "generated": "Generated"
+              },
+              "unverified": "Unverified",
+              "editedByYou": "Edited by you",
+              "editAria": "Edit {name}",
+              "whyItMatters": "Why it matters"
+            },
+            "editor": {
+              "addTitle": "Add a sample submission",
+              "addDescription": "Answer the questions as a student might and set the points each written answer should get.",
+              "editTitle": "Edit sample submission",
+              "editDescription": "Changes mark this submission as verified by you.",
+              "name": "Name",
+              "questionLabel": "Question {n}",
+              "pointsLabel": "{points} pts",
+              "aiGraded": "AI-graded",
+              "autoScored": "Auto-scored",
+              "answer": "Student answer",
+              "expectedPoints": "Expected points (max {max})",
+              "closedHint": "Auto-scored from the answer key. The AI is not used.",
+              "true": "True",
+              "false": "False",
+              "emptyOption": "(empty option)",
+              "tolerance": "Tolerance (%)",
+              "toleranceHint": "How far the AI's points may differ from yours, as a percent of each question's points and of the total.",
+              "note": "Why is this submission important? (optional)",
+              "tryHint": "Try grading runs the AI once on your written answers, without saving anything. You can then save the result as a test case.",
+              "tryGrading": "Try grading",
+              "trying": "Grading...",
+              "tryResult": "The AI would score this submission {score}%.",
+              "aiPoints": "{earned}/{possible} pts",
+              "saveWithAi": "Save as test case",
+              "saveWithAiHint": "Saves the AI's points as the expected points. Review them: the case stays unverified until you edit it.",
+              "nameFirst": "Add a name above to save this as a test case.",
+              "cancel": "Cancel",
+              "saving": "Saving...",
+              "save": "Save",
+              "errors": {
+                "previewFailed": "Could not grade this submission. Try again.",
+                "plan_required": "AI grading tests are not included in your current plan.",
+                "no_ai_questions": "This exam has no written-answer questions to grade.",
+                "unknown_question": "A question in this submission no longer exists in the saved exam. Save the exam and try again."
+              }
+            },
+            "report": {
+              "cols": {
+                "case": "Submission",
+                "question": "Question",
+                "expected": "Expected",
+                "grades": "Grades (x{count})",
+                "median": "Median",
+                "deviation": "Deviation",
+                "flags": "Flags",
+                "result": "Result"
+              },
+              "questionShort": "Q{n}",
+              "questionUnknown": "Question",
+              "points": "{earned}/{possible} pts",
+              "removed": "Question removed from the exam",
+              "total": "Total",
+              "flags": {
+                "auto": "Auto",
+                "flip": "Wrong verdict",
+                "inflated": "Inflated",
+                "unstable": "Unstable",
+                "removed": "Removed"
+              },
+              "overallFeedback": "Overall feedback",
+              "feedbackByQuestion": "Feedback by question"
+            },
+            "errors": {
+              "plan_required": "AI grading tests are not included in your current plan. Upgrade to test how the AI grades this exam.",
+              "no_ai_questions": "This exam has no written-answer questions. Only those are graded by the AI, so there is nothing to test.",
+              "unknown_question": "A question in that submission is not in the saved exam. Save the exam and try again.",
+              "case_limit": "You reached the limit of test cases for this exam.",
+              "run_in_progress": "A run is already in progress for this exam.",
+              "run_limit": "You reached today's limit of test runs. Try again tomorrow.",
+              "no_cases": "Add at least one sample submission before running tests."
+            }
           }
         }
       }

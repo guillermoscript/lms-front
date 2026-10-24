@@ -3,12 +3,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createTenantAi } from '@/lib/ai/tenant-ai'
 import { DRIFT_THRESHOLD } from './deviation'
 import { draftScenarios, runCase, type EngineContext } from './lesson-task-engine'
-import { CASE_COLUMNS, loadCheckpointGradingExercise, loadGradingExercise, snapshotToConfig, toCaseRow, toGradedCaseRow } from './store'
+import { CASE_COLUMNS, loadCheckpointGradingExercise, loadGradingExercise, snapshotToConfig, toCaseRow, toExamCaseRow, toGradedCaseRow } from './store'
+import { runExamCase, type ExamEngineContext } from './exam-engine'
+import { loadExamGradingContext } from '@/lib/exams/grade'
 import { runGradedCase, type GradedEngineContext } from './graded-answer-engine'
 import { gradeCheckpointAnswer } from '@/lib/checkpoints/grade-checkpoint-answer'
 import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
 import type { LanguageModel } from 'ai'
-import { EVAL_LIMITS, type CaseOutcome, type EvalCaseRow, type GradedCaseRow, type GradedOutcome, type GradedRunSummary, type RunSummary } from './schema'
+import { EVAL_LIMITS, type CaseOutcome, type EvalCaseRow, type ExamCaseRow, type ExamOutcome, type ExamRunSummary, type GradedCaseRow, type GradedOutcome, type GradedRunSummary, type RunSummary } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -33,7 +35,7 @@ function errorMessage(error: unknown) {
 export const STALE_RUN_MS = 20 * 60 * 1000
 
 /** Fails queued/running runs of a target that outlived their process, freeing its single active slot. */
-export async function freeStaleRuns(admin: Admin, tenantId: string, targetType: 'lesson_ai_task' | 'exercise' | 'checkpoint', targetId: number) {
+export async function freeStaleRuns(admin: Admin, tenantId: string, targetType: 'lesson_ai_task' | 'exercise' | 'checkpoint' | 'exam', targetId: number) {
   await admin
     .from('ai_eval_runs')
     .update({ status: 'failed', error: 'Interrupted', finished_at: new Date().toISOString() })
@@ -107,7 +109,7 @@ async function regenerateStaleScenarios(
  * request that queued it). The tenant comes from the run row the caller
  * inserted under RLS; every read and write below is pinned to it.
  */
-export async function executeEvalRun(runId: string, opts: { actorId?: string | null } = {}) {
+export async function executeEvalRun(runId: string, opts: { actorId?: string | null; locale?: string } = {}) {
   const admin = createAdminClient()
 
   const { data: run } = await admin
@@ -132,6 +134,11 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
 
   if (run.target_type === 'checkpoint') {
     await executeCheckpointRun(admin, { runId, tenantId, checkpointId: run.target_id, actorId: opts.actorId ?? null })
+    return
+  }
+
+  if (run.target_type === 'exam') {
+    await executeExamRun(admin, { runId, tenantId, examId: run.target_id, actorId: opts.actorId ?? null, locale: opts.locale ?? 'en' })
     return
   }
 
@@ -278,6 +285,101 @@ function executeCheckpointRun(admin: Admin, run: { runId: string; tenantId: stri
       }
     },
   })
+}
+
+/**
+ * Exam grader run: every case is graded GRADED_REPEATS times by the school's
+ * exam grader on the SAVED exam (closed questions exactly, free text by the
+ * AI, one model call per repeat); repeats fold into one result row.
+ */
+async function executeExamRun(
+  admin: Admin,
+  run: { runId: string; tenantId: string; examId: number; actorId: string | null; locale: string }
+) {
+  const { runId, tenantId, examId } = run
+  let modelCalls = 0
+
+  try {
+    const exam = await loadExamGradingContext(admin, { examId, tenantId })
+    if (!exam) throw new Error('The exam no longer exists.')
+
+    // A missing key fails here, before any case runs.
+    const ai = createTenantAi(tenantId, { actorId: run.actorId })
+    const grader = await ai.getModelForFeature('exam_grader')
+    await admin
+      .from('ai_eval_runs')
+      .update({ model_ids: { grader: `${grader.providerId}/${grader.modelId}` } })
+      .eq('id', runId)
+      .eq('tenant_id', tenantId)
+
+    const { data } = await admin
+      .from('ai_eval_cases')
+      .select(CASE_COLUMNS)
+      .eq('target_type', 'exam')
+      .eq('target_id', examId)
+      .eq('tenant_id', tenantId)
+      .eq('kind', 'graded_exam')
+      .order('created_at')
+      .limit(EVAL_LIMITS.maxCasesPerTarget)
+    const cases = (data ?? []).map((row) => toExamCaseRow(row as Record<string, unknown>))
+
+    const ctx: ExamEngineContext = { grader, exam, locale: run.locale, onModelCall: () => { modelCalls++ } }
+    const outcomes: { testCase: ExamCaseRow; outcome: ExamOutcome | null; error?: string }[] = []
+
+    await mapLimit(cases, EVAL_LIMITS.concurrency, async (testCase) => {
+      let outcome: ExamOutcome | null = null
+      let error: string | undefined
+      try {
+        outcome = await runExamCase(ctx, testCase)
+      } catch (e) {
+        error = errorMessage(e)
+      }
+      const { error: insertError } = await admin.from('ai_eval_results').insert({
+        tenant_id: tenantId,
+        run_id: runId,
+        case_id: testCase.id,
+        case_name: testCase.name,
+        case_kind: 'graded_exam',
+        expected: testCase.expected,
+        scores: outcome?.scores ?? null,
+        score: outcome?.score ?? null,
+        score_stddev: outcome?.score_stddev ?? null,
+        output: (outcome?.output ?? null) as never,
+        deviation: outcome?.deviation ?? null,
+        passed: outcome ? outcome.ok : null,
+        error: error ?? null,
+      })
+      // A result that could not be saved counts as an error, not a silent gap.
+      if (insertError) {
+        outcome = null
+        error = 'Could not save the result.'
+      }
+      outcomes.push({ testCase, outcome, error })
+    })
+
+    const scored = outcomes.filter((o) => o.outcome)
+    const summary: ExamRunSummary = {
+      total: outcomes.length,
+      passed: scored.filter((o) => o.outcome!.ok).length,
+      failed: scored.filter((o) => !o.outcome!.ok).length,
+      errors: outcomes.length - scored.length,
+      inflated_injections: scored.filter((o) => o.outcome!.reasons.includes('inflated')).length,
+      pass_flips: scored.filter((o) => o.outcome!.question_flips > 0).length,
+      unstable_cases: scored.filter((o) => o.outcome!.output?.questions.some((q) => q.unstable)).length,
+      mean_deviation: scored.length ? Math.round(scored.reduce((sum, o) => sum + o.outcome!.deviation, 0) / scored.length) : 0,
+      max_stddev: scored.reduce((max, o) => Math.max(max, o.outcome!.score_stddev), 0),
+      model_calls: modelCalls,
+      question_flips: scored.reduce((sum, o) => sum + o.outcome!.question_flips, 0),
+    }
+
+    await admin
+      .from('ai_eval_runs')
+      .update({ status: 'done', summary, finished_at: new Date().toISOString() })
+      .eq('id', runId)
+      .eq('tenant_id', tenantId)
+  } catch (error) {
+    await failRun(admin, runId, tenantId, error, modelCalls)
+  }
 }
 
 async function executeGradedRun(
