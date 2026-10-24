@@ -9,11 +9,17 @@ import {
   IconEye,
 } from '@tabler/icons-react'
 import { useLessonEditor } from './lesson-editor-context'
+import { usePublishTestsGuard } from '../ai-evals/publish-tests-guard'
 
 type ActionsLayout = 'desktop' | 'mobile'
 
 export function LessonEditorActions({ layout }: { layout: ActionsLayout }) {
-  const { loading, saveSuccess, formData, handleSave } = useLessonEditor()
+  const { loading, saveSuccess, formData, handleSave, initialData, savedTask } = useLessonEditor()
+  const publishGuard = usePublishTestsGuard(initialData ? `/api/teacher/evals/lesson-task/${initialData.id}/status` : null)
+  const unsavedAiChanges =
+    formData.ai_task_description.trim() !== savedTask.description ||
+    formData.ai_task_instructions.trim() !== savedTask.instructions ||
+    JSON.stringify(formData.ai_task_requirements) !== JSON.stringify(savedTask.requirements)
   const t = useTranslations('dashboard.teacher.lessonEditor')
 
   return (
@@ -39,8 +45,8 @@ export function LessonEditorActions({ layout }: { layout: ActionsLayout }) {
       <Button
         size="sm"
         className={layout === 'mobile' ? 'flex-1 gap-1.5' : 'h-8 gap-1.5'}
-        onClick={() => handleSave(true)}
-        disabled={loading || !formData.title}
+        onClick={() => void publishGuard.guardPublish(() => void handleSave(true), { unsavedAiChanges })}
+        disabled={loading || publishGuard.checking || !formData.title}
       >
         {loading ? (
           <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
@@ -49,6 +55,7 @@ export function LessonEditorActions({ layout }: { layout: ActionsLayout }) {
         )}
         {t('publishLesson')}
       </Button>
+      {publishGuard.dialog}
     </div>
   )
 }

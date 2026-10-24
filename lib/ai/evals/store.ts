@@ -8,7 +8,7 @@ import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
 import { CLOSED_EXERCISE_TYPES, EXTERNAL_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
 import { checkpointPassingScore } from '@/lib/checkpoints/grade-checkpoint-answer'
 import { parseConversationConfig, type ConversationConfig } from '@/lib/speech/conversation'
-import { isGradedEvalExerciseType, type CoachCaseRow, type EvalCaseRow, type ExamCaseRow, type ExerciseEvalSurface, type GradedCaseRow, type VoiceCaseRow } from './schema'
+import { EVAL_LIMITS, isGradedEvalExerciseType, type CoachCaseRow, type EvalCaseRow, type ExamCaseRow, type ExerciseEvalSurface, type GradedCaseRow, type VoiceCaseRow } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -425,6 +425,32 @@ export async function ensureExamGraderVersion(admin: Admin, examId: number) {
   return data as string
 }
 
+/**
+ * Insert a graded_exam case after the per-target cap check. The caller has
+ * authorized the exam and validated input/expected against its questions.
+ */
+export async function insertExamCase(
+  supabase: SupabaseClient,
+  ctx: { tenantId: string; examId: number },
+  row: { source: 'preview' | 'teacher' | 'submission'; name: string; importance_note: string | null; input: ExamCaseRow['input']; expected: ExamCaseRow['expected'] }
+): Promise<{ case: ExamCaseRow } | { error: 'case_limit' | 'save_failed' }> {
+  const { count } = await supabase
+    .from('ai_eval_cases')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', ctx.tenantId)
+    .eq('target_type', 'exam')
+    .eq('target_id', ctx.examId)
+  if ((count ?? 0) >= EVAL_LIMITS.maxCasesPerTarget) return { error: 'case_limit' }
+
+  const { data, error } = await supabase
+    .from('ai_eval_cases')
+    .insert({ tenant_id: ctx.tenantId, target_type: 'exam', target_id: ctx.examId, kind: 'graded_exam', ...row })
+    .select(CASE_COLUMNS)
+    .single()
+  if (error || !data) return { error: 'save_failed' }
+  return { case: toExamCaseRow(data as Record<string, unknown>) }
+}
+
 export function toExamCaseRow(row: Record<string, unknown>): ExamCaseRow {
   return row as unknown as ExamCaseRow
 }
@@ -470,4 +496,51 @@ export async function loadScenarioExercise(admin: Admin, exerciseId: number, ten
     conversation,
     passingScore: data.exercise_type === 'real_time_conversation' ? conversation.passing_score : typeof config.passing_score === 'number' ? Math.min(100, Math.max(0, config.passing_score)) : 70,
   }
+}
+
+export type PublishTargetType = 'lesson_ai_task' | 'exercise' | 'exam'
+
+export interface PublishTestStatus {
+  /** Saved test cases on the target. */
+  cases: number
+  /** The version the saved config maps to; null when there are no cases to run. */
+  version_no: number | null
+  /** A run on that version finished. */
+  tested: boolean
+}
+
+/**
+ * Has the SAVED config been tested? Feeds the "tests not run on vN" warning
+ * before Publish. The version is resolved only when cases exist, so targets
+ * without tests never get a version row from a publish.
+ */
+export async function loadPublishTestStatus(
+  supabase: SupabaseClient,
+  target: { tenantId: string; type: PublishTargetType; id: number },
+  resolveVersionId: () => Promise<string | null>
+): Promise<PublishTestStatus> {
+  const { count } = await supabase
+    .from('ai_eval_cases')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', target.tenantId)
+    .eq('target_type', target.type)
+    .eq('target_id', target.id)
+  const cases = count ?? 0
+  if (cases === 0) return { cases, version_no: null, tested: false }
+
+  const versionId = await resolveVersionId()
+  if (!versionId) return { cases, version_no: null, tested: false }
+
+  const [{ data: version }, { count: doneRuns }] = await Promise.all([
+    supabase.from('ai_config_versions').select('version_no').eq('id', versionId).eq('tenant_id', target.tenantId).maybeSingle(),
+    supabase
+      .from('ai_eval_runs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', target.tenantId)
+      .eq('target_type', target.type)
+      .eq('target_id', target.id)
+      .eq('version_id', versionId)
+      .eq('status', 'done'),
+  ])
+  return { cases, version_no: version?.version_no ?? null, tested: (doneRuns ?? 0) > 0 }
 }

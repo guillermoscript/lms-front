@@ -169,8 +169,8 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   // expected, so the override never persisted. Consume the real shape, recompute
   // the overall score from the per-question points, and persist.
   const handleSave = async (overrides: Record<number, {
-    points_earned?: number
-    is_correct?: boolean
+    points_earned?: number | null
+    is_correct?: boolean | null
     teacher_notes?: string
     is_overridden?: boolean
   }>) => {

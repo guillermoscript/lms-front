@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { examStaff } from '@/lib/ai/evals/route-auth'
-import { CASE_COLUMNS, loadExamQuestionsForCases } from '@/lib/ai/evals/store'
-import { createExamCaseSchema, EVAL_LIMITS } from '@/lib/ai/evals/schema'
+import { CASE_COLUMNS, insertExamCase, loadExamQuestionsForCases } from '@/lib/ai/evals/store'
+import { savedCaseError } from '@/lib/ai/evals/route-responses'
+import { createExamCaseSchema } from '@/lib/ai/evals/schema'
 import { validateExamCase } from '@/lib/ai/evals/exam-engine'
 
 type Params = { params: Promise<{ examId: string }> }
@@ -40,31 +41,13 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'no_ai_questions' }, { status: 400 })
   }
 
-  const { count } = await ctx.supabase
-    .from('ai_eval_cases')
-    .select('id', { count: 'exact', head: true })
-    .eq('tenant_id', ctx.tenantId)
-    .eq('target_type', 'exam')
-    .eq('target_id', ctx.exam.id)
-  if ((count ?? 0) >= EVAL_LIMITS.maxCasesPerTarget) {
-    return NextResponse.json({ error: 'case_limit', limit: EVAL_LIMITS.maxCasesPerTarget }, { status: 409 })
-  }
-
-  const { data, error } = await ctx.supabase
-    .from('ai_eval_cases')
-    .insert({
-      tenant_id: ctx.tenantId,
-      target_type: 'exam',
-      target_id: ctx.exam.id,
-      kind: 'graded_exam',
-      source: input.source,
-      name: input.name,
-      importance_note: input.importance_note ?? null,
-      expected: { ...input.expected, questions: expectedQuestions },
-      input: input.input,
-    })
-    .select(CASE_COLUMNS)
-    .single()
-  if (error) return NextResponse.json({ error: 'Could not save the case' }, { status: 500 })
-  return NextResponse.json({ case: data }, { status: 201 })
+  const saved = await insertExamCase(ctx.supabase, { tenantId: ctx.tenantId, examId: ctx.exam.id }, {
+    source: input.source,
+    name: input.name,
+    importance_note: input.importance_note ?? null,
+    expected: { ...input.expected, questions: expectedQuestions },
+    input: input.input,
+  })
+  if ('error' in saved) return savedCaseError(saved.error)
+  return NextResponse.json({ case: saved.case }, { status: 201 })
 }

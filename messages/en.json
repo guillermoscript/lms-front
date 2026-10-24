@@ -3191,7 +3191,8 @@
               "source": {
                 "preview": "From Try grading",
                 "teacher": "Written by you",
-                "generated": "Generated"
+                "generated": "Generated",
+                "submission": "From a graded submission"
               },
               "unverified": "Unverified",
               "editedByYou": "Edited by you",
@@ -3271,6 +3272,29 @@
               "no_cases": "Add at least one sample submission before running tests."
             }
           }
+        },
+        "fromSubmission": {
+          "title": "Use this grading as a test",
+          "description": "Saves these answers and your final points as a grading test for this exam, so the AI grader is checked against your judgement. The student's name is not saved.",
+          "button": "Save as grading test",
+          "saved": "Saved as a grading test",
+          "caseName": "Teacher-graded submission · {date}",
+          "errors": {
+            "case_limit": "This exam already has the maximum number of grading tests. Delete one first.",
+            "not_reviewed": "Save your review first. Only teacher-reviewed submissions can become tests.",
+            "no_ai_questions": "This submission has no graded written answers to test.",
+            "no_answers": "This submission has no answers to save.",
+            "answers_too_large": "These answers are too long to save as a test.",
+            "saveFailed": "Could not save the test. Try again."
+          }
+        },
+        "publishGuard": {
+          "untestedTitle": "Tests not run on v{version}",
+          "changedTitle": "Tests not run on these changes",
+          "untestedDescription": "{count, plural, one {There is # test} other {There are # tests}}, but none ran on the version you are about to publish. Run them first to catch an AI that got worse.",
+          "unsavedDescription": "You changed the AI setup since the last save, and {count, plural, one {its # test has} other {its # tests have}} not run on those changes. Run them first to catch an AI that got worse.",
+          "cancel": "Not now",
+          "publishAnyway": "Publish anyway"
         }
       }
     },

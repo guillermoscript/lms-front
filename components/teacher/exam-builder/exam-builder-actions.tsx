@@ -8,9 +8,12 @@ import {
   IconCircleCheck,
 } from '@tabler/icons-react'
 import { useExamBuilder } from './exam-builder-context'
+import { usePublishTestsGuard } from '../ai-evals/publish-tests-guard'
 
 export function ExamBuilderActions() {
-  const { loading, formData, handleSave } = useExamBuilder()
+  const { loading, formData, handleSave, initialData } = useExamBuilder()
+  const examId: number | undefined = initialData?.exam_id
+  const publishGuard = usePublishTestsGuard(examId ? `/api/teacher/evals/exam/${examId}/status` : null)
   const t = useTranslations('dashboard.teacher.examBuilder')
 
   return (
@@ -32,8 +35,8 @@ export function ExamBuilderActions() {
       <Button
         size="sm"
         className="h-8 gap-1.5"
-        onClick={() => handleSave(true)}
-        disabled={loading || !formData.title || formData.questions.length === 0}
+        onClick={() => void publishGuard.guardPublish(() => void handleSave(true))}
+        disabled={loading || publishGuard.checking || !formData.title || formData.questions.length === 0}
       >
         {loading ? (
           <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
@@ -42,6 +45,7 @@ export function ExamBuilderActions() {
         )}
         {t('publishExam')}
       </Button>
+      {publishGuard.dialog}
     </div>
   )
 }

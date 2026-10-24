@@ -3191,7 +3191,8 @@
               "source": {
                 "preview": "De Probar calificación",
                 "teacher": "Escrita por ti",
-                "generated": "Generada"
+                "generated": "Generada",
+                "submission": "De una entrega calificada"
               },
               "unverified": "Sin verificar",
               "editedByYou": "Editada por ti",
@@ -3271,6 +3272,29 @@
               "no_cases": "Añade al menos una entrega de ejemplo antes de ejecutar las pruebas."
             }
           }
+        },
+        "fromSubmission": {
+          "title": "Usa esta calificación como prueba",
+          "description": "Guarda estas respuestas y tus puntos finales como una prueba de calificación del examen, para comprobar la IA con tu criterio. No se guarda el nombre del estudiante.",
+          "button": "Guardar como prueba",
+          "saved": "Guardada como prueba de calificación",
+          "caseName": "Entrega calificada por el docente · {date}",
+          "errors": {
+            "case_limit": "Este examen ya tiene el máximo de pruebas de calificación. Borra una primero.",
+            "not_reviewed": "Guarda tu revisión primero. Solo las entregas revisadas por el docente pueden ser pruebas.",
+            "no_ai_questions": "Esta entrega no tiene respuestas escritas calificadas que probar.",
+            "no_answers": "Esta entrega no tiene respuestas que guardar.",
+            "answers_too_large": "Estas respuestas son demasiado largas para guardarlas como prueba.",
+            "saveFailed": "No se pudo guardar la prueba. Inténtalo de nuevo."
+          }
+        },
+        "publishGuard": {
+          "untestedTitle": "Pruebas sin correr en la v{version}",
+          "changedTitle": "Pruebas sin correr con estos cambios",
+          "untestedDescription": "{count, plural, one {Hay # prueba} other {Hay # pruebas}}, pero ninguna corrió en la versión que vas a publicar. Córrelas primero para detectar si la IA empeoró.",
+          "unsavedDescription": "Cambiaste la configuración de IA desde el último guardado y {count, plural, one {su # prueba no ha corrido} other {sus # pruebas no han corrido}} con esos cambios. Córrelas primero para detectar si la IA empeoró.",
+          "cancel": "Ahora no",
+          "publishAnyway": "Publicar igual"
         }
       }
     },

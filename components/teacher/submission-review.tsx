@@ -29,12 +29,52 @@ import {
   IconPencil,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { SaveSubmissionAsTest } from '@/components/teacher/ai-evals/save-submission-as-test'
+
+interface ReviewSubmission {
+  submission_id: number
+  exam_id: number
+  status: string
+  submitted_at: string
+  ai_score: number | null
+  final_score: number | null
+  teacher_feedback?: string
+}
+
+interface ReviewQuestion {
+  id: number
+  question_type: string
+  question_text: string
+  points_possible: number
+  sequence?: number
+  answer_text?: string
+  ai_feedback?: string
+  ai_grading_criteria?: string | null
+  expected_keywords?: string[] | null
+  ai_confidence?: number | null
+  options?: { id: number; option_text: string; is_correct?: boolean | null }[]
+}
+
+interface ReviewAnswer {
+  question_id: number
+  points_earned: number | null
+  is_correct: boolean | null
+  teacher_notes?: string
+  teacher_score_override: number | null
+}
+
+interface QuestionOverride {
+  points_earned?: number | null
+  is_correct?: boolean | null
+  teacher_notes?: string
+  is_overridden?: boolean
+}
 
 interface SubmissionReviewProps {
-  submission: any
-  questions?: any[]
-  answers?: any[]
-  onSave?: (overrides: any) => Promise<void>
+  submission: ReviewSubmission
+  questions?: ReviewQuestion[]
+  answers?: ReviewAnswer[]
+  onSave?: (overrides: Record<number, QuestionOverride>) => Promise<void>
 }
 
 export function SubmissionReview({
@@ -51,7 +91,7 @@ export function SubmissionReview({
     submission.teacher_feedback || ''
   )
   const initialAnswers = answers || []
-  const [overrides, setOverrides] = useState<Record<number, any>>(
+  const [overrides, setOverrides] = useState<Record<number, QuestionOverride>>(
     initialAnswers.reduce((acc, ans) => {
       acc[ans.question_id] = {
         points_earned: ans.teacher_score_override !== null ? ans.teacher_score_override : ans.points_earned,
@@ -60,7 +100,7 @@ export function SubmissionReview({
         is_overridden: ans.teacher_score_override !== null,
       }
       return acc
-    }, {} as Record<number, any>)
+    }, {} as Record<number, QuestionOverride>)
   )
 
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null)
@@ -96,11 +136,12 @@ export function SubmissionReview({
       // Refresh data
       const { data: updatedSub } = await supabase
         .from('exam_submissions')
-        .select('*')
+        .select('review_status')
         .eq('submission_id', submission.submission_id)
         .single()
 
-      if (updatedSub) setSubmission(updatedSub)
+      // Only the status: the raw row does not have this view's field names.
+      if (updatedSub?.review_status) setSubmission((s) => ({ ...s, status: updatedSub.review_status ?? s.status }))
       setEditingQuestionId(null)
 
       // Fire before `onSave`: the page's server action redirects to the
@@ -126,7 +167,7 @@ export function SubmissionReview({
     }
   }
 
-  const updateQuestionOverride = (questionId: number, updates: any) => {
+  const updateQuestionOverride = (questionId: number, updates: QuestionOverride) => {
     setOverrides({
       ...overrides,
       [questionId]: {
@@ -193,13 +234,17 @@ export function SubmissionReview({
         </div>
       </div>
 
+      {submission.status === 'teacher_reviewed' && (questions ?? []).some((q) => q.question_type === 'free_text') && (
+        <SaveSubmissionAsTest examId={submission.exam_id} submissionId={submission.submission_id} submittedAt={submission.submitted_at} />
+      )}
+
       {/* Review Questions */}
       <div className="space-y-6">
         <h3 className="text-lg font-bold flex items-center gap-2">
           {t('questions.title')}
         </h3>
 
-        {(questions || []).sort((a, b) => a.sequence - b.sequence).map((q, idx) => {
+        {(questions || []).sort((a, b) => (a.sequence ?? a.id) - (b.sequence ?? b.id)).map((q, idx) => {
           const override = overrides[q.id]
           const isCorrect = override?.is_correct
           const isPendingReview = q.question_type === 'free_text' && submission.status === 'pending'
@@ -246,7 +291,7 @@ export function SubmissionReview({
                 {/* Options mapping for non-free text */}
                 {!isFreeText && (
                   <div className="space-y-2">
-                    {q.options?.map((opt: any) => {
+                    {q.options?.map((opt) => {
                       // exam_answers.answer_text holds the option id for multiple
                       // choice and the literal "true"/"false" for true/false, so
                       // comparing the label alone never marked the pick (#674).
@@ -322,7 +367,7 @@ export function SubmissionReview({
                           type="number"
                           min="0"
                           max={q.points_possible}
-                          value={override?.points_earned}
+                          value={override?.points_earned ?? undefined}
                           onChange={(e) => updateQuestionOverride(q.id, { points_earned: parseInt(e.target.value) || 0 })}
                         />
                       </div>
