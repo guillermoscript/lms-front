@@ -42,6 +42,9 @@ export async function listCoursesForSession(
       { count: "exact" }
     )
     .eq("tenant_id", session.getTenantId())
+    // Count active enrollments only, like lms_get_course_stats: expired access
+    // is backfilled to 'disabled' (20261022150000) and must not inflate it.
+    .eq("enrollments.status", "active")
     .order("created_at", { ascending: false })
     .range(opts.offset, opts.offset + opts.limit - 1);
 
@@ -183,6 +186,7 @@ export function registerCourseTools(server: LmsServer) {
             enrollments(count)`
           )
           .eq("course_id", input.course_id)
+          .eq("enrollments.status", "active")
           .order("sequence", { referencedTable: "lessons" })
           .single();
 

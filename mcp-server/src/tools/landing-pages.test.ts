@@ -69,7 +69,8 @@ function from(table: string) {
     },
     eq: (col: string, v: unknown) => {
       described.push(`eq:${col}`);
-      filters.push((r) => same(r[col], v));
+      // `embed.col` filters the embedded rows, never the parent (PostgREST).
+      if (!col.includes(".")) filters.push((r) => same(r[col], v));
       return chain;
     },
     in: (col: string, vs: unknown[]) => {
