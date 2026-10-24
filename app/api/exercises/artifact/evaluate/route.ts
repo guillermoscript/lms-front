@@ -1,3 +1,4 @@
+import type { Json } from '@/lib/database.types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
@@ -10,6 +11,12 @@ import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export const maxDuration = 120
+
+/** The artifact's metadata, kept with the attempt only when small (the grader read all of it either way). */
+function storableMetadata(metadata: Record<string, unknown>): Json | null {
+  if (Object.keys(metadata).length === 0) return null
+  return JSON.stringify(metadata).length <= 20_000 ? (metadata as Json) : null
+}
 
 export async function POST(req: Request) {
   // 1. Auth — session cookie (web) or Bearer token (native app, #839)
@@ -118,6 +125,9 @@ export async function POST(req: Request) {
       engine_type: 'simulation',
       score,
       passed,
+      // Kept so a teacher can review and regrade the attempt (F5).
+      submission_text: content,
+      submission_metadata: storableMetadata(metadata),
       ai_result: {
         feedback: evaluation.feedback,
         strengths: evaluation.strengths,

@@ -46,7 +46,7 @@ export function GradedCaseCard({
 }) {
   const t = useTranslations('dashboard.teacher.aiEvals.graded.cases')
   const unverified = item.source === 'generated' && !item.teacher_edited
-  const sourceKey = item.source === 'preview' || item.source === 'teacher' ? item.source : 'generated'
+  const sourceKey = item.source === 'preview' || item.source === 'teacher' || item.source === 'submission' ? item.source : 'generated'
   return (
     <li className="rounded-lg border bg-card p-3.5">
       <div className="flex items-start justify-between gap-3">

@@ -2857,9 +2857,16 @@ export type Database = {
           exercise_id: number
           id: number
           passed: boolean
+          reviewed_at: string | null
           score: number | null
           submission_id: number | null
+          submission_metadata: Json | null
           submission_source: string | null
+          submission_text: string | null
+          teacher_feedback: string | null
+          teacher_id: string | null
+          teacher_passed: boolean | null
+          teacher_score: number | null
           tenant_id: string
           user_id: string
         }
@@ -2872,9 +2879,16 @@ export type Database = {
           exercise_id: number
           id?: number
           passed?: boolean
+          reviewed_at?: string | null
           score?: number | null
           submission_id?: number | null
+          submission_metadata?: Json | null
           submission_source?: string | null
+          submission_text?: string | null
+          teacher_feedback?: string | null
+          teacher_id?: string | null
+          teacher_passed?: boolean | null
+          teacher_score?: number | null
           tenant_id: string
           user_id: string
         }
@@ -2887,9 +2901,16 @@ export type Database = {
           exercise_id?: number
           id?: number
           passed?: boolean
+          reviewed_at?: string | null
           score?: number | null
           submission_id?: number | null
+          submission_metadata?: Json | null
           submission_source?: string | null
+          submission_text?: string | null
+          teacher_feedback?: string | null
+          teacher_id?: string | null
+          teacher_passed?: boolean | null
+          teacher_score?: number | null
           tenant_id?: string
           user_id?: string
         }

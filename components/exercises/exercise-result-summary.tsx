@@ -15,6 +15,8 @@ interface ExerciseResultSummaryProps {
   attemptNumber?: number | null
   completedAt?: string | null
   passingScore?: number
+  /** A teacher's regrade: shown as the verdict, with the AI's score kept as a note. */
+  teacherReview?: { score: number; passed: boolean; feedback: string | null } | null
   className?: string
   /** Engine-specific sections (corrections, transcript) inside the same
    * surface, so a result is one container rather than a stack of cards. */
@@ -36,6 +38,7 @@ export default function ExerciseResultSummary({
   attemptNumber,
   completedAt,
   passingScore,
+  teacherReview,
   className,
   children,
 }: ExerciseResultSummaryProps) {
@@ -62,8 +65,22 @@ export default function ExerciseResultSummary({
     <section className={cn(EXERCISE_SURFACE, 'space-y-5', className)} aria-label={t('title')}>
       <div className="space-y-3">
         <h3 className="text-sm font-semibold">{t('title')}</h3>
-        <ResultVerdict score={score} passed={passed} passingScore={passingScore} meta={meta} />
+        <ResultVerdict
+          score={teacherReview ? teacherReview.score : score}
+          passed={teacherReview ? teacherReview.passed : passed}
+          passingScore={passingScore}
+          meta={meta}
+        />
       </div>
+
+      {teacherReview && (
+        <ResultSection title={t('teacherReview')}>
+          {teacherReview.feedback && (
+            <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', RESULT_PROSE)}>{teacherReview.feedback}</p>
+          )}
+          {score !== null && <p className="text-xs text-muted-foreground">{t('aiScoreWas', { score: Math.round(score) })}</p>}
+        </ResultSection>
+      )}
 
       {feedback && (
         <ResultSection title={tAudio('aiFeedback')}>

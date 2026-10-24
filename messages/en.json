@@ -2186,7 +2186,8 @@
             "instructions": "Topic: {{topic}}\nExplain and show how to do it, in order, so a beginner can follow.",
             "criteria": "Evaluate the tutorial on {{topic}}. Correctness 30%, step order and completeness 25%, clarity for a beginner 25%, examples/visuals 20%. Cite concrete moments and give one next action."
           }
-        }
+        },
+        "studentAttempts": "Student attempts"
       },
       "submissionReview": {
         "status": {
@@ -3051,7 +3052,8 @@
             "source": {
               "preview": "From preview",
               "teacher": "Written by you",
-              "generated": "Generated"
+              "generated": "Generated",
+              "submission": "From a student answer"
             },
             "unverified": "Unverified",
             "editedByYou": "Edited by you",
@@ -3295,6 +3297,43 @@
           "unsavedDescription": "You changed the AI setup since the last save, and {count, plural, one {its # test has} other {its # tests have}} not run on those changes. Run them first to catch an AI that got worse.",
           "cancel": "Not now",
           "publishAnyway": "Publish anyway"
+        }
+      },
+      "exerciseAttempts": {
+        "title": "Student attempts",
+        "description": "Every AI-graded attempt, newest first. Regrade one when the AI got it wrong; students pass at {passingScore}.",
+        "unsupported": "This exercise type is not graded by the AI from a written answer, so there are no attempts to review here.",
+        "empty": "No graded attempts yet.",
+        "limited": "Showing the latest {count} attempts.",
+        "unknownStudent": "Unknown student",
+        "attempt": "Attempt {number}",
+        "aiGrade": "AI",
+        "teacherGrade": "You",
+        "noScore": "No score",
+        "passed": "passed",
+        "failed": "failed",
+        "noAnswer": "The answer was not kept for this attempt (graded before answers were stored).",
+        "aiFeedback": "AI feedback",
+        "teacherFeedback": "Your note to the student",
+        "scoreLabel": "Your score (0–100)",
+        "feedbackLabel": "Note to the student (optional)",
+        "willPass": "Passes (at {passingScore} or more)",
+        "willFail": "Does not pass (needs {passingScore})",
+        "overrideNote": "The student sees your grade and note in place of the AI score. A passing grade completes the exercise for them; a failing one does not undo a completion they already have.",
+        "saveGrade": "Save grade",
+        "cancel": "Cancel",
+        "regrade": "Regrade",
+        "changeGrade": "Change grade",
+        "saveAsTest": "Save as grading test",
+        "savedAsTest": "Saved as a grading test",
+        "caseName": "Teacher-graded answer · {date}",
+        "errors": {
+          "saveGrade": "Could not save the grade. Try again.",
+          "saveTest": "Could not save the test. Try again.",
+          "case_limit": "This exercise already has the maximum number of tests. Delete one first.",
+          "answer_too_large": "This answer is too long to save as a test.",
+          "no_answer": "The answer was not kept for this attempt.",
+          "not_reviewed": "Save your grade first."
         }
       }
     },
@@ -8092,7 +8131,9 @@
     "result": {
       "title": "Your last result",
       "noFeedbackRecorded": "This exercise is graded automatically, so there is no written feedback to review.",
-      "passMark": "Pass mark {score}"
+      "passMark": "Pass mark {score}",
+      "teacherReview": "Reviewed by your teacher",
+      "aiScoreWas": "The AI first scored this {score}."
     },
     "audio": {
       "title": "Audio exercise",

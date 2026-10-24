@@ -22,6 +22,8 @@ export interface LatestExerciseEvaluation {
   feedback: string | null
   strengths: string[]
   improvements: string[]
+  /** A teacher's regrade of this attempt; when set, it is the grade that counts. */
+  teacherReview: { score: number; passed: boolean; feedback: string | null } | null
 }
 
 /** Row shape this module consumes — the columns the exercise page selects. */
@@ -32,6 +34,9 @@ export interface ExerciseEvaluationRow {
   ai_result: unknown
   attempt_number?: number | null
   created_at: string
+  teacher_score?: number | null
+  teacher_passed?: boolean | null
+  teacher_feedback?: string | null
 }
 
 function stringList(raw: unknown): string[] {
@@ -68,5 +73,9 @@ export function toLatestEvaluation(
     attemptNumber: row.attempt_number ?? null,
     createdAt: row.created_at,
     ...parsed,
+    teacherReview:
+      row.teacher_score === null || row.teacher_score === undefined
+        ? null
+        : { score: Number(row.teacher_score), passed: row.teacher_passed === true, feedback: row.teacher_feedback || null },
   }
 }

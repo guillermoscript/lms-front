@@ -87,6 +87,18 @@ describe('toLatestEvaluation', () => {
       feedback: 'Nice work.',
       strengths: ['Clear'],
       improvements: [],
+      teacherReview: null,
+    })
+  })
+
+  it("carries a teacher's regrade, which the result card shows as the grade that counts", () => {
+    expect(
+      toLatestEvaluation({ ...row, teacher_score: 55, teacher_passed: false, teacher_feedback: 'Cite a source.' })?.teacherReview
+    ).toEqual({ score: 55, passed: false, feedback: 'Cite a source.' })
+    expect(toLatestEvaluation({ ...row, teacher_score: 90, teacher_passed: true, teacher_feedback: '' })?.teacherReview).toEqual({
+      score: 90,
+      passed: true,
+      feedback: null,
     })
   })
 

@@ -244,7 +244,7 @@ export type UpdateGradedCaseInput = z.infer<typeof updateGradedCaseSchema>
 export interface GradedCaseRow {
   id: string
   kind: 'graded_answer'
-  source: 'preview' | 'generated' | 'teacher'
+  source: 'preview' | 'generated' | 'teacher' | 'submission'
   name: string
   importance_note: string | null
   expected: GradedExpected
