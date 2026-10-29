@@ -10855,5 +10855,27 @@
     "exerciseGreetingGeneric": "¡Hola! 👋 Soy tu coach para este ejercicio.",
     "exerciseInstructions": "Las instrucciones completas están junto a este chat; léelas antes de empezar.",
     "exerciseStart": "**Cómo empezar:** escribe aquí tu respuesta o un primer borrador. Te daré retroalimentación y pistas (no la respuesta) y marcaré el ejercicio como completado cuando cumpla el objetivo."
+  },
+  "challenges": {
+    "claim": {
+      "cta": "Continuar con Google",
+      "ctaHint": "Guarda tu puntaje y entra al ranking.",
+      "loading": "Redirigiendo…",
+      "working": "Guardando tu resultado…",
+      "notMember": "Únete a esta escuela para guardar tu resultado.",
+      "joinCta": "Unirme a la escuela",
+      "invalidLink": "Este enlace de reto ya no es válido.",
+      "noAttempt": "No encontramos un resultado para guardar en este dispositivo.",
+      "banned": "Te removieron de esta escuela y no puedes volver a unirte.",
+      "signIn": "Inicia sesión para guardar tu resultado.",
+      "savedTitle": "Resultado guardado",
+      "savedScore": "Tu puntaje: {score}",
+      "freeNext": "Tu acceso gratuito está listo.",
+      "nextExercise": "Siguiente ejercicio",
+      "paidTitle": "Este curso es de pago",
+      "paidBody": "Tu puntaje de {score} quedó guardado en el ranking. No se otorgó acceso al curso.",
+      "buyCta": "Obtener el curso",
+      "error": "Algo salió mal. Inténtalo de nuevo."
+    }
   }
 }
