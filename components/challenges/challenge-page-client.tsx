@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Markdown from 'react-markdown'
 import { IconAlertCircle, IconCircleCheck, IconCircleX, IconLoader2 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ClaimResult } from './claim-result'
 import { ChallengeShareButton } from './challenge-share-button'
 import { ChallengeClaimSlot, ChallengeDuelSlot, type ChallengeResultContext } from './challenge-page-slots'
 
@@ -73,6 +75,7 @@ function PassedBadge({ passed }: { passed: boolean }) {
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
   const { token, exerciseId, title, instructions, passingScore, challenger, isOwner, rankingEntries } = props
+  const claiming = useSearchParams().get('claim') === '1'
   const t = useTranslations('challenges.page')
   const [answer, setAnswer] = useState('')
   const [pending, setPending] = useState(false)
@@ -154,6 +157,8 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         )}
       </header>
 
+      {claiming ? <ClaimResult token={token} /> : null}
+
       {isOwner ? (
         <section className="space-y-3" aria-labelledby="share-heading">
           <h2 id="share-heading" className="text-lg font-semibold">{t('shareHeading')}</h2>
@@ -169,7 +174,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         </div>
       </section>
 
-      {!isOwner && !result ? (
+      {!isOwner && !result && !claiming ? (
         <form onSubmit={submit} className="space-y-3" aria-busy={pending}>
           <label htmlFor="challenge-answer" className="text-sm font-semibold">{t('yourAnswer')}</label>
           <Textarea

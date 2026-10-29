@@ -10858,6 +10858,29 @@
     "exerciseStart": "**How to start:** write your answer, or a first draft, right here. I'll give you feedback and hints (not the answer), and I'll mark the exercise complete once it meets the goal."
   },
   "challenges": {
+    "claim": {
+      "cta": "Continue with Google",
+      "ctaHint": "Save your score and join the ranking.",
+      "loading": "Redirecting…",
+      "working": "Saving your result…",
+      "notMember": "Join this school to save your result.",
+      "joinCta": "Join school",
+      "invalidLink": "This challenge link is no longer valid.",
+      "noAttempt": "We couldn't find a result to save on this device.",
+      "banned": "You were removed from this school and cannot rejoin.",
+      "signIn": "Sign in to save your result.",
+      "savedTitle": "Result saved",
+      "savedScore": "Your score: {score}",
+      "freeNext": "Your free access is ready.",
+      "nextExercise": "Next exercise",
+      "paidTitle": "This course is paid",
+      "paidBody": "Your score of {score} is saved in the ranking. No access to the course was granted.",
+      "buyCta": "Get the course",
+      "error": "Something went wrong. Try again.",
+      "unavailable": "This challenge is no longer available.",
+      "retry": "We couldn't finish saving your result. Please try again.",
+      "claimFailed": "We couldn't attach your result. Please try again."
+    },
     "ranking": {
       "title": "Ranking",
       "loading": "Loading ranking",
