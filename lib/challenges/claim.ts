@@ -1,5 +1,6 @@
-import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { hashWithSecret, verifyGuestToken } from '@/lib/challenges/identity'
+import { isChallengesEnabled } from '@/lib/challenges/settings'
 
 /**
  * Guest → member claim for exercise challenges (epic #1025, WS4 #1029).
@@ -10,12 +11,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * user and only when `courseIsFree` says so (the RPC re-checks the same rule).
  */
 
-/** httpOnly cookie that carries the raw guest token set when the guest played. */
-export const CHALLENGE_GUEST_COOKIE = 'challenge_guest'
-
-/** What `challenge_attempts.guest_token_hash` stores: sha256 hex of the raw token. */
-export function hashGuestToken(rawToken: string): string {
-  return createHash('sha256').update(rawToken).digest('hex')
+/** Unsigned/tampered cookies are never trusted; a missing secret fails closed. */
+function verifyGuestTokenSafe(token: string | null | undefined): token is string {
+  try {
+    return verifyGuestToken(token)
+  } catch {
+    return false
+  }
 }
 
 export type ClaimResult =
@@ -109,7 +111,7 @@ export async function claimChallengeAttempt({
   /** Raw value of the httpOnly guest cookie. */
   guestToken: string | null | undefined
 }): Promise<ClaimResult> {
-  if (!guestToken || !linkToken) return { ok: false, code: 'no_attempt' }
+  if (!verifyGuestTokenSafe(guestToken) || !linkToken) return { ok: false, code: 'no_attempt' }
 
   const { data: membership } = await admin
     .from('tenant_users')
@@ -148,11 +150,18 @@ export async function claimChallengeAttempt({
     .eq('tenant_id', tenantId)
     .eq('setting_key', 'challenges_enabled')
     .maybeSingle()
-  if (setting?.setting_value !== true) return { ok: false, code: 'unavailable' }
+  if (!isChallengesEnabled(setting?.setting_value)) return { ok: false, code: 'unavailable' }
 
   const exerciseId = exercise.id as number
   const courseId = exercise.course_id as number
-  const guestHash = hashGuestToken(guestToken)
+  // Same identity module as the attempt API: the cookie must be a token this
+  // server signed, and the stored hash is the keyed one.
+  let guestHash: string
+  try {
+    guestHash = hashWithSecret('guest', guestToken)
+  } catch {
+    return { ok: false, code: 'claim_failed' }
+  }
 
   type Row = { id: string; user_id: string | null; is_official: boolean; score: number; passed: boolean; created_at: string }
   const cols = 'id, user_id, is_official, score, passed, created_at'
