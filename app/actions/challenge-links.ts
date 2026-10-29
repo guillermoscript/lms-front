@@ -1,9 +1,10 @@
 'use server'
 
-import { nanoid } from 'nanoid'
 import { revalidatePath } from 'next/cache'
-import { authenticateUser, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
+import { authenticateUser, requireTeacherOrAdmin } from '@/lib/actions/utils'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { hasPlanFeature } from '@/lib/plans/server'
+import { createLinkCore, deactivateLinkCore, loadChallengesEnabled, setChallengeableCore } from '@/lib/challenges/links'
 
 /**
  * Challenge-link management (epic #1025, WS5 #1030). `challenge_links` and
@@ -16,28 +17,13 @@ export type ChallengeActionResult<T = undefined> =
   | { success: true; data: T }
   | { success: false; error: string }
 
-/** Guests can only play free-text exercises; quiz-like types are out. */
-const CHALLENGEABLE_TYPES = ['essay', 'discussion']
-
 const fail = (error: string): { success: false; error: string } => ({ success: false, error })
-
-async function isChallengesEnabled(tenantId: string): Promise<boolean> {
-  const { data } = await createAdminClient()
-    .from('tenant_settings')
-    .select('setting_value')
-    .eq('tenant_id', tenantId)
-    .eq('setting_key', 'challenges_enabled')
-    .maybeSingle()
-  const v = data?.setting_value as unknown
-  if (v && typeof v === 'object') return (v as { enabled?: unknown }).enabled === true
-  return v === true
-}
 
 /** Whether the caller's school has challenges switched on (for UI hints). */
 export async function getChallengesEnabled(): Promise<boolean> {
   try {
     const ctx = await authenticateUser()
-    return await isChallengesEnabled(ctx.tenantId)
+    return await loadChallengesEnabled(createAdminClient(), ctx.tenantId)
   } catch {
     return false
   }
@@ -46,78 +32,21 @@ export async function getChallengesEnabled(): Promise<boolean> {
 /**
  * Create a share link for the caller's OWN official challenge attempt.
  * Idempotent: an existing active link for that attempt is returned as-is.
+ * Rules live in `lib/challenges/links.ts`, shared with the MCP tool.
  */
 export async function createChallengeLink(
   attemptId: string,
 ): Promise<ChallengeActionResult<{ id: string; token: string; path: string }>> {
   try {
     const ctx = await authenticateUser()
-    if (typeof attemptId !== 'string' || !attemptId) return fail('Invalid attempt')
-    if (!(await isChallengesEnabled(ctx.tenantId))) return fail('Challenges are not enabled')
-
-    const admin = createAdminClient()
-    const { data: attempt } = await admin
-      .from('challenge_attempts')
-      .select('id, exercise_id, user_id, is_official')
-      .eq('id', attemptId)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle()
-    if (!attempt || attempt.user_id !== ctx.userId) return fail('Attempt not found')
-    if (!attempt.is_official) return fail('Only an official attempt can be shared')
-
-    const { data: exercise } = await admin
-      .from('exercises')
-      .select('id, is_challengeable')
-      .eq('id', attempt.exercise_id)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle()
-    if (!exercise?.is_challengeable) return fail('Exercise is not challengeable')
-
-    const { data: existing } = await admin
-      .from('challenge_links')
-      .select('id, token')
-      .eq('tenant_id', ctx.tenantId)
-      .eq('owner_attempt_id', attempt.id)
-      .eq('created_by', ctx.userId)
-      .eq('active', true)
-      .maybeSingle()
-    if (existing) {
-      return { success: true, data: { ...existing, path: `/reto/${existing.token}` } }
-    }
-
-    let link: { id: string; token: string } | null = null
-    for (let i = 0; i < 3 && !link; i++) {
-      const { data, error } = await admin
-        .from('challenge_links')
-        .insert({
-          tenant_id: ctx.tenantId,
-          exercise_id: attempt.exercise_id,
-          token: nanoid(12),
-          created_by: ctx.userId,
-          owner_attempt_id: attempt.id,
-        })
-        .select('id, token')
-        .single()
-      if (data) {
-        link = data
-        break
-      }
-      if (error?.code !== '23505') return fail('Failed to create link')
-      // Unique violation: either a token collision (retry with a fresh one) or a
-      // concurrent request already created the active link for this attempt.
-      const { data: raced } = await admin
-        .from('challenge_links')
-        .select('id, token')
-        .eq('tenant_id', ctx.tenantId)
-        .eq('owner_attempt_id', attempt.id)
-        .eq('active', true)
-        .maybeSingle()
-      if (raced) link = raced
-    }
-    if (!link) return fail('Failed to create link')
-
+    const r = await createLinkCore(
+      { admin: createAdminClient(), hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading') },
+      ctx,
+      { attemptId },
+    )
+    if (!r.ok) return fail(r.error)
     revalidatePath('/dashboard/student/challenges')
-    return { success: true, data: { ...link, path: `/reto/${link.token}` } }
+    return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}` } }
   } catch (err) {
     console.error('createChallengeLink failed', err)
     return fail('Failed to create link')
@@ -128,25 +57,8 @@ export async function createChallengeLink(
 export async function deactivateChallengeLink(linkId: string): Promise<ChallengeActionResult> {
   try {
     const ctx = await authenticateUser()
-    if (typeof linkId !== 'string' || !linkId) return fail('Invalid link')
-
-    const admin = createAdminClient()
-    const { data: link } = await admin
-      .from('challenge_links')
-      .select('id, created_by')
-      .eq('id', linkId)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle()
-    if (!link) return fail('Link not found')
-    if (ctx.role !== 'admin' && link.created_by !== ctx.userId) return fail('Unauthorized')
-
-    const { error } = await admin
-      .from('challenge_links')
-      .update({ active: false })
-      .eq('id', link.id)
-      .eq('tenant_id', ctx.tenantId)
-    if (error) return fail('Failed to deactivate link')
-
+    const r = await deactivateLinkCore({ admin: createAdminClient() }, ctx, { linkId })
+    if (!r.ok) return fail(r.error)
     revalidatePath('/dashboard/student/challenges')
     return { success: true, data: undefined }
   } catch (err) {
@@ -219,38 +131,13 @@ export async function setExerciseChallengeable(
 ): Promise<ChallengeActionResult<{ isChallengeable: boolean }>> {
   try {
     const ctx = await requireTeacherOrAdmin()
-    if (!Number.isInteger(exerciseId) || typeof value !== 'boolean') return fail('Invalid input')
-
-    const { data: exercise } = await ctx.supabase
-      .from('exercises')
-      .select('id, course_id, exercise_type')
-      .eq('id', exerciseId)
-      .eq('tenant_id', ctx.tenantId)
-      .maybeSingle()
-    if (!exercise || exercise.course_id == null) return fail('Exercise not found')
-    await verifyCourseOwnership(ctx, exercise.course_id)
-
-    if (value) {
-      if (!CHALLENGEABLE_TYPES.includes(exercise.exercise_type as string)) {
-        return fail('Only essay and discussion exercises can be challenges')
-      }
-      if (!(await isChallengesEnabled(ctx.tenantId))) {
-        return fail('Challenges are not enabled for this school')
-      }
-    }
-
-    const { error } = await ctx.supabase
-      .from('exercises')
-      .update({ is_challengeable: value })
-      .eq('id', exercise.id)
-      .eq('tenant_id', ctx.tenantId)
-    if (error) return fail('Failed to update exercise')
-
-    revalidatePath(`/dashboard/teacher/courses/${exercise.course_id}/exercises/${exercise.id}`)
-    return { success: true, data: { isChallengeable: value } }
+    const r = await setChallengeableCore({ admin: createAdminClient() }, ctx, exerciseId, value)
+    if (!r.ok) return fail(r.error)
+    revalidatePath(`/dashboard/teacher/courses/${r.data.courseId}/exercises/${r.data.exerciseId}`)
+    return { success: true, data: { isChallengeable: r.data.isChallengeable } }
   } catch (err) {
     console.error('setExerciseChallengeable failed', err)
-    // Auth / ownership errors from the shared helpers are safe to surface.
+    // Auth errors from the shared helpers are safe to surface.
     const msg = err instanceof Error ? err.message : ''
     return fail(msg.startsWith('Unauthorized') ? 'Unauthorized' : 'Failed to update exercise')
   }
