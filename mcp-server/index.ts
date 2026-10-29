@@ -9,6 +9,7 @@ import { registerCourseTools } from "./src/tools/courses.js";
 import { registerLessonTools } from "./src/tools/lessons.js";
 import { registerEvalTools } from "./src/tools/evals.js";
 import { registerExerciseTools } from "./src/tools/exercises.js";
+import { registerChallengeTools } from "./src/tools/challenges.js";
 import { registerExamTools } from "./src/tools/exams.js";
 import { registerAnalyticsTools } from "./src/tools/analytics.js";
 import { registerStudentTools } from "./src/tools/student.js";
@@ -120,6 +121,7 @@ if (demoWidgetsEnabled()) {
   registerLessonTools(server);
   registerEvalTools(server);
   registerExerciseTools(server);
+  registerChallengeTools(server);
   registerExamTools(server);
   registerAnalyticsTools(server);
   registerStudentTools(server);
