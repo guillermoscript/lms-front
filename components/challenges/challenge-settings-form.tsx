@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { DEFAULT_GUEST_MONTHLY_CAP } from '@/lib/challenges/settings'
 import { updateChallengeSettings } from '@/app/actions/admin/settings'
 import type { SettingsGroup } from '@/app/actions/admin/settings'
 
@@ -67,9 +68,10 @@ export function ChallengeSettingsForm({ settings }: Props) {
           step={1}
           inputMode="numeric"
           defaultValue={cap}
+          placeholder={String(DEFAULT_GUEST_MONTHLY_CAP)}
           className="max-w-40"
         />
-        <p className="text-sm text-muted-foreground">{t('capHint')}</p>
+        <p className="text-sm text-muted-foreground">{t('capHint', { default: DEFAULT_GUEST_MONTHLY_CAP })}</p>
       </div>
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>

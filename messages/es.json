@@ -10865,7 +10865,7 @@
         "enabled": "Activar retos de ejercicios",
         "enabledHint": "Desactivado por defecto. Si está apagado, todos los enlaces de reto aparecen como no encontrados.",
         "cap": "Tope mensual de intentos de invitados",
-        "capHint": "Máximo de intentos oficiales de invitados por mes. Déjalo vacío para usar el valor por defecto. El reto se pausa al alcanzar el tope.",
+        "capHint": "Máximo de intentos oficiales de invitados por mes. Déjalo vacío para usar el valor por defecto ({default}). El reto se pausa al alcanzar el tope.",
         "save": "Guardar",
         "saving": "Guardando…",
         "saved": "Configuración de retos guardada",

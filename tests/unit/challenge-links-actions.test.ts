@@ -56,6 +56,7 @@ vi.mock('@/lib/supabase/tenant', () => ({
 vi.mock('@/lib/supabase/get-user-role', () => ({ getUserRole: async () => h.ctx.role }))
 
 import {
+  getChallengesEnabled,
   createChallengeLink,
   deactivateChallengeLink,
   setExerciseChallengeable,
@@ -101,6 +102,15 @@ describe('setExerciseChallengeable', () => {
     h.ctx.role = 'admin'
     h.ctx.tenantId = OTHER
     expect((await setExerciseChallengeable(5, true)).success).toBe(false)
+  })
+})
+
+describe('getChallengesEnabled reads the shared parser', () => {
+  it.each([
+    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: false }, false], [false, false],
+  ])('challenges_enabled shape %j => %s', async (raw, want) => {
+    h.tables.tenant_settings[0].setting_value = raw
+    expect(await getChallengesEnabled()).toBe(want)
   })
 })
 

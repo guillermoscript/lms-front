@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 import { revalidatePath } from 'next/cache'
 import { authenticateUser, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isChallengesEnabled as isChallengesEnabledValue } from '@/lib/challenges/settings'
 
 /**
  * Challenge-link management (epic #1025, WS5 #1030). `challenge_links` and
@@ -28,9 +29,7 @@ async function isChallengesEnabled(tenantId: string): Promise<boolean> {
     .eq('tenant_id', tenantId)
     .eq('setting_key', 'challenges_enabled')
     .maybeSingle()
-  const v = data?.setting_value as unknown
-  if (v && typeof v === 'object') return (v as { enabled?: unknown }).enabled === true
-  return v === true
+  return isChallengesEnabledValue(data?.setting_value)
 }
 
 /** Whether the caller's school has challenges switched on (for UI hints). */

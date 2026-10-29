@@ -134,7 +134,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
     : title
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-10 md:py-14">
+    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 pb-10 pt-16 md:pb-14 md:pt-24">
       <header className="space-y-3">
         {challenger ? (
           <section aria-labelledby="challenger-heading" className="space-y-2" data-testid="challenger-card">

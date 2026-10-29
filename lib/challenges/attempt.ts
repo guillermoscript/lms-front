@@ -3,6 +3,7 @@ import type { Json } from '@/lib/database.types'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { isChallengeableType, type ChallengeGrade, type ChallengeGradingExercise } from '@/lib/challenges/grade'
 import { checkChallengeLimits } from '@/lib/challenges/limits'
+import { isChallengesEnabled } from '@/lib/challenges/settings'
 
 export const MAX_ANSWER_CHARS = 20_000
 
@@ -52,11 +53,6 @@ interface StoredFeedback {
   strengths?: string[]
   improvements?: string[]
   passing_score?: number
-}
-
-function challengesEnabled(value: unknown): boolean {
-  if (value === true) return true
-  return !!value && typeof value === 'object' && (value as { enabled?: unknown }).enabled === true
 }
 
 function fromRow(
@@ -132,7 +128,7 @@ async function runAttempt(
     .eq('tenant_id', tenantId)
     .eq('setting_key', 'challenges_enabled')
     .maybeSingle()
-  if (!challengesEnabled(setting?.setting_value)) return refuse('challenges_disabled')
+  if (!isChallengesEnabled(setting?.setting_value)) return refuse('challenges_disabled')
 
   const { data: stored } = await admin
     .from('exercises')

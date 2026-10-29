@@ -296,6 +296,12 @@ describe('claimChallenge', () => {
     expect(isChallengesEnabled(raw)).toBe(want)
   })
 
+  it("claim works when the raw string 'true' is stored", async () => {
+    seed({ price: 0 })
+    db.tables.tenant_settings[0].setting_value = 'true'
+    expect(await claimChallenge('tok')).toMatchObject({ success: true, accessGranted: true })
+  })
+
   it('claim works when the admin UI shape {enabled: true} is stored', async () => {
     seed({ price: 0 })
     db.tables.tenant_settings[0].setting_value = { enabled: true }

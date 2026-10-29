@@ -126,6 +126,15 @@ describe('submitChallengeAttempt', () => {
     expect(grade).not.toHaveBeenCalled()
   })
 
+  it.each([
+    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: false }, false], [false, false],
+  ])('challenges_enabled shape %j => enabled %s', async (raw, enabled) => {
+    const tenant_settings = [{ tenant_id: TENANT, setting_key: 'challenges_enabled', setting_value: raw }]
+    const out = await submitChallengeAttempt(deps(world({ tenant_settings })), { token: 'tok', answer: 'x' }, guest)
+    if (enabled) expect(out.ok).toBe(true)
+    else expect(out).toEqual({ ok: false, refusal: 'challenges_disabled' })
+  })
+
   it('refuses without the ai_grading plan feature', async () => {
     const out = await submitChallengeAttempt(deps(world(), { hasAiGrading: async () => false }), { token: 'tok', answer: 'x' }, guest)
     expect(out).toEqual({ ok: false, refusal: 'plan_feature_required' })

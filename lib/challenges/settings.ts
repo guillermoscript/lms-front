@@ -11,3 +11,6 @@ export function isChallengesEnabled(raw: unknown): boolean {
   }
   return false
 }
+
+/** Monthly guest cap used when the school has not configured one. */
+export const DEFAULT_GUEST_MONTHLY_CAP = 200
