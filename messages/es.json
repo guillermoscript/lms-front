@@ -10864,15 +10864,20 @@
       "error": "No se pudo cargar el ranking.",
       "retry": "Reintentar",
       "you": "(tú)",
-      "points": "puntos",
       "duel": {
         "tie": "Empate técnico",
-        "tieHint": "Menos de 3 puntos de diferencia.",
+        "tieHint": "Menos de {points} puntos de diferencia.",
         "youWin": "¡Ganaste!",
         "theyWin": "Gana {name}",
         "you": "Tú",
         "diff": "{diff} puntos de diferencia"
-      }
+      },
+      "columns": {
+        "rank": "Posición",
+        "name": "Nombre",
+        "score": "Puntaje"
+      },
+      "anonymous": "Estudiante"
     }
   }
 }

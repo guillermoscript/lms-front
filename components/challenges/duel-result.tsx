@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl'
-import { compareDuel } from '@/lib/challenges/ranking'
+import { compareDuel, TIE_BAND_POINTS } from '@/lib/challenges/ranking'
 import { cn } from '@/lib/utils'
 
 interface DuelResultProps {
@@ -40,7 +40,7 @@ export function DuelResult({ mine, theirs, theirName, className }: DuelResultPro
         </div>
       </dl>
       <p className="text-sm text-muted-foreground">
-        {outcome === 'tie' ? t('duel.tieHint') : t('duel.diff', { diff })}
+        {outcome === 'tie' ? t('duel.tieHint', { points: TIE_BAND_POINTS }) : t('duel.diff', { diff })}
       </p>
     </section>
   )

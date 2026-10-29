@@ -10864,15 +10864,20 @@
       "error": "Couldn't load the ranking.",
       "retry": "Retry",
       "you": "(you)",
-      "points": "points",
       "duel": {
         "tie": "Technical tie",
-        "tieHint": "Less than 3 points apart.",
+        "tieHint": "Less than {points} points apart.",
         "youWin": "You win!",
         "theyWin": "{name} wins",
         "you": "You",
         "diff": "{diff} points apart"
-      }
+      },
+      "columns": {
+        "rank": "Rank",
+        "name": "Name",
+        "score": "Score"
+      },
+      "anonymous": "Student"
     }
   }
 }
