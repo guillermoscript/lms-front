@@ -98,6 +98,26 @@ describe('submitChallengeAttempt', () => {
     expect(inserts.every((i) => i.table === 'challenge_attempts')).toBe(true)
   })
 
+  it('always reports isOfficial; a different answer after an official one flags officialAlreadyTaken', async () => {
+    const d = deps(world())
+    const first = await submitChallengeAttempt(d, { token: 'tok', answer: 'one' }, guest)
+    const second = await submitChallengeAttempt(d, { token: 'tok', answer: 'two' }, guest)
+    const repeat = await submitChallengeAttempt(d, { token: 'tok', answer: 'two' }, guest)
+    if (!first.ok || !second.ok || !repeat.ok) throw new Error('refused')
+    expect(first.result.isOfficial).toBe(true)
+    expect(first.result).not.toHaveProperty('officialAlreadyTaken')
+    expect(second.result).toMatchObject({ isOfficial: false, officialAlreadyTaken: true })
+    expect(repeat.result).toMatchObject({ alreadyGraded: true, isOfficial: false, officialAlreadyTaken: true })
+  })
+
+  it('practice forced by limits (no prior official) is NOT officialAlreadyTaken', async () => {
+    vi.mocked(checkChallengeLimits).mockResolvedValue({ status: 'ok', official: false })
+    const out = await submitChallengeAttempt(deps(world()), { token: 'tok', answer: 'x' }, guest)
+    if (!out.ok) throw new Error('refused')
+    expect(out.result.isOfficial).toBe(false)
+    expect(out.result).not.toHaveProperty('officialAlreadyTaken')
+  })
+
   it('same answer returns the stored grade without regrading', async () => {
     const tables = world()
     const d = deps(tables)

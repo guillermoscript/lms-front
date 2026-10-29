@@ -33,6 +33,8 @@ export interface AttemptResult {
   strengths: string[]
   improvements: string[]
   isOfficial: boolean
+  /** True when this person already holds an official attempt, so this one is practice. */
+  officialAlreadyTaken?: true
   /** True when a stored grade was returned instead of grading again. */
   alreadyGraded: boolean
 }
@@ -58,7 +60,8 @@ interface StoredFeedback {
 function fromRow(
   row: { id: string; score: number; passed: boolean; feedback: Json | null; is_official: boolean },
   fallbackPassingScore: number,
-  alreadyGraded: boolean
+  alreadyGraded: boolean,
+  officialAlreadyTaken = false
 ): AttemptResult {
   const fb = (row.feedback && typeof row.feedback === 'object' && !Array.isArray(row.feedback)
     ? row.feedback
@@ -72,6 +75,7 @@ function fromRow(
     strengths: fb.strengths ?? [],
     improvements: fb.improvements ?? [],
     isOfficial: row.is_official,
+    ...(officialAlreadyTaken && !row.is_official ? { officialAlreadyTaken: true as const } : {}),
     alreadyGraded,
   }
 }
@@ -167,7 +171,7 @@ async function runAttempt(
 
   // Same answer again: the stored grade, no AI call, no new row. Never regraded.
   const repeat = (attempts ?? []).find((a) => (a.answer as { text?: string } | null)?.text === input.answer)
-  if (repeat) return { ok: true, result: fromRow(repeat, passingScoreOf(exercise), true) }
+  if (repeat) return { ok: true, result: fromRow(repeat, passingScoreOf(exercise), true, (attempts ?? []).some((a) => a.is_official)) }
 
   const limits = await checkChallengeLimits({
     tenantId,
@@ -182,7 +186,8 @@ async function runAttempt(
   const graded = await deps.grade(exercise as ChallengeGradingExercise, input.answer)
 
   // WS7 may force practice (e.g. the guest monthly cap is spent).
-  const hasOfficial = limits.official === false || (attempts ?? []).some((a) => a.is_official)
+  const officialAlreadyTaken = (attempts ?? []).some((a) => a.is_official)
+  const hasOfficial = limits.official === false || officialAlreadyTaken
   const base = {
     tenant_id: tenantId,
     exercise_id: link.exercise_id as number,
@@ -219,5 +224,5 @@ async function runAttempt(
   }
   if (error || !row) throw new Error('challenge_attempt_persist_failed')
 
-  return { ok: true, result: fromRow(row, graded.passingScore, false) }
+  return { ok: true, result: fromRow(row, graded.passingScore, false, officialAlreadyTaken) }
 }

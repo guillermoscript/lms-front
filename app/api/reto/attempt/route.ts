@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   }
   if (answer.length > MAX_ANSWER_CHARS) return Response.json({ error: 'answer_too_long' }, { status: 413 })
 
-  // Identity: a signed-in member counts as themself, everyone else by guest cookie.
+  // Identity: an active member counts as themself, everyone else by guest cookie.
   const supabase = await createClient()
   const {
     data: { user },
@@ -63,7 +63,21 @@ export async function POST(req: Request) {
   // Only a token this server signed is trusted; anything else gets a fresh one.
   const presented = cookieStore.get(GUEST_COOKIE)?.value
   let guestToken = verifyGuestToken(presented) ? presented : undefined
-  const issueCookie = !user && !guestToken
+  // A session alone is not membership: only an ACTIVE member of the host school
+  // plays as themself. Non-members and banned users play as guests, so the
+  // claim flow can join them later and they never reach the ranking unjoined.
+  const admin = createAdminClient()
+  let member = false
+  if (user) {
+    const { data: membership } = await admin
+      .from('tenant_users')
+      .select('status')
+      .eq('tenant_id', hostTenantId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    member = membership?.status === 'active'
+  }
+  const issueCookie = !member && !guestToken
   if (issueCookie) guestToken = newGuestToken()
   const withCookie = (response: Response) => {
     if (issueCookie && guestToken) {
@@ -77,8 +91,8 @@ export async function POST(req: Request) {
   }
 
   const identity = {
-    userId: user?.id ?? null,
-    guestTokenHash: !user && guestToken ? hashWithSecret('guest', guestToken) : null,
+    userId: member && user ? user.id : null,
+    guestTokenHash: !member && guestToken ? hashWithSecret('guest', guestToken) : null,
     ipHash: hashWithSecret('ip', trustedClientIp(requestHeaders)),
   }
 
@@ -95,7 +109,7 @@ export async function POST(req: Request) {
   try {
     outcome = await submitChallengeAttempt(
       {
-        admin: createAdminClient(),
+        admin,
         hostTenantId,
         hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading'),
         grade: async (exercise, text) => {
