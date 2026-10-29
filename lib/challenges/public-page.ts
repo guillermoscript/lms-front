@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isChallengesEnabled } from '@/lib/challenges/settings'
 
 export const CHALLENGES_ENABLED_KEY = 'challenges_enabled'
 
@@ -36,12 +37,6 @@ export function displayName(fullName: string | null | undefined): string | null 
   if (parts.length === 1) return first
   const initial = Array.from(parts[parts.length - 1])[0]?.toUpperCase()
   return initial ? `${first} ${initial}.` : first
-}
-
-function isChallengesEnabled(value: unknown): boolean {
-  if (value === true) return true
-  if (value && typeof value === 'object') return (value as { enabled?: unknown }).enabled === true
-  return false
 }
 
 /**

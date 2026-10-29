@@ -54,6 +54,13 @@ describe('loadChallengePage gating', () => {
     expect(d?.challenger).toMatchObject({ score: 87, name: 'Guillermo M.' })
     expect(d?.exercise.passingScore).toBe(80)
   })
+  // Also the reader behind the OG route (`loadPublicChallenge` is this function).
+  it.each([
+    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: false }, false], [false, false],
+  ])('challenges_enabled shape %j => loads: %s', async (raw, loads) => {
+    seed({ tenant_settings: { setting_value: raw } })
+    expect(Boolean(await loadChallengePage(TOKEN, TENANT))).toBe(loads)
+  })
   it('404s on tenant mismatch', async () => expect(await loadChallengePage(TOKEN, 'tenant-b')).toBeNull())
   it('404s on inactive link', async () => {
     seed({ challenge_links: { ...db.challenge_links!, active: false } })

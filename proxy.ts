@@ -5,6 +5,7 @@ import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 import { isProtectedPath } from '@/lib/auth/route-access'
 import { cookieDomainForHost } from '@/lib/tenant/cookie-domain'
+import { guardChallengePath } from '@/lib/challenges/proxy-guard'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -323,6 +324,18 @@ export default async function proxy(request: NextRequest) {
 
   // --- Inject tenant ID into request headers so server components can read it ---
   request.headers.set('x-tenant-id', tenantId)
+
+  // --- Real 404 for dead challenge links (a page-level notFound() is a soft 404 under loading.tsx) ---
+  const challengeNotFound = await guardChallengePath({
+    request,
+    pathname,
+    tenantId,
+    locales,
+    defaultLocale,
+    supabaseUrl: SUPABASE_URL,
+    serviceKey: SUPABASE_SERVICE_ROLE_KEY,
+  })
+  if (challengeNotFound) return challengeNotFound
 
   // --- Intl Middleware ---
   const intlResponse = intlMiddleware(request)

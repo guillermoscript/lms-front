@@ -290,10 +290,16 @@ describe('claimChallenge', () => {
   })
 
   it.each([
-    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: 'true' }, true],
+    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: 'true' }, false],
     [false, false], [{ enabled: false }, false], ['false', false], [null, false], [undefined, false], [{}, false],
   ])('challenges_enabled shape %j => %s', (raw, want) => {
     expect(isChallengesEnabled(raw)).toBe(want)
+  })
+
+  it("claim works when the raw string 'true' is stored", async () => {
+    seed({ price: 0 })
+    db.tables.tenant_settings[0].setting_value = 'true'
+    expect(await claimChallenge('tok')).toMatchObject({ success: true, accessGranted: true })
   })
 
   it('claim works when the admin UI shape {enabled: true} is stored', async () => {

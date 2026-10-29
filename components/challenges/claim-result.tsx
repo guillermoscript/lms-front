@@ -27,7 +27,7 @@ export function ClaimResult({ token }: { token: string }) {
   if (!outcome.success) {
     if (outcome.code === 'not_member') {
       return (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col items-start gap-2">
           <p>{t('notMember')}</p>
           <Button render={<Link href={joinSchoolPath(`/reto/${encodeURIComponent(token)}?claim=1`)} />}>{t('joinCta')}</Button>
         </div>
@@ -46,7 +46,7 @@ export function ClaimResult({ token }: { token: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-start gap-2">
       <h2 className="text-lg font-semibold">
         {outcome.requiresPurchase ? t('paidTitle') : t('savedTitle')}
       </h2>

@@ -38,6 +38,7 @@
 import { createHmac } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit } from '@/lib/rate-limit'
+import { DEFAULT_GUEST_MONTHLY_CAP } from '@/lib/challenges/settings'
 
 export type ChallengeLimitResult =
   | { status: 'ok'; official: boolean }
@@ -56,7 +57,7 @@ export interface ChallengeLimitInput {
 
 export const MONTHLY_CAP_SETTING_KEY = 'challenges_guest_monthly_cap'
 /** Used when the tenant has not configured `challenges_guest_monthly_cap`. */
-export const DEFAULT_GUEST_MONTHLY_CAP = 200
+export { DEFAULT_GUEST_MONTHLY_CAP }
 /** Used when the stored cap exists but is malformed or negative. */
 export const SAFE_GUEST_MONTHLY_CAP = 20
 /** Max attempts per IP (guests), per device and per user in a rolling hour. */

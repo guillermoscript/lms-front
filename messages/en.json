@@ -10865,7 +10865,7 @@
         "enabled": "Enable exercise challenges",
         "enabledHint": "Off by default. When off, every challenge link shows as not found.",
         "cap": "Monthly guest attempt cap",
-        "capHint": "Maximum official guest attempts per month. Leave blank to use the default. The challenge pauses when the cap is reached.",
+        "capHint": "Maximum official guest attempts per month. Leave blank to use the default ({default}). The challenge pauses when the cap is reached.",
         "save": "Save",
         "saving": "Saving…",
         "saved": "Challenge settings saved",
