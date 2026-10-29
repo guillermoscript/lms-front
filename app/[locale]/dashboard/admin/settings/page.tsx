@@ -20,6 +20,8 @@ import { getMailerStatus } from '@/lib/email/status'
 import { MailerStatusRow } from '@/components/admin/mailer-status-row'
 import { countPreviewLessons } from '@/lib/settings/free-preview'
 import { normalizeCountry } from '@/lib/countries'
+import { ChallengeSettingsForm } from '@/components/challenges/challenge-settings-form'
+import { ChallengeLinksList } from '@/components/challenges/challenge-links-list'
 
 export default async function SettingsPage({
   searchParams,
@@ -28,6 +30,7 @@ export default async function SettingsPage({
 }) {
   const t = await getTranslations('dashboard.admin.settings')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
+  const tChallenges = await getTranslations('challenges.admin')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin') {
@@ -213,6 +216,20 @@ export default async function SettingsPage({
                 </CardHeader>
                 <CardContent>
                   <EnrollmentSettingsForm settings={settings.enrollment || {}} previewLessonCount={previewLessonCount} />
+                </CardContent>
+              </Card>
+
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>{tChallenges('settings.title')}</CardTitle>
+                  <CardDescription>{tChallenges('settings.description')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <ChallengeSettingsForm settings={settings.challenges || {}} />
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">{tChallenges('links.title')}</h3>
+                    <ChallengeLinksList />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

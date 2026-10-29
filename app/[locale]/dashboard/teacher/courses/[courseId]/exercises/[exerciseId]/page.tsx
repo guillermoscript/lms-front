@@ -24,6 +24,8 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { isGradedEvalExerciseType } from '@/lib/ai/evals/schema'
 import { IconUsers } from '@tabler/icons-react'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
+import { getChallengesEnabled } from '@/app/actions/challenge-links'
+import { ChallengeableToggle } from '@/components/challenges/challengeable-toggle'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -100,6 +102,13 @@ export default async function EditExercisePage({ params }: PageProps) {
             <AiSetupGate><AiEditSheet scope={{ type: 'exercise', exerciseId: exercise.id, courseId: parseInt(courseId) }} /></AiSetupGate>
           </div>
         }
+      />
+
+      <ChallengeableToggle
+        exerciseId={exercise.id}
+        initialValue={exercise.is_challengeable === true}
+        challengesEnabled={await getChallengesEnabled()}
+        supportedType={['essay', 'discussion'].includes(exercise.exercise_type)}
       />
 
       <ExerciseBuilder

@@ -163,6 +163,12 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
  * `custom_branding`. A generic upsert here would skip both, so these actions
  * refuse the key on every plan (#763).
  */
+/** `challenges_*` keys have a typed writer (`updateChallengeSettings`) with validation. */
+const CHALLENGE_KEY_REFUSAL: SettingsResponse = {
+  success: false,
+  error: 'Use updateChallengeSettings for challenge settings',
+}
+
 const THEME_KEY_REFUSAL: SettingsResponse = {
   success: false,
   error: 'The school theme is saved from Appearance, not from settings.',
@@ -203,6 +209,7 @@ export async function updateSetting(
     }
 
     if (key === SCHOOL_THEME_SETTING_KEY) return THEME_KEY_REFUSAL
+    if (key.startsWith('challenges_')) return CHALLENGE_KEY_REFUSAL
 
     // Same gate as updateSettings (#890): blank -> null, emails validated.
     const normalized = normalizeGeneralSettings({ [key]: value })
@@ -246,6 +253,7 @@ export async function updateSettings(
     }
 
     if (Object.keys(settings).includes(SCHOOL_THEME_SETTING_KEY)) return THEME_KEY_REFUSAL
+    if (Object.keys(settings).some((k) => k.startsWith('challenges_'))) return CHALLENGE_KEY_REFUSAL
 
     // Optional contact emails: blank -> null, non-blank must be an address (#890).
     const normalized = normalizeGeneralSettings(settings)
@@ -273,6 +281,57 @@ export async function updateSettings(
     return { success: true, data: settings }
   } catch (error) {
     console.error('Error updating settings:', error)
+    return { success: false, error: 'Failed to update settings' }
+  }
+}
+
+/**
+ * Exercise challenges (#1030): the opt-in switch and the guest monthly cap.
+ * `challenges_enabled` is `{ enabled }` like every other toggle; the cap is a
+ * bare JSON integer (the shape the guest-limit check parses). Admin only.
+ */
+export async function updateChallengeSettings(input: {
+  enabled: boolean
+  guestMonthlyCap: number | null
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const role = await getUserRole()
+    if (role !== 'admin') return { success: false, error: 'Unauthorized' }
+
+    if (typeof input.enabled !== 'boolean') return { success: false, error: 'Invalid input' }
+    const cap = input.guestMonthlyCap
+    if (cap !== null && (!Number.isInteger(cap) || cap < 0 || cap > 1_000_000)) {
+      return { success: false, error: 'invalid_cap' }
+    }
+
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+
+    const rows: { tenant_id: string; setting_key: string; setting_value: unknown }[] = [
+      { tenant_id: tenantId, setting_key: 'challenges_enabled', setting_value: { enabled: input.enabled } },
+    ]
+    if (cap !== null) {
+      rows.push({ tenant_id: tenantId, setting_key: 'challenges_guest_monthly_cap', setting_value: cap })
+    }
+    const { error } = await supabase
+      .from('tenant_settings')
+      .upsert(rows as never, { onConflict: 'tenant_id,setting_key' })
+    if (error) throw error
+
+    // Blank cap = back to the application default: drop any stored override.
+    if (cap === null) {
+      const { error: delError } = await supabase
+        .from('tenant_settings')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('setting_key', 'challenges_guest_monthly_cap')
+      if (delError) throw delError
+    }
+
+    revalidatePath('/dashboard/admin/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating challenge settings:', error)
     return { success: false, error: 'Failed to update settings' }
   }
 }
@@ -961,6 +1020,7 @@ export async function getAllSettingsByCategory(): Promise<CategorySettingsRespon
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
       manual_payment_instructions: 'payment', manual_payment_accounts: 'payment',
       free_preview_enabled: 'enrollment',
+      challenges_enabled: 'challenges', challenges_guest_monthly_cap: 'challenges',
     }
 
     const grouped = (data || []).reduce((acc: Record<string, SettingsGroup>, s: SettingRow) => {
