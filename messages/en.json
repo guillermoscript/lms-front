@@ -2729,6 +2729,7 @@
           "tiles": {
             "passed": "Passed",
             "verdictChanges": "Verdict changes",
+            "unstableCases": "Unstable cases ({repeats} repeats)",
             "avgDeviation": "Average deviation",
             "modelCalls": "Model calls"
           },
