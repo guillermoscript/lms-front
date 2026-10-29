@@ -20,7 +20,7 @@ export function classifyChallengePath(pathname: string): ChallengePath {
 }
 
 const LOOKUP_TIMEOUT_MS = 1500
-const LOOKUP_TTL_MS = 15_000
+const LOOKUP_TTL_MS = 5_000
 const lookupCache = new Map<string, { ok: boolean; expiresAt: number }>()
 
 /** Test seam. */
