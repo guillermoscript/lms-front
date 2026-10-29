@@ -31,6 +31,8 @@ export interface ChallengePageClientProps {
   creatorName?: string | null
   /** The signed-in viewer is the challenger: show the card and share, not the form. */
   isOwner: boolean
+  /** A Supabase session exists (member or not); the action itself re-checks membership. */
+  viewerSignedIn?: boolean
   /** Per-exercise ranking, supplied by the page once WS6's server helper is wired in. */
   rankingEntries?: ChallengeResultContext['rankingEntries']
 }
@@ -76,7 +78,7 @@ function PassedBadge({ passed }: { passed: boolean }) {
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, rankingEntries } = props
+  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerSignedIn, rankingEntries } = props
   const claiming = useSearchParams().get('claim') === '1'
   const t = useTranslations('challenges.page')
   const [answer, setAnswer] = useState('')
@@ -128,6 +130,8 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         challengerScore: challenger?.score ?? null,
         challengerName: challenger?.name ?? null,
         rankingEntries,
+        title,
+        viewerSignedIn,
       }
     : null
 
@@ -162,7 +166,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         )}
       </header>
 
-      {claiming ? <ClaimResult token={token} /> : null}
+      {claiming ? <ClaimResult token={token} exerciseId={exerciseId} title={title} /> : null}
 
       {isOwner ? (
         <section className="space-y-3" aria-labelledby="share-heading">

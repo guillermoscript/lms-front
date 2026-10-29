@@ -10978,6 +10978,26 @@
       "improvements": "Por mejorar",
       "openLine": "{name} te reta en {exercise}. ¿Cuánto sacas?",
       "openLineAnon": "Te retan en {exercise}. ¿Cuánto sacas?"
+    },
+    "share": {
+      "copyLink": "Copiar link de reto",
+      "friendsTitle": "Reta a tus amigos",
+      "friendsBody": "Comparte tu mejor resultado y deja que intenten superarlo.",
+      "friendsCta": "Reta a tus amigos",
+      "createLink": "Crear link",
+      "creating": "Creando link…",
+      "copied": "Link de reto copiado",
+      "copiedExisting": "Se copió tu link existente",
+      "copiedShort": "Copiado",
+      "manualHint": "Copia este link",
+      "error": "No se pudo crear el link. Inténtalo de nuevo.",
+      "errorUnauthorized": "No puedes crear un link para este ejercicio.",
+      "shareTitle": "Supera mi puntaje",
+      "shareText": "¿Puedes superar mi puntaje en «{exercise}»?",
+      "pendingTitle": "Resultados sin link",
+      "pendingBody": "Crea un link para retar a tus amigos con estos resultados.",
+      "pendingLoadError": "No se pudieron cargar tus resultados.",
+      "editorHint": "Cualquiera con el link puede jugar este ejercicio como invitado."
     }
   }
 }

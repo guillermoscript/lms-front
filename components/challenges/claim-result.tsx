@@ -6,9 +6,10 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { claimChallenge, type ClaimChallengeOutcome } from '@/app/actions/challenge-claim'
 import { joinSchoolPath } from '@/lib/auth/route-access'
+import { ChallengeFriendsShare } from '@/components/challenges/challenge-friends-share'
 
 /** Runs the post-login claim for `/reto/<token>?claim=1` and shows the outcome. */
-export function ClaimResult({ token }: { token: string }) {
+export function ClaimResult({ token, exerciseId, title }: { token: string; exerciseId?: number; title?: string }) {
   const t = useTranslations('challenges.claim')
   const [outcome, setOutcome] = useState<ClaimChallengeOutcome | null>(null)
 
@@ -74,6 +75,7 @@ export function ClaimResult({ token }: { token: string }) {
           )}
         </>
       )}
+      {exerciseId !== undefined && <ChallengeFriendsShare exerciseId={exerciseId} title={title ?? ''} />}
     </div>
   )
 }

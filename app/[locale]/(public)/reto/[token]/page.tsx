@@ -48,6 +48,7 @@ export default async function ChallengePage({ params }: Props) {
       creatorName={data.creatorName}
       challenger={data.challenger ? { score: data.challenger.score, passed: data.challenger.passed, name: data.challenger.name } : null}
       isOwner={isOwner}
+      viewerSignedIn={Boolean(userId)}
       rankingEntries={rankingEntries}
     />
   )

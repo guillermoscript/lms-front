@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { setExerciseChallengeable } from '@/app/actions/challenge-links'
+import { createOpenChallengeLink, setExerciseChallengeable } from '@/app/actions/challenge-links'
+import { ChallengeLinkAction } from '@/components/challenges/challenge-link-action'
 
 interface Props {
   exerciseId: number
@@ -18,6 +19,7 @@ interface Props {
 
 export function ChallengeableToggle({ exerciseId, initialValue, challengesEnabled, supportedType }: Props) {
   const t = useTranslations('challenges.admin.exercise')
+  const tShare = useTranslations('challenges.share')
   const [value, setValue] = useState(initialValue)
   const [saving, setSaving] = useState(false)
 
@@ -55,6 +57,17 @@ export function ChallengeableToggle({ exerciseId, initialValue, challengesEnable
       <p className="mt-3 text-sm text-warning" role="note">
         {t('warning')}
       </p>
+      {value && challengesEnabled && supportedType && (
+        <div className="mt-3 space-y-1">
+          <ChallengeLinkAction
+            create={() => createOpenChallengeLink(exerciseId)}
+            label={tShare('copyLink')}
+            variant="outline"
+            testId="challenge-copy-open-link"
+          />
+          <p className="text-xs text-muted-foreground">{tShare('editorHint')}</p>
+        </div>
+      )}
       {!supportedType && (
         <p className="mt-2 text-sm text-muted-foreground">{t('unsupportedType')}</p>
       )}

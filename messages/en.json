@@ -10978,6 +10978,26 @@
       "improvements": "To improve",
       "openLine": "{name} challenges you on {exercise}. How much can you score?",
       "openLineAnon": "You are challenged on {exercise}. How much can you score?"
+    },
+    "share": {
+      "copyLink": "Copy challenge link",
+      "friendsTitle": "Challenge your friends",
+      "friendsBody": "Share your best result and let them try to beat it.",
+      "friendsCta": "Challenge your friends",
+      "createLink": "Create link",
+      "creating": "Creating link…",
+      "copied": "Challenge link copied",
+      "copiedExisting": "Your existing link was copied",
+      "copiedShort": "Copied",
+      "manualHint": "Copy this link",
+      "error": "Could not create the link. Try again.",
+      "errorUnauthorized": "You can't create a link for this exercise.",
+      "shareTitle": "Beat my score",
+      "shareText": "Can you beat my score on “{exercise}”?",
+      "pendingTitle": "Results without a link",
+      "pendingBody": "Create a link to challenge friends with these results.",
+      "pendingLoadError": "Could not load your results.",
+      "editorHint": "Anyone with the link can play this exercise as a guest."
     }
   }
 }
