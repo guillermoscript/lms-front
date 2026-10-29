@@ -234,6 +234,77 @@ export function runCase(ctx: EngineContext, testCase: EvalCaseRow) {
   return testCase.kind === 'golden_chat' ? runGoldenCase(ctx, testCase) : runScenarioCase(ctx, testCase)
 }
 
+/**
+ * Folds the repeats of one case into a single outcome by majority: completed
+ * if more than half the repeats completed, each criterion passed if more than
+ * half passed it. A tie (only possible when a repeat errored) fails the case.
+ * The transcript, turn and evidence shown are from a repeat that agrees with
+ * the majority.
+ */
+export function foldCaseRepeats(
+  testCase: Pick<EvalCaseRow, 'kind' | 'expected' | 'golden_output'>,
+  outcomes: CaseOutcome[],
+  erroredRepeats = 0
+): CaseOutcome {
+  const n = outcomes.length
+  const majority = (votes: number) => votes * 2 > n
+  const completedVotes = outcomes.filter((o) => o.completed).length
+  const completed = majority(completedVotes)
+  const criteria = outcomes[0].verdicts.map((v) => v.criterion)
+  const criteriaPasses = criteria.map((_, i) => outcomes.filter((o) => o.verdicts[i]?.passed).length)
+  const criteriaMajority = criteriaPasses.map(majority)
+
+  // The repeat that agrees with the majority on completion and on the most criteria.
+  const agreement = (o: CaseOutcome) =>
+    (o.completed === completed ? criteria.length + 1 : 0) +
+    criteriaMajority.filter((passed, i) => (o.verdicts[i]?.passed ?? false) === passed).length
+  const representative = outcomes.reduce((best, o) => (agreement(o) > agreement(best) ? o : best), outcomes[0])
+
+  const verdicts = criteria.map((criterion, i) => {
+    const source = [representative, ...outcomes].find((o) => (o.verdicts[i]?.passed ?? false) === criteriaMajority[i])
+    return { criterion, passed: criteriaMajority[i], evidence: source?.verdicts[i]?.evidence ?? 'No verdict returned.' }
+  })
+  const completedTurn = completed ? representative.completed_turn : null
+  const { deviation, passed } = computeDeviation({
+    completed,
+    completedTurn,
+    expected: testCase.expected,
+    golden: testCase.kind === 'golden_chat' ? testCase.golden_output : null,
+    verdicts,
+  })
+  const split = (votes: number) => votes > 0 && votes < n
+  return {
+    transcript: representative.transcript,
+    completed,
+    completed_turn: completedTurn,
+    verdicts,
+    deviation,
+    passed: passed && completedVotes * 2 !== n,
+    output: {
+      repeats: n + erroredRepeats,
+      completed_flags: outcomes.map((o) => o.completed),
+      criteria_passes: criteriaPasses,
+      errored_repeats: erroredRepeats,
+      unstable: split(completedVotes) || criteriaPasses.some(split),
+    },
+  }
+}
+
+/** Runs a case `repeats` times (sequentially) and folds the results by majority. */
+export async function runCaseRepeated(ctx: EngineContext, testCase: EvalCaseRow, repeats: number): Promise<CaseOutcome> {
+  const outcomes: CaseOutcome[] = []
+  let firstError: unknown = null
+  for (let i = 0; i < repeats; i++) {
+    try {
+      outcomes.push(await runCase(ctx, testCase))
+    } catch (error) {
+      firstError ??= error
+    }
+  }
+  if (outcomes.length === 0) throw firstError ?? new Error('Every repeat failed')
+  return foldCaseRepeats(testCase, outcomes, repeats - outcomes.length)
+}
+
 // --- scenario drafting ---------------------------------------------------------
 
 const draftSchema = z.object({

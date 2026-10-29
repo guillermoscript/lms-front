@@ -556,6 +556,12 @@ interface ResultRow {
     hints?: number;
     corrections_logged?: number;
     evaluation?: { score?: number; feedback?: string } | null;
+    /** lesson case run several times: the votes behind the majority row. */
+    repeats?: number;
+    completed_flags?: boolean[];
+    criteria_passes?: number[];
+    errored_repeats?: number;
+    unstable?: boolean;
   } | null;
   deviation: unknown;
   passed: boolean | null;
@@ -578,6 +584,15 @@ function summaryLine(summary: unknown): string {
     .filter(([, v]) => typeof v === "number" || typeof v === "string" || typeof v === "boolean")
     .map(([k, v]) => `${k.replace(/_/g, " ")}: ${String(v)}`);
   return parts.join(", ");
+}
+
+/** Lesson case run several times: " — completed in 2/3 repeats, UNSTABLE". Empty for single runs. */
+function repeatsText(r: ResultRow): string {
+  const flags = r.output?.completed_flags;
+  if (!flags || flags.length + (r.output?.errored_repeats ?? 0) <= 1) return "";
+  const done = flags.filter(Boolean).length;
+  const errored = r.output?.errored_repeats ? `, ${r.output.errored_repeats} errored` : "";
+  return ` — completed in ${done}/${flags.length} repeats${errored}${r.output?.unstable ? ", UNSTABLE (repeats disagreed)" : ""}`;
 }
 
 function deviationText(d: unknown): string {
@@ -697,7 +712,7 @@ export function formatRunReport(
       const dev = deviationText(r.deviation);
       const expected = r.expected?.completed == null ? "" : ` (expected: ${expectedLabel(r.expected.completed)})`;
       out.push(
-        `${mark} **${r.case_name}** (${r.case_kind === "scenario" ? "simulated student" : "golden chat"}) — ${outcome}${expected}${dev ? ` — deviation: ${dev}/100` : ""}${r.error ? ` — error: ${r.error}` : ""}`
+        `${mark} **${r.case_name}** (${r.case_kind === "scenario" ? "simulated student" : "golden chat"}) — ${outcome}${expected}${repeatsText(r)}${dev ? ` — deviation: ${dev}/100` : ""}${r.error ? ` — error: ${r.error}` : ""}`
       );
     }
     const qs = r.output?.questions ?? [];
@@ -709,9 +724,13 @@ export function formatRunReport(
     out.push("", "## Failed criteria", "");
     for (const r of failing) {
       out.push(`**${r.case_name}**`);
-      for (const v of (r.verdicts ?? []).filter((x) => !x.passed)) {
-        out.push(`- ✗ ${v.criterion}${v.evidence ? ` — evidence: ${v.evidence}` : ""}`);
-      }
+      const passes = r.output?.criteria_passes;
+      const voted = r.output?.completed_flags?.length;
+      (r.verdicts ?? []).forEach((v, i) => {
+        if (v.passed) return;
+        const votes = passes && voted && voted > 1 ? ` (passed in ${passes[i] ?? 0}/${voted} repeats)` : "";
+        out.push(`- ✗ ${v.criterion}${votes}${v.evidence ? ` — evidence: ${v.evidence}` : ""}`);
+      });
     }
   }
 
@@ -1424,22 +1443,32 @@ export function registerEvalTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_run_evals",
-      description: `Run every test case against the lesson's CURRENT saved AI task (save prompt changes first with lms_upsert_lesson_ai_task), or — with exercise_id — against the exercise's CURRENT saved grader (save changes first with lms_update_exercise), or — with exam_id — against the exam's CURRENT saved questions and grading (save changes first with lms_update_exam_question): each graded answer (or each exam's free-text answer set) is graded 3 times, so cost is cases × 3 model calls (returned as estimated_model_calls); injection cases must never score above expected. Exercises also run their coach and voice scenarios once each (the coach gets a preview-only completion tool, so nothing is written; voice is TEXT-simulated with no audio). An exam with no free-text questions is rejected (no_ai_questions). The run executes in the background on the school's AI key (one run at a time per lesson, daily cap per school) and takes roughly 1–3 minutes; this call returns the run id immediately — then call lms_get_eval_run. ${WORKFLOW}`,
-      schema: z.object({ ...TargetFields }),
+      description: `Run every test case against the lesson's CURRENT saved AI task (save prompt changes first with lms_upsert_lesson_ai_task), or — with exercise_id — against the exercise's CURRENT saved grader (save changes first with lms_update_exercise), or — with exam_id — against the exam's CURRENT saved questions and grading (save changes first with lms_update_exam_question): each graded answer (or each exam's free-text answer set) is graded 3 times, so cost is cases × 3 model calls (returned as estimated_model_calls); injection cases must never score above expected. Lesson cases (scenarios and golden chats) run \`repeats\` times each (default 3; 1, 3 or 5) and the result is decided by majority: completed or not by majority, each must_keep criterion passed by majority; cost is roughly cases × 12 × repeats model calls (returned as estimated_model_calls), so 3 repeats triple the cost of a single pass. Exercises also run their coach and voice scenarios once each (the coach gets a preview-only completion tool, so nothing is written; voice is TEXT-simulated with no audio). An exam with no free-text questions is rejected (no_ai_questions). The run executes in the background on the school's AI key (one run at a time per lesson, daily cap per school) and takes roughly 1–3 minutes; this call returns the run id immediately — then call lms_get_eval_run. ${WORKFLOW}`,
+      schema: z.object({
+        ...TargetFields,
+        repeats: z
+          .union([z.literal(1), z.literal(3), z.literal(5)])
+          .optional()
+          .describe("Lesson only: times each case runs; the majority decides (default 3). Cost scales with it"),
+      }),
       annotations: WRITE,
     },
     async (input, ctx) => {
       const t = resolveEvalTarget(input);
       if (!t.ok) return errorResult(t.error);
+      if (input.repeats !== undefined && t.kind !== "lesson")
+        return errorResult("`repeats` applies to lesson AI task runs only; exercise and exam cases are always graded 3 times.");
       return run(ctx, ownerOfTarget(t), async (call) => {
-        const res = await call("POST", `${t.base}/runs`, {}, RUN_START_TIMEOUT_MS);
+        const body = input.repeats !== undefined ? { repeats: input.repeats } : {};
+        const res = await call("POST", `${t.base}/runs`, body, RUN_START_TIMEOUT_MS);
         if (res.status !== 202 && res.status !== 201 && res.status !== 200)
           return errorResult(describeEvalError(res.status, res.body, t.kind));
         const r = res.body.run as { id?: string; status?: string } | undefined;
         const est = res.body.estimated_model_calls;
+        const repeats = typeof res.body.repeats === "number" ? res.body.repeats : undefined;
         return ok(
-          { run_id: r?.id, status: r?.status ?? "queued", estimated_model_calls: est },
-          `Test run started: \`${r?.id}\` (${r?.status ?? "queued"}${typeof est === "number" ? `, ~${est} model calls on the school's AI key` : ""}).\n\nCall lms_get_eval_run with run_id "${r?.id}" in ~1–3 minutes to read the report.`
+          { run_id: r?.id, status: r?.status ?? "queued", estimated_model_calls: est, ...(repeats ? { repeats } : {}) },
+          `Test run started: \`${r?.id}\` (${r?.status ?? "queued"}${typeof est === "number" ? `, ~${est} model calls on the school's AI key` : ""}${repeats && repeats > 1 ? `; each case runs ${repeats} times and the majority decides` : ""}).\n\nCall lms_get_eval_run with run_id "${r?.id}" in ~1–3 minutes to read the report.`
         );
       });
     }
@@ -1450,7 +1479,7 @@ export function registerEvalTools(server: LmsServer) {
     {
       name: "lms_get_eval_run",
       description:
-        "Read a test run's report as markdown: status, task version, summary, one line per case (✓/✗, completed vs expected, turn, deviation) and the failed criteria with evidence. For exercise runs: per case expected score ±tolerance vs the median score, the 3 repeat scores, stddev, deviation, INFLATED flag for injections, and the grader's feedback; summary has inflated_injections, pass_flips (majority verdict wrong), unstable_cases (a repeat disagreed), mean_deviation, max_stddev. For exam runs: per case the expected total vs the median total, then a per-question table (question ID, auto-scored or AI-graded, expected vs median points, deviation %, flags: flip, unstable, inflated, question removed); summary also has question_flips. Coach scenarios show completed or not against expected, the turn it completed at, and the failed reasons. Voice scenarios (text-simulated) show finished or not, the score against its expected band, hints and corrections. If the run is still queued/running, call again in a minute. Set include_transcripts to read the full conversations (long). Use the failures to improve the prompt with lms_upsert_lesson_ai_task, then lms_run_evals again.",
+        "Read a test run's report as markdown: status, task version, summary, one line per case (✓/✗, completed vs expected, turn, deviation) and the failed criteria with evidence. For exercise runs: per case expected score ±tolerance vs the median score, the 3 repeat scores, stddev, deviation, INFLATED flag for injections, and the grader's feedback; summary has inflated_injections, pass_flips (majority verdict wrong), unstable_cases (a repeat disagreed), mean_deviation, max_stddev. For exam runs: per case the expected total vs the median total, then a per-question table (question ID, auto-scored or AI-graded, expected vs median points, deviation %, flags: flip, unstable, inflated, question removed); summary also has question_flips. Lesson cases run several times show the majority result, how many repeats completed, UNSTABLE when repeats disagreed, and per failed criterion how many repeats passed it; the summary has repeats and unstable_cases. Coach scenarios show completed or not against expected, the turn it completed at, and the failed reasons. Voice scenarios (text-simulated) show finished or not, the score against its expected band, hints and corrections. If the run is still queued/running, call again in a minute. Set include_transcripts to read the full conversations (long). Use the failures to improve the prompt with lms_upsert_lesson_ai_task, then lms_run_evals again.",
       schema: z.object({
         run_id: z.string().describe("The run ID returned by lms_run_evals / lms_list_eval_runs"),
         include_transcripts: z.boolean().optional().describe("Include each case's full conversation (default false)"),
