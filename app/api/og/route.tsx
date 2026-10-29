@@ -4,6 +4,8 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { readHeadingFont } from '@/lib/themes/brand-fonts'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getTranslations } from 'next-intl/server'
+import { loadPublicChallenge } from '@/lib/challenges/public-page'
 import { fetchImageAsDataUrl } from '@/lib/og/fetch-image'
 import { ogCardPalette, type OgCardPalette } from '@/lib/og/palette'
 import type { KitHeadingFont } from '@/lib/themes/brand-outputs'
@@ -267,6 +269,98 @@ function renderCertificateCard({
   )
 }
 
+function renderChallengeCard({
+  site,
+  title,
+  score,
+  badge,
+  logo,
+  palette,
+  headingFontFamily,
+}: {
+  site: string
+  title: string
+  score: number | null
+  badge: string
+  logo: string | null
+  palette: OgCardPalette
+  headingFontFamily?: string
+}) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: 72,
+        background: cardBackground(palette),
+        color: palette.primaryText,
+        fontFamily: 'sans-serif',
+      }}
+    >
+      <BrandRow logo={logo} label={site} textColor={palette.secondaryText} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 56 }}>
+        {score !== null ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 240,
+              height: 240,
+              flexShrink: 0,
+              borderRadius: 9999,
+              border: `8px solid ${palette.accent}`,
+              fontSize: 120,
+              fontWeight: 700,
+              color: palette.primaryText,
+              ...headingFontStyle(headingFontFamily),
+            }}
+          >
+            {score}
+          </div>
+        ) : null}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
+          {badge ? (
+            <div
+              style={{
+                display: 'flex',
+                alignSelf: 'flex-start',
+                fontSize: 22,
+                letterSpacing: 4,
+                textTransform: 'uppercase',
+                color: palette.secondaryText,
+                border: `1px solid ${palette.accent}`,
+                borderRadius: 9999,
+                padding: '10px 26px',
+              }}
+            >
+              {badge}
+            </div>
+          ) : null}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: title.length > 70 ? 46 : title.length > 40 ? 58 : 70,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              color: palette.primaryText,
+              ...headingFontStyle(headingFontFamily),
+            }}
+          >
+            {title}
+          </div>
+        </div>
+      </div>
+
+      <AccentBar color={palette.accent} />
+    </div>
+  )
+}
+
 function renderCourseCard({
   site,
   title,
@@ -371,6 +465,9 @@ function renderCourseCard({
  * Variants (via ?type=):
  *  - generic (default): site + title + subtitle — used by most public pages
  *  - certificate: student achievement card — used by /verify/[code]
+ *  - challenge: score ring + "X scored N on Y" headline for /reto/[token]; name, score and title
+ *    all come from the DB via loadPublicChallenge (same gating as the page), the
+ *    headline is built server-side. Ungated/unresolvable token -> generic card.
  *  - course: brand column (logo, school name, badge, course title) beside a framed thumbnail,
  *    or the generic layout with the course description when there is no
  *    thumbnail — used by /courses/[id]; falls back to the generic card when the course id
@@ -427,6 +524,28 @@ export async function GET(request: NextRequest) {
     }
     // Unresolved course id (deleted, unpublished, wrong tenant) — the generic
     // card below still carries this tenant's brand.
+  }
+
+  if (type === 'challenge') {
+    // Everything on this card comes from the database through the same
+    // loader (and gating) as the page; the query string only picks the
+    // token and one of two locales. An ungated link falls through to the
+    // generic card, which carries no score.
+    const locale = sp.get('locale') === 'es' ? 'es' : 'en'
+    const data = await loadPublicChallenge(sp.get('token') ?? '', tenantId)
+    if (data) {
+      const t = await getTranslations({ locale, namespace: 'challenges.page' })
+      const title = clamp(
+        data.challenger
+          ? t('challengerLine', { name: data.challenger.name ?? t('guestName'), score: data.challenger.score, exercise: data.exercise.title })
+          : data.exercise.title,
+        120
+      )
+      return new ImageResponse(
+        renderChallengeCard({ site, title, score: data.challenger?.score ?? null, badge: t('ogBadge'), logo, palette, headingFontFamily }),
+        { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts }
+      )
+    }
   }
 
   if (type === 'certificate') {

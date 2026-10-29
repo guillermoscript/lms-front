@@ -10898,6 +10898,83 @@
         "copied": "Link copied",
         "copyError": "Could not copy the link"
       }
+    },
+    "claim": {
+      "cta": "Continue with Google",
+      "ctaHint": "Save your score and join the ranking.",
+      "loading": "Redirecting…",
+      "working": "Saving your result…",
+      "notMember": "Join this school to save your result.",
+      "joinCta": "Join school",
+      "invalidLink": "This challenge link is no longer valid.",
+      "noAttempt": "We couldn't find a result to save on this device.",
+      "banned": "You were removed from this school and cannot rejoin.",
+      "signIn": "Sign in to save your result.",
+      "savedTitle": "Result saved",
+      "savedScore": "Your score: {score}",
+      "freeNext": "Your free access is ready.",
+      "nextExercise": "Next exercise",
+      "paidTitle": "This course is paid",
+      "paidBody": "Your score of {score} is saved in the ranking. No access to the course was granted.",
+      "buyCta": "Get the course",
+      "error": "Something went wrong. Try again.",
+      "unavailable": "This challenge is no longer available.",
+      "retry": "We couldn't finish saving your result. Please try again.",
+      "claimFailed": "We couldn't attach your result. Please try again."
+    },
+    "ranking": {
+      "title": "Ranking",
+      "loading": "Loading ranking",
+      "empty": "No one is ranked yet. Be the first!",
+      "error": "Couldn't load the ranking.",
+      "retry": "Retry",
+      "you": "(you)",
+      "duel": {
+        "tie": "Technical tie",
+        "tieHint": "Less than {points} points apart.",
+        "youWin": "You win!",
+        "theyWin": "{name} wins",
+        "you": "You",
+        "diff": "{diff} points apart"
+      },
+      "columns": {
+        "rank": "Rank",
+        "name": "Name",
+        "score": "Score"
+      },
+      "anonymous": "Student"
+    },
+    "page": {
+      "eyebrow": "Challenge",
+      "challengerLine": "{name} scored {score} on {exercise}. Can you beat it?",
+      "beatIt": "Answer below. You get one graded attempt, with no hints.",
+      "passingScore": "Passing score {score}",
+      "guestName": "Guest",
+      "passed": "Passed",
+      "notPassed": "Not passed",
+      "instructions": "Instructions",
+      "yourAnswer": "Your answer",
+      "answerPlaceholder": "Write your answer here",
+      "coldNote": "One graded attempt. No hints, no tutor.",
+      "submit": "Submit answer",
+      "grading": "Grading…",
+      "resultHeading": "Your result",
+      "duelBasic": "{name}: {challenger} · You: {you}",
+      "shareHeading": "Share your challenge",
+      "shareBody": "Send this link to a friend. They play without an account.",
+      "share": "Share",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "copyFailed": "Could not copy the link",
+      "shareText": "{name} scored {score} on {exercise}. Can you beat it?",
+      "metaDescription": "Take the challenge and compare your score.",
+      "ogBadge": "Challenge",
+      "errorGeneric": "We could not grade your answer. Try again in a moment.",
+      "errorRateLimited": "Too many attempts. Try again later.",
+      "errorPaused": "This challenge is paused for now.",
+      "errorAlreadyPlayed": "You already played this challenge.",
+      "strengths": "Strengths",
+      "improvements": "To improve"
     }
   }
 }

@@ -1,0 +1,40 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
+import { DuelResult } from '@/components/challenges/duel-result'
+import { ClaimCta } from '@/components/challenges/claim-cta'
+import { Ranking } from '@/components/challenges/ranking'
+import type { RankingEntry } from '@/lib/challenges/ranking'
+
+export interface ChallengeResultContext {
+  token: string
+  exerciseId: number
+  guestScore: number
+  guestPassed: boolean
+  challengerScore: number | null
+  challengerName: string | null
+  /** Ranking rows from WS6's `getChallengeRankingServer`; absent until wired. */
+  rankingEntries?: RankingEntry[]
+}
+
+/** The duel result (guest vs challenger, with the tie band) and the per-exercise ranking. */
+export function ChallengeDuelSlot({ ctx }: { ctx: ChallengeResultContext }) {
+  const t = useTranslations('challenges.page')
+  return (
+    <div className="space-y-5">
+      {ctx.challengerScore !== null ? (
+        <DuelResult
+          mine={ctx.guestScore}
+          theirs={ctx.challengerScore}
+          theirName={ctx.challengerName ?? t('guestName')}
+        />
+      ) : null}
+      {ctx.rankingEntries ? <Ranking entries={ctx.rankingEntries} /> : null}
+    </div>
+  )
+}
+
+/** The claim CTA: "continue with Google" to save the result and join the ranking. */
+export function ChallengeClaimSlot({ ctx }: { ctx: ChallengeResultContext }) {
+  return <ClaimCta token={ctx.token} />
+}

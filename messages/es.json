@@ -10898,6 +10898,83 @@
         "copied": "Enlace copiado",
         "copyError": "No se pudo copiar el enlace"
       }
+    },
+    "claim": {
+      "cta": "Continuar con Google",
+      "ctaHint": "Guarda tu puntaje y entra al ranking.",
+      "loading": "Redirigiendo…",
+      "working": "Guardando tu resultado…",
+      "notMember": "Únete a esta escuela para guardar tu resultado.",
+      "joinCta": "Unirme a la escuela",
+      "invalidLink": "Este enlace de reto ya no es válido.",
+      "noAttempt": "No encontramos un resultado para guardar en este dispositivo.",
+      "banned": "Te removieron de esta escuela y no puedes volver a unirte.",
+      "signIn": "Inicia sesión para guardar tu resultado.",
+      "savedTitle": "Resultado guardado",
+      "savedScore": "Tu puntaje: {score}",
+      "freeNext": "Tu acceso gratuito está listo.",
+      "nextExercise": "Siguiente ejercicio",
+      "paidTitle": "Este curso es de pago",
+      "paidBody": "Tu puntaje de {score} quedó guardado en el ranking. No se otorgó acceso al curso.",
+      "buyCta": "Obtener el curso",
+      "error": "Algo salió mal. Inténtalo de nuevo.",
+      "unavailable": "Este reto ya no está disponible.",
+      "retry": "No pudimos terminar de guardar tu resultado. Inténtalo de nuevo.",
+      "claimFailed": "No pudimos asociar tu resultado. Inténtalo de nuevo."
+    },
+    "ranking": {
+      "title": "Ranking",
+      "loading": "Cargando ranking",
+      "empty": "Aún no hay nadie en el ranking. ¡Sé el primero!",
+      "error": "No se pudo cargar el ranking.",
+      "retry": "Reintentar",
+      "you": "(tú)",
+      "duel": {
+        "tie": "Empate técnico",
+        "tieHint": "Menos de {points} puntos de diferencia.",
+        "youWin": "¡Ganaste!",
+        "theyWin": "Gana {name}",
+        "you": "Tú",
+        "diff": "{diff} puntos de diferencia"
+      },
+      "columns": {
+        "rank": "Posición",
+        "name": "Nombre",
+        "score": "Puntaje"
+      },
+      "anonymous": "Estudiante"
+    },
+    "page": {
+      "eyebrow": "Reto",
+      "challengerLine": "{name} sacó {score} en {exercise}. ¿Lo superas?",
+      "beatIt": "Responde abajo. Tienes un intento calificado, sin pistas.",
+      "passingScore": "Nota para aprobar {score}",
+      "guestName": "Invitado",
+      "passed": "Aprobado",
+      "notPassed": "No aprobado",
+      "instructions": "Instrucciones",
+      "yourAnswer": "Tu respuesta",
+      "answerPlaceholder": "Escribe tu respuesta aquí",
+      "coldNote": "Un intento calificado. Sin pistas ni tutor.",
+      "submit": "Enviar respuesta",
+      "grading": "Calificando…",
+      "resultHeading": "Tu resultado",
+      "duelBasic": "{name}: {challenger} · Tú: {you}",
+      "shareHeading": "Comparte tu reto",
+      "shareBody": "Envía este enlace a un amigo. Juega sin crear cuenta.",
+      "share": "Compartir",
+      "copyLink": "Copiar enlace",
+      "linkCopied": "Enlace copiado",
+      "copyFailed": "No se pudo copiar el enlace",
+      "shareText": "{name} sacó {score} en {exercise}. ¿Lo superas?",
+      "metaDescription": "Acepta el reto y compara tu puntaje.",
+      "ogBadge": "Reto",
+      "errorGeneric": "No pudimos calificar tu respuesta. Inténtalo de nuevo en un momento.",
+      "errorRateLimited": "Demasiados intentos. Inténtalo más tarde.",
+      "errorPaused": "Este reto está en pausa por ahora.",
+      "errorAlreadyPlayed": "Ya jugaste este reto.",
+      "strengths": "Fortalezas",
+      "improvements": "Por mejorar"
     }
   }
 }
