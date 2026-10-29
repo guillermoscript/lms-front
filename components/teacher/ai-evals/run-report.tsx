@@ -88,10 +88,19 @@ export function SummaryTiles({ summary }: { summary: RunRow['summary'] }) {
   const t = useTranslations('dashboard.teacher.aiEvals.run.tiles')
   if (!summary) return null
   const total = summary.total ?? 0
+  // Runs from before repeats have no unstable_cases: keep their four tiles.
+  const repeated = summary.unstable_cases !== undefined && (summary.repeats ?? 1) > 1
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className={cn('grid grid-cols-2 gap-2', repeated ? 'sm:grid-cols-5' : 'sm:grid-cols-4')}>
       <Tile label={t('passed')} value={`${summary.passed ?? 0}/${total}`} tone={(summary.passed ?? 0) < total ? 'bad' : undefined} />
       <Tile label={t('verdictChanges')} value={String(summary.verdict_changes ?? 0)} />
+      {repeated && (
+        <Tile
+          label={t('unstableCases', { repeats: summary.repeats ?? 0 })}
+          value={String(summary.unstable_cases ?? 0)}
+          tone={(summary.unstable_cases ?? 0) > 0 ? 'bad' : undefined}
+        />
+      )}
       <Tile label={t('avgDeviation')} value={`${Math.round(summary.avg_deviation ?? 0)}/100`} />
       <Tile label={t('modelCalls')} value={String(summary.model_calls ?? 0)} />
     </div>

@@ -141,7 +141,28 @@ export interface CaseOutcome {
   verdicts: CriterionVerdict[]
   deviation: number
   passed: boolean
+  /** How the repeats voted (lesson cases run LESSON_TASK_REPEATS times by default). */
+  output?: LessonRepeatsOutput
   error?: string
+}
+
+/** Each lesson case runs this many times by default; the majority decides. */
+export const LESSON_TASK_REPEATS = 3
+/** Odd, so a full set of repeats always has a majority. */
+export const lessonRepeatsSchema = z.union([z.literal(1), z.literal(3), z.literal(5)])
+export type LessonRepeats = z.infer<typeof lessonRepeatsSchema>
+
+/** `ai_eval_results.output` of a lesson case: the per-repeat votes behind the majority row. */
+export interface LessonRepeatsOutput {
+  repeats: number
+  /** Completed or not, per repeat that finished. */
+  completed_flags: boolean[]
+  /** Per criterion (same order as `verdicts`): how many repeats passed it. */
+  criteria_passes: number[]
+  /** Repeats that errored and did not vote. */
+  errored_repeats: number
+  /** Some repeat disagreed with the others on completion or on a criterion. */
+  unstable: boolean
 }
 
 export interface RunSummary {
@@ -153,6 +174,10 @@ export interface RunSummary {
   avg_deviation: number
   model_calls: number
   regenerated_scenarios: number
+  /** Times each case ran (absent on runs from before repeats). */
+  repeats?: number
+  /** Cases where some repeat disagreed with the others. */
+  unstable_cases?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -680,7 +705,7 @@ export interface VoiceOutcome {
 }
 
 /** Coach outcome reuses CaseOutcome plus the coach-specific output. */
-export interface CoachOutcome extends CaseOutcome {
+export interface CoachOutcome extends Omit<CaseOutcome, 'output'> {
   output: CoachOutput
 }
 
