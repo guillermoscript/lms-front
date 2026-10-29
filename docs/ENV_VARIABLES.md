@@ -105,6 +105,7 @@ AI is BYOK: each school stores its own provider keys (Admin > Settings > AI). Th
 | Variable | Required | Description | Where to get it | Example |
 |----------|----------|-------------|-----------------|---------|
 | `CRON_SECRET` | Optional | Shared secret to authenticate `/api/cron/*` endpoints (e.g., expire-subscriptions). If set, cron requests must include this as a bearer token. | Generate with `openssl rand -hex 32` | `a1b2c3d4...` (64 hex chars) |
+| `CHALLENGE_HASH_SECRET` | Required for challenges | Keyed hash (HMAC) for exercise-challenge guest cookies and IPs (#1027). No fallback: unset = `/api/reto/attempt` returns 503. | Generate with `openssl rand -hex 32` | `a1b2c3d4...` |
 
 ### PayPal (Alternative Payment Provider)
 
