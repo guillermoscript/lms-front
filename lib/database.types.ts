@@ -901,6 +901,148 @@ export type Database = {
           },
         ]
       }
+      challenge_attempts: {
+        Row: {
+          answer: Json
+          created_at: string
+          exercise_id: number
+          feedback: Json | null
+          graded_at: string
+          guest_token_hash: string | null
+          id: string
+          ip_hash: string
+          is_official: boolean
+          link_id: string | null
+          passed: boolean
+          score: number
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          answer: Json
+          created_at?: string
+          exercise_id: number
+          feedback?: Json | null
+          graded_at?: string
+          guest_token_hash?: string | null
+          id?: string
+          ip_hash: string
+          is_official?: boolean
+          link_id?: string | null
+          passed: boolean
+          score: number
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          answer?: Json
+          created_at?: string
+          exercise_id?: number
+          feedback?: Json | null
+          graded_at?: string
+          guest_token_hash?: string | null
+          id?: string
+          ip_hash?: string
+          is_official?: boolean
+          link_id?: string | null
+          passed?: boolean
+          score?: number
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_attempts_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_attempts_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_attempts_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_links: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          exercise_id: number
+          id: string
+          owner_attempt_id: string | null
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          exercise_id: number
+          id?: string
+          owner_attempt_id?: string | null
+          tenant_id: string
+          token: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          exercise_id?: number
+          id?: string
+          owner_attempt_id?: string | null
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_links_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_links_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_links_owner_attempt_fk"
+            columns: ["owner_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           conversation_id: string
@@ -3191,6 +3333,7 @@ export type Database = {
           exercise_type: Database["public"]["Enums"]["exercise_type"]
           id: number
           instructions: string
+          is_challengeable: boolean
           lesson_id: number | null
           status: Database["public"]["Enums"]["status"]
           system_prompt: string | null
@@ -3213,6 +3356,7 @@ export type Database = {
           exercise_type: Database["public"]["Enums"]["exercise_type"]
           id?: never
           instructions: string
+          is_challengeable?: boolean
           lesson_id?: number | null
           status?: Database["public"]["Enums"]["status"]
           system_prompt?: string | null
@@ -3235,6 +3379,7 @@ export type Database = {
           exercise_type?: Database["public"]["Enums"]["exercise_type"]
           id?: never
           instructions?: string
+          is_challengeable?: boolean
           lesson_id?: number | null
           status?: Database["public"]["Enums"]["status"]
           system_prompt?: string | null
@@ -8734,6 +8879,17 @@ export type Database = {
         Returns: boolean
       }
       generate_verification_code: { Args: never; Returns: string }
+      get_challenge_ranking: {
+        Args: { _exercise_id: number }
+        Returns: {
+          created_at: string
+          display_name: string
+          passed: boolean
+          rank: number
+          score: number
+          user_id: string
+        }[]
+      }
       get_completed_courses_count: {
         Args: { _user_id: string }
         Returns: number
