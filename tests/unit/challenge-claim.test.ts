@@ -4,11 +4,14 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+// `server-only` is a Next-bundler shim; stub it so the REAL identity module loads.
+vi.mock('server-only', () => ({}))
+
 type Row = Record<string, unknown>
 const db = vi.hoisted(() => ({ tables: {} as Record<string, Row[]> }))
 const ctx = vi.hoisted(() => ({
   user: { id: 'u1', email: 'u@x.com' } as { id: string; email: string } | null,
-  cookie: 'raw-guest-token' as string | undefined,
+  cookie: undefined as string | undefined,
   rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   rpcError: null as { message: string } | null,
   failTables: [] as string[],
@@ -60,7 +63,7 @@ function fakeAdmin() {
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fakeAdmin() }))
 vi.mock('@/lib/supabase/tenant', () => ({ getCurrentTenantId: () => Promise.resolve('t1') }))
 vi.mock('next/headers', () => ({
-  cookies: () => Promise.resolve({ get: (n: string) => (n === 'challenge_guest' && ctx.cookie ? { value: ctx.cookie } : undefined) }),
+  cookies: () => Promise.resolve({ get: (n: string) => (n === 'reto_guest' && ctx.cookie ? { value: ctx.cookie } : undefined) }),
 }))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: () =>
@@ -75,7 +78,12 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/tenant/join-school', () => ({ BANNED_MESSAGE: 'banned-msg' }))
 
 import { claimChallenge } from '@/app/actions/challenge-claim'
-import { hashGuestToken } from '@/lib/challenges/claim'
+import { hashWithSecret, newGuestToken } from '@/lib/challenges/identity'
+import { claimChallengeAttempt } from '@/lib/challenges/claim'
+import { isChallengesEnabled } from '@/lib/challenges/settings'
+
+// The cookie and hash come from the attempt-side helpers, not a re-implementation.
+let goodToken = ''
 
 function seed(opts: { price?: number; planPrice?: number; membership?: string; ownOfficial?: boolean } = {}) {
   db.tables = {
@@ -92,7 +100,7 @@ function seed(opts: { price?: number; planPrice?: number; membership?: string; o
     plans: opts.planPrice === undefined ? [] : [{ tenant_id: 't1', plan_id: 2, price: opts.planPrice, deleted_at: null }],
     challenge_attempts: [
       {
-        id: 'g1', tenant_id: 't1', exercise_id: 10, user_id: null, guest_token_hash: hashGuestToken('raw-guest-token'),
+        id: 'g1', tenant_id: 't1', exercise_id: 10, user_id: null, guest_token_hash: hashWithSecret('guest', goodToken),
         is_official: true, score: 87, passed: true, created_at: '2026-10-29T10:00:00Z',
       },
       ...(opts.ownOfficial
@@ -105,8 +113,10 @@ function seed(opts: { price?: number; planPrice?: number; membership?: string; o
 const attempt = (id: string) => db.tables.challenge_attempts.find((r) => r.id === id)!
 
 beforeEach(() => {
+  vi.stubEnv('CHALLENGE_HASH_SECRET', 'test-secret')
+  goodToken = newGuestToken()
+  ctx.cookie = goodToken
   ctx.user = { id: 'u1', email: 'u@x.com' }
-  ctx.cookie = 'raw-guest-token'
   ctx.rpcCalls = []
   ctx.rpcError = null
   ctx.failTables = []
@@ -189,7 +199,7 @@ describe('claimChallenge', () => {
     ctx.user = { id: 'u1', email: 'u@x.com' }
     ctx.cookie = undefined
     expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'no_attempt' })
-    ctx.cookie = 'raw-guest-token'
+    ctx.cookie = goodToken
     db.tables.challenge_links[0].tenant_id = 'other'
     expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'invalid_link' })
     expect(ctx.rpcCalls).toEqual([])
@@ -197,7 +207,7 @@ describe('claimChallenge', () => {
 
   it("someone else's cookie does not match the attempt", async () => {
     seed({ price: 0 })
-    ctx.cookie = 'another-token'
+    ctx.cookie = newGuestToken()
     expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'no_attempt' })
     expect(attempt('g1').user_id).toBeNull()
   })
@@ -260,5 +270,35 @@ describe('claimChallenge', () => {
     }
     expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'claim_failed' })
     expect(ctx.rpcCalls).toEqual([])
+  })
+
+  it('NEGATIVE: an unsigned or tampered cookie is never trusted', async () => {
+    seed({ price: 0 })
+    ctx.cookie = `${goodToken.split('.')[0]}.deadbeef`
+    expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'no_attempt' })
+    ctx.cookie = 'plain-unsigned'
+    expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'no_attempt' })
+    expect(attempt('g1').user_id).toBeNull()
+  })
+
+  it('claims an attempt written with the attempt-side cookie+hash (cross-module)', async () => {
+    seed({ price: 0 })
+    const out = await claimChallengeAttempt({
+      admin: fakeAdmin() as never, userId: 'u1', tenantId: 't1', linkToken: 'tok', guestToken: goodToken,
+    })
+    expect(out).toMatchObject({ ok: true, status: 'claimed' })
+  })
+
+  it.each([
+    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: 'true' }, true],
+    [false, false], [{ enabled: false }, false], ['false', false], [null, false], [undefined, false], [{}, false],
+  ])('challenges_enabled shape %j => %s', (raw, want) => {
+    expect(isChallengesEnabled(raw)).toBe(want)
+  })
+
+  it('claim works when the admin UI shape {enabled: true} is stored', async () => {
+    seed({ price: 0 })
+    db.tables.tenant_settings[0].setting_value = { enabled: true }
+    expect(await claimChallenge('tok')).toMatchObject({ success: true, accessGranted: true })
   })
 })

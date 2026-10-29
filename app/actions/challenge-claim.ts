@@ -4,9 +4,9 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { GUEST_COOKIE } from '@/lib/challenges/identity'
 import { BANNED_MESSAGE } from '@/lib/tenant/join-school'
 import {
-  CHALLENGE_GUEST_COOKIE,
   claimChallengeAttempt,
   findNextExercise,
 } from '@/lib/challenges/claim'
@@ -51,7 +51,7 @@ export async function claimChallenge(linkToken: string): Promise<ClaimChallengeO
 
   const tenantId = await getCurrentTenantId()
   const admin = createAdminClient()
-  const guestToken = (await cookies()).get(CHALLENGE_GUEST_COOKIE)?.value
+  const guestToken = (await cookies()).get(GUEST_COOKIE)?.value
 
   const claim = await claimChallengeAttempt({
     admin,
