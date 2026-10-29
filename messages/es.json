@@ -10975,7 +10975,9 @@
       "errorPaused": "Este reto está en pausa por ahora.",
       "errorAlreadyPlayed": "Ya jugaste este reto.",
       "strengths": "Fortalezas",
-      "improvements": "Por mejorar"
+      "improvements": "Por mejorar",
+      "openLine": "{name} te reta en {exercise}. ¿Cuánto sacas?",
+      "openLineAnon": "Te retan en {exercise}. ¿Cuánto sacas?"
     }
   }
 }

@@ -96,6 +96,13 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_my_notifications",
   "lms_mark_notifications_read",
   "lms_my_league",
+  // Challenges (#1043): students share their own official result, read the
+  // school ranking and deactivate links they created. Marking an exercise
+  // challengeable (lms_set_exercise_challengeable) stays staff-only; the app
+  // route re-checks role and ownership on every call.
+  "lms_create_challenge_link",
+  "lms_get_challenge_ranking",
+  "lms_deactivate_challenge_link",
 ]);
 
 /**

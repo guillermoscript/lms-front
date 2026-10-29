@@ -10975,7 +10975,9 @@
       "errorPaused": "This challenge is paused for now.",
       "errorAlreadyPlayed": "You already played this challenge.",
       "strengths": "Strengths",
-      "improvements": "To improve"
+      "improvements": "To improve",
+      "openLine": "{name} challenges you on {exercise}. How much can you score?",
+      "openLineAnon": "You are challenged on {exercise}. How much can you score?"
     }
   }
 }

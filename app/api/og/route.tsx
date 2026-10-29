@@ -6,6 +6,7 @@ import { readHeadingFont } from '@/lib/themes/brand-fonts'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { loadPublicChallenge } from '@/lib/challenges/public-page'
+import { challengeHeadline } from '@/lib/challenges/headline'
 import { fetchImageAsDataUrl } from '@/lib/og/fetch-image'
 import { ogCardPalette, type OgCardPalette } from '@/lib/og/palette'
 import type { KitHeadingFont } from '@/lib/themes/brand-outputs'
@@ -535,12 +536,7 @@ export async function GET(request: NextRequest) {
     const data = await loadPublicChallenge(sp.get('token') ?? '', tenantId)
     if (data) {
       const t = await getTranslations({ locale, namespace: 'challenges.page' })
-      const title = clamp(
-        data.challenger
-          ? t('challengerLine', { name: data.challenger.name ?? t('guestName'), score: data.challenger.score, exercise: data.exercise.title })
-          : data.exercise.title,
-        120
-      )
+      const title = clamp(challengeHeadline(t, data), 120)
       return new ImageResponse(
         renderChallengeCard({ site, title, score: data.challenger?.score ?? null, badge: t('ogBadge'), logo, palette, headingFontFamily }),
         { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts }

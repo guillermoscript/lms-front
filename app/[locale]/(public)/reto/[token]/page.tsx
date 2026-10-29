@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { loadChallengePage } from '@/lib/challenges/public-page'
+import { challengeHeadline } from '@/lib/challenges/headline'
 import { buildPageMetadata } from '@/lib/seo'
 import { getChallengeRankingServer } from '@/lib/challenges/ranking-server'
 import { ChallengePageClient } from '@/components/challenges/challenge-page-client'
@@ -18,10 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { robots: { index: false, follow: false } }
 
   const t = await getTranslations({ locale, namespace: 'challenges.page' })
-  const name = data.challenger?.name ?? t('guestName')
-  const title = data.challenger
-    ? t('challengerLine', { name, score: data.challenger.score, exercise: data.exercise.title })
-    : data.exercise.title
+  const title = challengeHeadline(t, data)
   const metadata = await buildPageMetadata({
     title,
     description: t('metaDescription'),
@@ -47,6 +45,7 @@ export default async function ChallengePage({ params }: Props) {
       title={data.exercise.title}
       instructions={data.exercise.instructions}
       passingScore={data.exercise.passingScore}
+      creatorName={data.creatorName}
       challenger={data.challenger ? { score: data.challenger.score, passed: data.challenger.passed, name: data.challenger.name } : null}
       isOwner={isOwner}
       rankingEntries={rankingEntries}

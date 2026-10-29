@@ -87,7 +87,7 @@ async function verifyBearerToken(token: string): Promise<User | null> {
     return error || !data?.user ? null : data.user
 }
 
-async function getBearerContext(token: string): Promise<ApiAuthContext | null> {
+export async function getBearerContext(token: string): Promise<ApiAuthContext | null> {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!
 
@@ -146,7 +146,7 @@ async function resolveTenantFromMembership(
     return null
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
     try {
         return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
     } catch {
