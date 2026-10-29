@@ -75,6 +75,7 @@ export function ClaimResult({ token, exerciseId, title }: { token: string; exerc
           )}
         </>
       )}
+      {/* Only once the claim succeeded: before that there is no official attempt to share. */}
       {exerciseId !== undefined && <ChallengeFriendsShare exerciseId={exerciseId} title={title ?? ''} />}
     </div>
   )

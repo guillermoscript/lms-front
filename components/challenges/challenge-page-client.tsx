@@ -31,8 +31,8 @@ export interface ChallengePageClientProps {
   creatorName?: string | null
   /** The signed-in viewer is the challenger: show the card and share, not the form. */
   isOwner: boolean
-  /** A Supabase session exists (member or not); the action itself re-checks membership. */
-  viewerSignedIn?: boolean
+  /** Active member of this school: gets "challenge your friends" instead of the Google claim. */
+  viewerIsMember?: boolean
   /** Per-exercise ranking, supplied by the page once WS6's server helper is wired in. */
   rankingEntries?: ChallengeResultContext['rankingEntries']
 }
@@ -78,7 +78,7 @@ function PassedBadge({ passed }: { passed: boolean }) {
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerSignedIn, rankingEntries } = props
+  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries } = props
   const claiming = useSearchParams().get('claim') === '1'
   const t = useTranslations('challenges.page')
   const [answer, setAnswer] = useState('')
@@ -131,7 +131,8 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         challengerName: challenger?.name ?? null,
         rankingEntries,
         title,
-        viewerSignedIn,
+        // On ?claim=1 `ClaimResult` already offers the share action.
+        viewerIsMember: viewerIsMember && !claiming,
       }
     : null
 

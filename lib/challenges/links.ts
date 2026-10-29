@@ -65,6 +65,26 @@ async function canManageCourse(admin: Admin, actor: ChallengeActor, courseId: nu
   return actor.role === 'admin' || course.author_id === actor.userId
 }
 
+/**
+ * Which of these exercises a member can currently share a link for: the same
+ * eligibility `createLinkCore` enforces (challenges on, plan gate, type,
+ * challengeable). Lets UI lists avoid offering a button that would be refused.
+ */
+export async function shareableExerciseIds(
+  deps: ChallengeLinkDeps,
+  tenantId: string,
+  exercises: { id: number; is_challengeable: boolean | null; exercise_type: string | null }[],
+): Promise<Set<number>> {
+  if (!exercises.length) return new Set()
+  if (!(await loadChallengesEnabled(deps.admin, tenantId))) return new Set()
+  if (!(await deps.hasAiGrading(tenantId))) return new Set()
+  return new Set(
+    exercises
+      .filter((e) => e.is_challengeable === true && CHALLENGEABLE_TYPES.includes(e.exercise_type as string))
+      .map((e) => e.id),
+  )
+}
+
 export interface LinkResult {
   id: string
   token: string

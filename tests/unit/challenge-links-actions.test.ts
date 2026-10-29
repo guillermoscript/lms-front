@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   tables: {} as Record<string, Row[]>,
   updates: [] as { table: string; payload: Row; eqs: [string, unknown][] }[],
   inserts: [] as { table: string; row: Row }[],
+  aiGrading: true,
 }))
 
 function builder(table: string) {
@@ -54,7 +55,7 @@ vi.mock('@/lib/supabase/tenant', () => ({
   getCurrentTenantId: async () => h.ctx.tenantId,
   getCurrentUserId: async () => h.ctx.userId,
 }))
-vi.mock('@/lib/plans/server', () => ({ hasPlanFeature: async () => true }))
+vi.mock('@/lib/plans/server', () => ({ hasPlanFeature: async () => h.aiGrading }))
 vi.mock('@/lib/supabase/get-user-role', () => ({ getUserRole: async () => h.ctx.role }))
 
 import {
@@ -72,6 +73,7 @@ beforeEach(() => {
   h.ctx = { role: 'student', userId: ME, tenantId: TENANT }
   h.updates = []
   h.inserts = []
+  h.aiGrading = true
   h.tables = {
     tenant_settings: [{ tenant_id: TENANT, setting_key: 'challenges_enabled', setting_value: { enabled: true } }],
     exercises: [{ id: 5, tenant_id: TENANT, course_id: 9, is_challengeable: true, exercise_type: 'essay' }],
@@ -291,5 +293,33 @@ describe('listUnsharedOfficialAttempts', () => {
     h.tables.challenge_links = [{ id: 'l', tenant_id: TENANT, created_by: ME, active: true, owner_attempt_id: 'a1' }]
     const r2 = await listUnsharedOfficialAttempts()
     expect(r2).toMatchObject({ success: true, data: [] })
+  })
+})
+
+describe('ai_grading plan gate (#1047)', () => {
+  it('refuses every creation path and offers no attempts when the plan lacks ai_grading', async () => {
+    h.aiGrading = false
+    h.ctx.role = 'admin'
+    expect((await createOpenChallengeLink(5)).success).toBe(false)
+    expect((await createBestAttemptChallengeLink(5)).success).toBe(false)
+    expect((await createChallengeLink('a1')).success).toBe(false)
+    expect(h.inserts).toHaveLength(0)
+    h.ctx.role = 'student'
+    h.tables.exercises[0].title = 'Ex'
+    expect(await listUnsharedOfficialAttempts()).toMatchObject({ success: true, data: [] })
+  })
+  it('the unshared list also drops attempts when challenges are off or the exercise is not shareable', async () => {
+    h.tables.exercises[0].title = 'Ex'
+    h.tables.tenant_settings = []
+    expect(await listUnsharedOfficialAttempts()).toMatchObject({ success: true, data: [] })
+    h.tables.tenant_settings = [{ tenant_id: TENANT, setting_key: 'challenges_enabled', setting_value: { enabled: true } }]
+    h.tables.exercises[0].exercise_type = 'quiz'
+    expect(await listUnsharedOfficialAttempts()).toMatchObject({ success: true, data: [] })
+  })
+  it('flags the staff open-link fallback so the UI can say so', async () => {
+    h.ctx.role = 'admin'
+    h.tables.challenge_attempts = []
+    h.tables.challenge_links = []
+    expect(await createBestAttemptChallengeLink(5)).toMatchObject({ success: true, data: { fellBackToOpen: true, score: null } })
   })
 })

@@ -22,6 +22,7 @@ export function ChallengeLinksList() {
   const [failed, setFailed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [unshared, setUnshared] = useState<OfficialAttemptRow[]>([]);
+  const [attemptsFailed, setAttemptsFailed] = useState(false);
   const [manualToken, setManualToken] = useState<string | null>(null);
   const tShare = useTranslations("challenges.share");
 
@@ -35,6 +36,7 @@ export function ChallengeLinksList() {
     if (res?.success) setRows(res.data);
     else setFailed(true);
     setUnshared(att?.success ? att.data : []);
+    setAttemptsFailed(!att?.success);
   }, []);
 
   useEffect(() => {
@@ -45,14 +47,15 @@ export function ChallengeLinksList() {
         () => null,
       ),
       listUnsharedOfficialAttempts().then(
-        (res) => (res.success ? res.data : []),
-        () => [] as OfficialAttemptRow[],
+        (res) => (res.success ? res.data : null),
+        () => null,
       ),
     ]).then(([res, att]) => {
       if (cancelled) return;
       if (res) setRows(res.data);
       else setFailed(true);
-      setUnshared(att);
+      setUnshared(att ?? []);
+      setAttemptsFailed(att === null);
     });
     return () => {
       cancelled = true;
@@ -113,6 +116,11 @@ export function ChallengeLinksList() {
       </p>
     );
   }
+  const attemptsError = attemptsFailed && (
+    <p className="text-sm text-destructive" role="alert">
+      {tShare("pendingLoadError")}
+    </p>
+  );
   const pending = unshared.length > 0 && (
     <section
       className="space-y-2"
@@ -138,6 +146,7 @@ export function ChallengeLinksList() {
   if (rows.length === 0)
     return (
       <div className="space-y-6">
+        {attemptsError}
         {pending}
         <p className="text-sm text-muted-foreground">{t("empty")}</p>
       </div>
@@ -145,6 +154,7 @@ export function ChallengeLinksList() {
 
   return (
     <div className="space-y-6">
+      {attemptsError}
       {pending}
       <ul
         className="divide-y rounded-lg border"

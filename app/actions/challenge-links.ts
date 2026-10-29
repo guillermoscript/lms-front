@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { authenticateUser, requireTeacherOrAdmin } from '@/lib/actions/utils'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasPlanFeature } from '@/lib/plans/server'
-import { createLinkCore, deactivateLinkCore, loadChallengesEnabled, setChallengeableCore } from '@/lib/challenges/links'
+import {
+  createLinkCore,
+  deactivateLinkCore,
+  loadChallengesEnabled,
+  setChallengeableCore,
+  shareableExerciseIds,
+} from '@/lib/challenges/links'
 
 /**
  * Challenge-link management (epic #1025, WS5 #1030). `challenge_links` and
@@ -58,7 +64,15 @@ const coreDeps = () => ({
   hasAiGrading: (tenantId: string) => hasPlanFeature(tenantId, 'ai_grading'),
 })
 
-export type ShareLinkData = { id: string; token: string; path: string; reused: boolean; score: number | null }
+export type ShareLinkData = {
+  id: string
+  token: string
+  path: string
+  reused: boolean
+  score: number | null
+  /** Staff without an official attempt get a score-less open link. */
+  fellBackToOpen?: boolean
+}
 
 /**
  * Teacher/admin: the OPEN link of a challengeable exercise (no score), created
@@ -89,7 +103,7 @@ export async function createBestAttemptChallengeLink(exerciseId: number): Promis
     const r = await createLinkCore(coreDeps(), ctx, { exerciseId, useBestAttempt: true })
     if (!r.ok) return fail(r.error)
     revalidatePath('/dashboard/student/challenges')
-    return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}`, reused: r.data.reused, score: r.data.score } }
+    return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}`, reused: r.data.reused, score: r.data.score, fellBackToOpen: r.data.fellBackToOpen } }
   } catch (err) {
     console.error('createBestAttemptChallengeLink failed', err)
     return fail('Failed to create link')
@@ -130,16 +144,17 @@ export async function listUnsharedOfficialAttempts(): Promise<ChallengeActionRes
         .in('owner_attempt_id', attempts.map((a) => a.id)),
       admin
         .from('exercises')
-        .select('id, title, is_challengeable')
+        .select('id, title, is_challengeable, exercise_type')
         .eq('tenant_id', ctx.tenantId)
         .in('id', [...new Set(attempts.map((a) => a.exercise_id))]),
     ])
+    const shareable = await shareableExerciseIds(coreDeps(), ctx.tenantId, exercises ?? [])
     const linked = new Set((links ?? []).map((l) => l.owner_attempt_id))
     const byId = new Map((exercises ?? []).map((e) => [e.id, e]))
     return {
       success: true,
       data: attempts
-        .filter((a) => !linked.has(a.id) && byId.get(a.exercise_id)?.is_challengeable)
+        .filter((a) => !linked.has(a.id) && shareable.has(a.exercise_id))
         .map((a) => ({
           attemptId: a.id,
           exerciseId: a.exercise_id,

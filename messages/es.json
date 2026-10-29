@@ -10896,8 +10896,7 @@
         "deactivated": "Enlace desactivado",
         "error": "No se pudo desactivar el enlace",
         "copy": "Copiar enlace",
-        "copied": "Enlace copiado",
-        "copyError": "No se pudo copiar el enlace"
+        "copied": "Enlace copiado"
       }
     },
     "claim": {
@@ -10997,7 +10996,8 @@
       "pendingTitle": "Resultados sin link",
       "pendingBody": "Crea un link para retar a tus amigos con estos resultados.",
       "pendingLoadError": "No se pudieron cargar tus resultados.",
-      "editorHint": "Cualquiera con el link puede jugar este ejercicio como invitado."
+      "editorHint": "Cualquiera con el link puede jugar este ejercicio como invitado.",
+      "openFallback": "Aún no tienes un resultado oficial, así que este link no tiene puntaje que superar."
     }
   }
 }

@@ -5,6 +5,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { loadChallengePage } from '@/lib/challenges/public-page'
 import { challengeHeadline } from '@/lib/challenges/headline'
 import { buildPageMetadata } from '@/lib/seo'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getChallengeRankingServer } from '@/lib/challenges/ranking-server'
 import { ChallengePageClient } from '@/components/challenges/challenge-page-client'
 
@@ -35,6 +36,17 @@ export default async function ChallengePage({ params }: Props) {
   if (!data) notFound()
 
   const isOwner = Boolean(userId && data.challenger?.userId && data.challenger.userId === userId)
+  // Only an ACTIVE member can share a result; a session without membership still gets the claim CTA.
+  let viewerIsMember = false
+  if (userId) {
+    const { data: membership } = await createAdminClient()
+      .from('tenant_users')
+      .select('status')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    viewerIsMember = membership?.status === 'active'
+  }
   // A ranking failure must not take the challenge page down.
   const rankingEntries = await getChallengeRankingServer(tenantId, data.exercise.id).catch(() => undefined)
 
@@ -48,7 +60,7 @@ export default async function ChallengePage({ params }: Props) {
       creatorName={data.creatorName}
       challenger={data.challenger ? { score: data.challenger.score, passed: data.challenger.passed, name: data.challenger.name } : null}
       isOwner={isOwner}
-      viewerSignedIn={Boolean(userId)}
+      viewerIsMember={viewerIsMember}
       rankingEntries={rankingEntries}
     />
   )

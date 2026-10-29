@@ -10896,8 +10896,7 @@
         "deactivated": "Link deactivated",
         "error": "Could not deactivate the link",
         "copy": "Copy link",
-        "copied": "Link copied",
-        "copyError": "Could not copy the link"
+        "copied": "Link copied"
       }
     },
     "claim": {
@@ -10997,7 +10996,8 @@
       "pendingTitle": "Results without a link",
       "pendingBody": "Create a link to challenge friends with these results.",
       "pendingLoadError": "Could not load your results.",
-      "editorHint": "Anyone with the link can play this exercise as a guest."
+      "editorHint": "Anyone with the link can play this exercise as a guest.",
+      "openFallback": "You have no official result yet, so this link has no score to beat."
     }
   }
 }
