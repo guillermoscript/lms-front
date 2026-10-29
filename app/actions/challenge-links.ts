@@ -131,7 +131,9 @@ export async function setExerciseChallengeable(
 ): Promise<ChallengeActionResult<{ isChallengeable: boolean }>> {
   try {
     const ctx = await requireTeacherOrAdmin()
-    const r = await setChallengeableCore({ admin: createAdminClient() }, ctx, exerciseId, value)
+    const r = await setChallengeableCore(
+      { admin: createAdminClient(), hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading') },
+      ctx, exerciseId, value)
     if (!r.ok) return fail(r.error)
     revalidatePath(`/dashboard/teacher/courses/${r.data.courseId}/exercises/${r.data.exerciseId}`)
     return { success: true, data: { isChallengeable: r.data.isChallengeable } }

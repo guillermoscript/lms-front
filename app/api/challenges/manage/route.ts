@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBearerUser } from '@/lib/supabase/api-auth'
+import { getBearerContext } from '@/lib/supabase/api-auth'
 import { hasPlanFeature } from '@/lib/plans/server'
-import { tenantOrigin } from '@/lib/tenant/origin'
+import { requireTenantOrigin } from '@/lib/tenant/origin'
 import {
   CHALLENGE_PUBLIC_WARNING,
   createLinkCore,
@@ -21,8 +21,11 @@ import {
  * The tenant and role come from the verified JWT / tenant_users, never the body.
  */
 export async function POST(req: Request) {
-  const user = await getBearerUser(req)
-  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  // Verified bearer token; tenant from the JWT claim or the single active membership.
+  const token = (req.headers.get('authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1]
+  const auth = token ? await getBearerContext(token) : null
+  if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const { user, tenantId } = auth
 
   let body: Record<string, unknown>
   try {
@@ -30,11 +33,6 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 })
   }
-
-  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  const claims = decodeClaims(token)
-  const tenantId = typeof claims.tenant_id === 'string' ? claims.tenant_id : null
-  if (!tenantId) return Response.json({ error: 'Tenant context missing from token' }, { status: 401 })
 
   const admin = createAdminClient()
   // `tenant_users` is authoritative for role and membership (not the JWT claim).
@@ -74,7 +72,14 @@ export async function POST(req: Request) {
       if (!r.ok) return bad(r.error, r.error === 'Unauthorized' ? 403 : 422)
       const { data: tenant } = await admin.from('tenants').select('slug, domain').eq('id', tenantId).maybeSingle()
       const path = `/reto/${r.data.token}`
-      return Response.json({ ...r.data, path, url: `${tenantOrigin(tenant)}${path}` })
+      let origin: string
+      try {
+        origin = requireTenantOrigin(tenant)
+      } catch (err) {
+        console.error('challenge link origin', err)
+        return bad('The school URL is not configured on the server', 500)
+      }
+      return Response.json({ ...r.data, path, url: `${origin}${path}` })
     }
     case 'deactivate_link': {
       if (typeof body.token !== 'string') return bad('token is required')
@@ -84,13 +89,5 @@ export async function POST(req: Request) {
     }
     default:
       return bad('Unknown action')
-  }
-}
-
-function decodeClaims(token: string): Record<string, unknown> {
-  try {
-    return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
-  } catch {
-    return {}
   }
 }

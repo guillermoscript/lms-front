@@ -71,7 +71,7 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
   if (!link || !link.active || link.tenant_id !== tenantId) return null
   if (!isChallengesEnabled(setting?.setting_value)) return null
 
-  const [{ data: exercise }, { data: attempt }] = await Promise.all([
+  const [{ data: exercise }, { data: attempt }, { data: creator }] = await Promise.all([
     admin
       .from('exercises')
       .select('id, title, instructions, exercise_type, exercise_config, is_challengeable, status')
@@ -85,6 +85,10 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
           .eq('id', link.owner_attempt_id)
           .eq('tenant_id', tenantId)
           .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // Open link: the creator's name is what the card says (fetched in parallel).
+    !link.owner_attempt_id && link.created_by
+      ? admin.from('profiles').select('full_name').eq('id', link.created_by).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
   if (!exercise || !exercise.is_challengeable || exercise.status !== 'published') return null
@@ -103,12 +107,7 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
     challenger = { score: attempt.score, passed: attempt.passed, name, userId: attempt.user_id }
   }
 
-  // Open link: no score, so the creator's name is what the card says.
-  let creatorName: string | null = challenger?.name ?? null
-  if (!challenger && link.created_by) {
-    const { data: profile } = await admin.from('profiles').select('full_name').eq('id', link.created_by).maybeSingle()
-    creatorName = displayName(profile?.full_name)
-  }
+  const creatorName: string | null = challenger?.name ?? displayName((creator as { full_name?: string | null } | null)?.full_name)
 
   return {
     link: { id: link.id, token: link.token, ownerAttemptId: link.owner_attempt_id },

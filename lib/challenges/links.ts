@@ -79,7 +79,7 @@ export interface LinkResult {
 }
 
 export async function setChallengeableCore(
-  deps: Pick<ChallengeLinkDeps, 'admin'>,
+  deps: ChallengeLinkDeps,
   actor: ChallengeActor,
   exerciseId: number,
   value: boolean,
@@ -103,6 +103,9 @@ export async function setChallengeableCore(
     }
     if (!(await loadChallengesEnabled(admin, actor.tenantId))) {
       return fail('Challenges are not enabled for this school')
+    }
+    if (!(await deps.hasAiGrading(actor.tenantId))) {
+      return fail('The school plan does not include AI grading, so challenges cannot be played. Upgrade the plan first.')
     }
   }
 

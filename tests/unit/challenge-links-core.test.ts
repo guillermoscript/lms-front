@@ -145,6 +145,11 @@ describe('setChallengeableCore', () => {
     expect((await setChallengeableCore(deps(), actor('teacher'), 7, true)).ok).toBe(false)
     expect((await setChallengeableCore(deps(), actor('admin'), 7, true)).ok).toBe(true)
   })
+  it('enabling needs the ai_grading plan; disabling does not', async () => {
+    plan = false
+    expect((await setChallengeableCore(deps(), actor('admin'), 7, true)).ok).toBe(false)
+    expect((await setChallengeableCore(deps(), actor('admin'), 7, false)).ok).toBe(true)
+  })
   it('enabling needs essay/discussion and an opted-in tenant; disabling always works', async () => {
     expect((await setChallengeableCore(deps(), actor('admin'), 6, true)).ok).toBe(false)
     tables.tenant_settings = []
