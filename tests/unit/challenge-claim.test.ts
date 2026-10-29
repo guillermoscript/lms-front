@@ -11,6 +11,8 @@ const ctx = vi.hoisted(() => ({
   cookie: 'raw-guest-token' as string | undefined,
   rpcCalls: [] as Array<{ fn: string; args: unknown }>,
   rpcError: null as { message: string } | null,
+  failTables: [] as string[],
+  beforeUpdate: null as null | (() => void),
 }))
 
 function fakeAdmin() {
@@ -22,11 +24,15 @@ function fakeAdmin() {
       let lim = Infinity
       let orderCol: string | null = null
       const run = () => {
+        if (ctx.failTables.includes(table)) return { data: null, error: { message: 'boom' } }
         let out = rows().filter((r) => filters.every((f) => f(r)))
         if (orderCol) out = [...out].sort((a, b) => String(a[orderCol!]).localeCompare(String(b[orderCol!])))
+        if (ctx.failTables.includes(table)) return { data: null, error: { message: 'boom' } }
         if (patch) {
-          out.forEach((r) => Object.assign(r, patch))
-          return { data: null, error: null }
+          ctx.beforeUpdate?.()
+          const hit = rows().filter((r) => filters.every((f) => f(r)))
+          hit.forEach((r) => Object.assign(r, patch))
+          return { data: hit.map((r) => ({ id: r.id })), error: null }
         }
         return { data: out.slice(0, lim), error: null }
       }
@@ -73,10 +79,11 @@ import { hashGuestToken } from '@/lib/challenges/claim'
 
 function seed(opts: { price?: number; planPrice?: number; membership?: string; ownOfficial?: boolean } = {}) {
   db.tables = {
+    tenant_settings: [{ tenant_id: 't1', setting_key: 'challenges_enabled', setting_value: true }],
     tenant_users: [{ tenant_id: 't1', user_id: 'u1', status: opts.membership ?? 'active' }],
-    challenge_links: [{ id: 'l1', tenant_id: 't1', exercise_id: 10, token: 'tok' }],
+    challenge_links: [{ id: 'l1', tenant_id: 't1', exercise_id: 10, token: 'tok', active: true }],
     exercises: [
-      { id: 10, course_id: 5, tenant_id: 't1', status: 'published' },
+      { id: 10, course_id: 5, tenant_id: 't1', status: 'published', is_challengeable: true },
       { id: 11, course_id: 5, tenant_id: 't1', status: 'published' },
     ],
     product_courses: opts.price === undefined ? [] : [{ tenant_id: 't1', course_id: 5, product_id: 1 }],
@@ -102,6 +109,8 @@ beforeEach(() => {
   ctx.cookie = 'raw-guest-token'
   ctx.rpcCalls = []
   ctx.rpcError = null
+  ctx.failTables = []
+  ctx.beforeUpdate = null
 })
 
 describe('claimChallenge', () => {
@@ -197,5 +206,59 @@ describe('claimChallenge', () => {
     seed({ price: 0 })
     ctx.rpcError = { message: 'Access to this course was revoked' }
     expect(await claimChallenge('tok')).toMatchObject({ success: true, accessGranted: false, nextExerciseId: null })
+  })
+
+  it('inactive link claims and grants nothing', async () => {
+    seed({ price: 0 })
+    db.tables.challenge_links[0].active = false
+    expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'unavailable' })
+    expect(attempt('g1').user_id).toBeNull()
+    expect(ctx.rpcCalls).toEqual([])
+  })
+
+  it('unpublished or non-challengeable exercise claims and grants nothing', async () => {
+    seed({ price: 0 })
+    db.tables.exercises[0].status = 'draft'
+    expect(await claimChallenge('tok')).toMatchObject({ code: 'unavailable' })
+    db.tables.exercises[0].status = 'published'
+    db.tables.exercises[0].is_challengeable = false
+    expect(await claimChallenge('tok')).toMatchObject({ code: 'unavailable' })
+    expect(ctx.rpcCalls).toEqual([])
+  })
+
+  it('tenant with challenges disabled (or no setting row) claims and grants nothing', async () => {
+    seed({ price: 0 })
+    db.tables.tenant_settings[0].setting_value = false
+    expect(await claimChallenge('tok')).toMatchObject({ code: 'unavailable' })
+    db.tables.tenant_settings = []
+    expect(await claimChallenge('tok')).toMatchObject({ code: 'unavailable' })
+    expect(ctx.rpcCalls).toEqual([])
+  })
+
+  it('a soft-deleted priced plan does not make the course paid', async () => {
+    seed({ planPrice: 10 })
+    db.tables.plans[0].deleted_at = '2026-01-01'
+    // the fake ignores `is(deleted_at, null)` rows that are set, like Postgres
+    expect(await claimChallenge('tok')).toMatchObject({ success: true, accessGranted: true })
+  })
+
+  it.each(['products', 'product_courses', 'plan_courses', 'plans'])(
+    'NEGATIVE: pricing query error on %s is unknown: no grant, retry',
+    async (table) => {
+      seed({ price: 0, planPrice: 0 })
+      ctx.failTables = [table]
+      expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'retry' })
+      expect(ctx.rpcCalls).toEqual([])
+    },
+  )
+
+  it('lost race (0 rows updated) does not report a claim; reports stored state', async () => {
+    seed({ price: 0 })
+    // a concurrent claim by another account takes the row before our update
+    ctx.beforeUpdate = () => {
+      attempt('g1').user_id = 'someone-else'
+    }
+    expect(await claimChallenge('tok')).toMatchObject({ success: false, code: 'claim_failed' })
+    expect(ctx.rpcCalls).toEqual([])
   })
 })

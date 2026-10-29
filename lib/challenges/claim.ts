@@ -26,30 +26,32 @@ export type ClaimResult =
       attempt: { id: string; score: number; passed: boolean; isOfficial: boolean }
       exerciseId: number
       courseId: number
-      courseIsFree: boolean
+      courseAccess: CourseAccessKind
     }
   | {
       ok: false
-      code: 'invalid_link' | 'no_attempt' | 'banned' | 'not_member'
+      code: 'invalid_link' | 'unavailable' | 'no_attempt' | 'banned' | 'not_member' | 'claim_failed'
     }
+
+export type CourseAccessKind = 'free' | 'paid' | 'unknown'
 
 /**
  * Same rule as `grant_free_entitlement` (migration 20261022160000): a course
  * is paid when any product linked to it has price <> 0, or any non-deleted
- * plan that includes it has price > 0. Any query error => treated as PAID, so
- * a failure can never open a grant.
+ * plan that includes it has price > 0. A query error is `'unknown'`: callers
+ * must never grant on anything but `'free'`.
  */
-export async function courseIsFree(
+export async function getCourseAccessKind(
   admin: SupabaseClient,
   tenantId: string,
   courseId: number,
-): Promise<boolean> {
+): Promise<CourseAccessKind> {
   const { data: links, error: linkError } = await admin
     .from('product_courses')
     .select('product_id')
     .eq('tenant_id', tenantId)
     .eq('course_id', courseId)
-  if (linkError) return false
+  if (linkError) return 'unknown'
 
   const productIds = (links ?? []).map((l) => l.product_id as number)
   if (productIds.length > 0) {
@@ -58,15 +60,15 @@ export async function courseIsFree(
       .select('product_id, price')
       .eq('tenant_id', tenantId)
       .in('product_id', productIds)
-    if (error) return false
-    if ((products ?? []).some((p) => Number(p.price) !== 0)) return false
+    if (error) return 'unknown'
+    if ((products ?? []).some((p) => Number(p.price) !== 0)) return 'paid'
   }
 
   const { data: planLinks, error: planLinkError } = await admin
     .from('plan_courses')
     .select('plan_id')
     .eq('course_id', courseId)
-  if (planLinkError) return false
+  if (planLinkError) return 'unknown'
 
   const planIds = (planLinks ?? []).map((l) => l.plan_id as number)
   if (planIds.length > 0) {
@@ -76,11 +78,11 @@ export async function courseIsFree(
       .eq('tenant_id', tenantId)
       .is('deleted_at', null)
       .in('plan_id', planIds)
-    if (error) return false
-    if ((plans ?? []).some((p) => Number(p.price) > 0)) return false
+    if (error) return 'unknown'
+    if ((plans ?? []).some((p) => Number(p.price) > 0)) return 'paid'
   }
 
-  return true
+  return 'free'
 }
 
 /**
@@ -120,19 +122,33 @@ export async function claimChallengeAttempt({
 
   const { data: link } = await admin
     .from('challenge_links')
-    .select('id, tenant_id, exercise_id')
+    .select('id, tenant_id, exercise_id, active')
     .eq('token', linkToken)
     .maybeSingle()
   // The link must belong to the host tenant; never trust a cross-tenant token.
   if (!link || link.tenant_id !== tenantId) return { ok: false, code: 'invalid_link' }
+  // A deactivated link, a disabled tenant or a no-longer-challengeable
+  // exercise must claim and grant nothing.
+  if (link.active !== true) return { ok: false, code: 'unavailable' }
 
   const { data: exercise } = await admin
     .from('exercises')
-    .select('id, course_id, tenant_id')
+    .select('id, course_id, tenant_id, status, is_challengeable')
     .eq('id', link.exercise_id)
     .eq('tenant_id', tenantId)
     .maybeSingle()
   if (!exercise) return { ok: false, code: 'invalid_link' }
+  if (exercise.status !== 'published' || exercise.is_challengeable !== true) {
+    return { ok: false, code: 'unavailable' }
+  }
+
+  const { data: setting } = await admin
+    .from('tenant_settings')
+    .select('setting_value')
+    .eq('tenant_id', tenantId)
+    .eq('setting_key', 'challenges_enabled')
+    .maybeSingle()
+  if (setting?.setting_value !== true) return { ok: false, code: 'unavailable' }
 
   const exerciseId = exercise.id as number
   const courseId = exercise.course_id as number
@@ -161,8 +177,8 @@ export async function claimChallengeAttempt({
   const own = (ownRows ?? []) as Row[]
   const ownOfficial = own.find((r) => r.is_official)
 
-  const free = await courseIsFree(admin, tenantId, courseId)
-  const base = { exerciseId, courseId, courseIsFree: free }
+  const courseAccess = await getCourseAccessKind(admin, tenantId, courseId)
+  const base = { exerciseId, courseId, courseAccess }
 
   if (toClaim.length === 0) {
     // Nothing left to attach: a repeat call, or the cookie never matched.
@@ -178,40 +194,46 @@ export async function claimChallengeAttempt({
 
   // The user's own official attempt always wins; otherwise the guest's
   // official one (the earliest) becomes theirs, extra rows are practice.
-  let officialGuestId = ownOfficial ? null : (toClaim.find((r) => r.is_official)?.id ?? null)
+  const officialGuestId = ownOfficial ? null : (toClaim.find((r) => r.is_official)?.id ?? null)
 
-  for (const row of toClaim) {
-    const makeOfficial = row.id === officialGuestId
-    let { error } = await admin
+  // Returns how many rows this call actually attached (0 = lost a race).
+  const attach = async (id: string, official: boolean) => {
+    const { data, error } = await admin
       .from('challenge_attempts')
-      .update({ user_id: userId, is_official: makeOfficial })
-      .eq('id', row.id)
+      .update({ user_id: userId, is_official: official })
+      .eq('id', id)
       .eq('tenant_id', tenantId)
       .is('user_id', null)
-    if (error && makeOfficial) {
-      // Lost a race with the user's own official attempt (unique index):
-      // keep the row, as practice.
-      officialGuestId = null
-      ;({ error } = await admin
-        .from('challenge_attempts')
-        .update({ user_id: userId, is_official: false })
-        .eq('id', row.id)
-        .eq('tenant_id', tenantId)
-        .is('user_id', null))
-    }
-    if (error) console.error('Failed to claim challenge attempt:', error)
+      .select('id')
+    return { error, count: data?.length ?? 0 }
   }
 
-  const shown = ownOfficial ?? toClaim.find((r) => r.id === officialGuestId) ?? toClaim[0]
+  for (const row of toClaim) {
+    let res = await attach(row.id, row.id === officialGuestId)
+    if (res.error && row.id === officialGuestId) {
+      // Lost a race with the user's own official attempt (unique index):
+      // keep the row, as practice.
+      res = await attach(row.id, false)
+    }
+    if (res.error) console.error('Failed to claim challenge attempt:', res.error)
+  }
+
+  // Report what is actually stored now, not the pre-update snapshot.
+  const { data: finalRows } = await admin
+    .from('challenge_attempts')
+    .select(cols)
+    .eq('tenant_id', tenantId)
+    .eq('exercise_id', exerciseId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  const mine = (finalRows ?? []) as Row[]
+  const shown = mine.find((r) => r.is_official) ?? mine[0]
+  if (!shown) return { ok: false, code: 'claim_failed' }
+
   return {
     ok: true,
     status: 'claimed',
-    attempt: {
-      id: shown.id,
-      score: shown.score,
-      passed: shown.passed,
-      isOfficial: shown.id === officialGuestId || shown.is_official,
-    },
+    attempt: { id: shown.id, score: shown.score, passed: shown.passed, isOfficial: shown.is_official },
     ...base,
   }
 }

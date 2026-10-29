@@ -26,7 +26,15 @@ export type ClaimChallengeOutcome =
     }
   | {
       success: false
-      code: 'unauthenticated' | 'invalid_link' | 'no_attempt' | 'banned' | 'not_member'
+      code:
+        | 'unauthenticated'
+        | 'invalid_link'
+        | 'unavailable'
+        | 'no_attempt'
+        | 'banned'
+        | 'not_member'
+        | 'claim_failed'
+        | 'retry'
       error?: string
     }
 
@@ -67,7 +75,11 @@ export async function claimChallenge(linkToken: string): Promise<ClaimChallengeO
     courseId: claim.courseId,
   }
 
-  if (!claim.courseIsFree) {
+  // The attempt is claimed either way; access is only ever granted on 'free'.
+  // 'unknown' (a pricing query failed) grants nothing and asks to retry.
+  if (claim.courseAccess === 'unknown') return { success: false, code: 'retry' }
+
+  if (claim.courseAccess === 'paid') {
     return { ...base, accessGranted: false, nextExerciseId: null, requiresPurchase: true }
   }
 

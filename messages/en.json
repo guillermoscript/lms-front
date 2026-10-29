@@ -10875,7 +10875,10 @@
       "paidTitle": "This course is paid",
       "paidBody": "Your score of {score} is saved in the ranking. No access to the course was granted.",
       "buyCta": "Get the course",
-      "error": "Something went wrong. Try again."
+      "error": "Something went wrong. Try again.",
+      "unavailable": "This challenge is no longer available.",
+      "retry": "We couldn't finish saving your result. Please try again.",
+      "claimFailed": "We couldn't attach your result. Please try again."
     }
   }
 }

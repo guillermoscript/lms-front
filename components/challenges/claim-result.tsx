@@ -16,7 +16,7 @@ export function ClaimResult({ token }: { token: string }) {
     let cancelled = false
     claimChallenge(token)
       .then((o) => !cancelled && setOutcome(o))
-      .catch(() => !cancelled && setOutcome({ success: false, code: 'no_attempt' }))
+      .catch(() => !cancelled && setOutcome({ success: false, code: 'retry' }))
     return () => {
       cancelled = true
     }
@@ -29,11 +29,19 @@ export function ClaimResult({ token }: { token: string }) {
       return (
         <div className="flex flex-col gap-2">
           <p>{t('notMember')}</p>
-          <Button render={<Link href={joinSchoolPath(`/reto/${token}?claim=1`)} />}>{t('joinCta')}</Button>
+          <Button render={<Link href={joinSchoolPath(`/reto/${encodeURIComponent(token)}?claim=1`)} />}>{t('joinCta')}</Button>
         </div>
       )
     }
-    const key = { unauthenticated: 'signIn', invalid_link: 'invalidLink', no_attempt: 'noAttempt', banned: 'banned' } as const
+    const key = {
+      unauthenticated: 'signIn',
+      invalid_link: 'invalidLink',
+      unavailable: 'unavailable',
+      no_attempt: 'noAttempt',
+      banned: 'banned',
+      claim_failed: 'claimFailed',
+      retry: 'retry',
+    } as const
     return <p role="alert">{t(key[outcome.code as keyof typeof key])}</p>
   }
 

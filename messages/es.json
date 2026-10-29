@@ -10875,7 +10875,10 @@
       "paidTitle": "Este curso es de pago",
       "paidBody": "Tu puntaje de {score} quedó guardado en el ranking. No se otorgó acceso al curso.",
       "buyCta": "Obtener el curso",
-      "error": "Algo salió mal. Inténtalo de nuevo."
+      "error": "Algo salió mal. Inténtalo de nuevo.",
+      "unavailable": "Este reto ya no está disponible.",
+      "retry": "No pudimos terminar de guardar tu resultado. Inténtalo de nuevo.",
+      "claimFailed": "No pudimos asociar tu resultado. Inténtalo de nuevo."
     }
   }
 }
