@@ -53,6 +53,7 @@ vi.mock('@/lib/supabase/tenant', () => ({
   getCurrentTenantId: async () => h.ctx.tenantId,
   getCurrentUserId: async () => h.ctx.userId,
 }))
+vi.mock('@/lib/plans/server', () => ({ hasPlanFeature: async () => true }))
 vi.mock('@/lib/supabase/get-user-role', () => ({ getUserRole: async () => h.ctx.role }))
 
 import {

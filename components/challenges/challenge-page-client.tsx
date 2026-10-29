@@ -27,6 +27,8 @@ export interface ChallengePageClientProps {
   instructions: string
   passingScore: number
   challenger: { score: number; passed: boolean; name: string | null } | null
+  /** Creator of an OPEN link (no challenger score); `null` when unknown. */
+  creatorName?: string | null
   /** The signed-in viewer is the challenger: show the card and share, not the form. */
   isOwner: boolean
   /** Per-exercise ranking, supplied by the page once WS6's server helper is wired in. */
@@ -74,7 +76,7 @@ function PassedBadge({ passed }: { passed: boolean }) {
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { token, exerciseId, title, instructions, passingScore, challenger, isOwner, rankingEntries } = props
+  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, rankingEntries } = props
   const claiming = useSearchParams().get('claim') === '1'
   const t = useTranslations('challenges.page')
   const [answer, setAnswer] = useState('')
@@ -152,7 +154,10 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         ) : (
           <>
             <p className="text-sm font-medium text-muted-foreground">{t('eyebrow')}</p>
-            <h1 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
+            <h1 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl" data-testid="open-challenge-heading">
+              {creatorName ? t('openLine', { name: creatorName, exercise: title }) : t('openLineAnon', { exercise: title })}
+            </h1>
+            <p className="text-base">{t('beatIt')}</p>
           </>
         )}
       </header>

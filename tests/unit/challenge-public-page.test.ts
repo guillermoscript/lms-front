@@ -17,12 +17,13 @@ vi.mock('@/lib/supabase/admin', () => ({
 }))
 
 import { displayName, loadChallengePage } from '@/lib/challenges/public-page'
+import { challengeHeadline } from '@/lib/challenges/headline'
 
 const TENANT = 'tenant-a'
 const TOKEN = 'abcdef123456'
 
 function seed(over: Partial<Record<string, Row>> = {}) {
-  db.challenge_links = { id: 'l1', token: TOKEN, tenant_id: TENANT, exercise_id: 1, owner_attempt_id: 'a1', active: true }
+  db.challenge_links = { id: 'l1', token: TOKEN, tenant_id: TENANT, exercise_id: 1, owner_attempt_id: 'a1', active: true, created_by: 'u1' }
   db.tenant_settings = { setting_value: { enabled: true } }
   db.exercises = { id: 1, title: 'T', instructions: 'I', exercise_type: 'essay', exercise_config: { passing_score: 80 }, is_challengeable: true, status: 'published' }
   db.challenge_attempts = { score: 87, passed: true, user_id: 'u1' }
@@ -77,4 +78,34 @@ describe('loadChallengePage gating', () => {
     }
   })
   it('rejects malformed tokens without querying', async () => expect(await loadChallengePage('a b', TENANT)).toBeNull())
+})
+
+describe('open link (no challenger score)', () => {
+  beforeEach(() => {
+    for (const k of Object.keys(db)) delete db[k]
+    seed({
+      challenge_links: { id: 'l2', token: TOKEN, tenant_id: TENANT, exercise_id: 1, owner_attempt_id: null, active: true, created_by: 'u1' },
+      challenge_attempts: null,
+    })
+  })
+
+  it('keeps the SAME gating as a scored link and carries the creator name, no score', async () => {
+    const d = await loadChallengePage(TOKEN, TENANT)
+    expect(d?.challenger).toBeNull()
+    expect(d?.creatorName).toBe('Guillermo M.')
+    expect(await loadChallengePage(TOKEN, 'tenant-b')).toBeNull()
+    seed({ challenge_links: { ...db.challenge_links!, active: false } })
+    expect(await loadChallengePage(TOKEN, TENANT)).toBeNull()
+    seed({ challenge_links: { ...db.challenge_links!, active: true }, tenant_settings: { setting_value: { enabled: false } } })
+    expect(await loadChallengePage(TOKEN, TENANT)).toBeNull()
+  })
+
+  it('headline for page, metadata and OG: invitation, never a score', async () => {
+    const t = (key: string, v?: Record<string, string | number>) => `${key}|${JSON.stringify(v)}`
+    const open = (await loadChallengePage(TOKEN, TENANT))!
+    expect(challengeHeadline(t, open)).toBe('openLine|{"name":"Guillermo M.","exercise":"T"}')
+    expect(challengeHeadline(t, { ...open, creatorName: null })).toBe('openLineAnon|{"exercise":"T"}')
+    const scored = { ...open, challenger: { score: 87, passed: true, name: null, userId: 'u1' } }
+    expect(challengeHeadline(t, scored)).toBe('challengerLine|{"name":"guestName|undefined","score":87,"exercise":"T"}')
+  })
 })
