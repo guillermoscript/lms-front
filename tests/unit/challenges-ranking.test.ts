@@ -123,9 +123,8 @@ describe('getChallengeRankingServer', () => {
 })
 
 function render(node: React.ReactElement) {
-  return renderToStaticMarkup(
-    createElement(NextIntlClientProvider, { locale: 'en', messages: en, timeZone: 'UTC' }, node),
-  )
+  const props = { locale: 'en', messages: en, timeZone: 'UTC', children: node }
+  return renderToStaticMarkup(createElement(NextIntlClientProvider, props))
 }
 const entry = (o: Partial<RankingEntry>): RankingEntry => ({
   rank: 1, userId: 'u', displayName: 'Ana P.', score: 90, passed: true, createdAt: 't', ...o,
