@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- loose fake of the supabase client */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/challenges/limits', () => ({ checkChallengeLimits: vi.fn(async () => ({ status: 'ok' })) }))
+vi.mock('@/lib/challenges/limits', () => ({ checkChallengeLimits: vi.fn(async () => ({ status: 'ok', official: true })) }))
 
 import { computeRubricScore, resolveRubric, resolvePassingScore } from '@/lib/challenges/grade'
 import { submitChallengeAttempt, type AttemptDeps } from '@/lib/challenges/attempt'
@@ -64,7 +64,7 @@ const guest = { userId: null, guestTokenHash: 'g1', ipHash: 'ip' }
 
 beforeEach(() => {
   grade.mockClear()
-  vi.mocked(checkChallengeLimits).mockResolvedValue({ status: 'ok' })
+  vi.mocked(checkChallengeLimits).mockResolvedValue({ status: 'ok', official: true })
 })
 
 describe('rubric scoring', () => {
@@ -141,5 +141,38 @@ describe('submitChallengeAttempt', () => {
   it('never returns the answer key or criteria', async () => {
     const out = await submitChallengeAttempt(deps(world()), { token: 'tok', answer: 'x' }, guest)
     expect(JSON.stringify(out)).not.toMatch(/criteria|correctAnswer|rubric/)
+  })
+})
+
+describe('limits contract', () => {
+  it('official:false from limits stores the first attempt as practice', async () => {
+    vi.mocked(checkChallengeLimits).mockResolvedValue({ status: 'ok', official: false })
+    const inserts: any[] = []
+    const out = await submitChallengeAttempt(deps(world(), {}, inserts), { token: 'tok', answer: 'x' }, guest)
+    expect(out).toMatchObject({ ok: true, result: { isOfficial: false } })
+    expect(inserts[0].row.is_official).toBe(false)
+  })
+
+  it('passes userId to limits for members', async () => {
+    await submitChallengeAttempt(deps(world()), { token: 'tok', answer: 'x' }, { userId: 'u1', guestTokenHash: null, ipHash: 'ip' })
+    expect(checkChallengeLimits).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1' }))
+  })
+
+  it('refuses a concurrent identical submission while one is in flight', async () => {
+    let release!: () => void
+    const slow = vi.fn(() => new Promise<any>((res) => (release = () => res({ score: 50, passed: false, passingScore: 60, feedback: '', strengths: [], improvements: [], criteria: [] }))))
+    const d = deps(world(), { grade: slow })
+    const first = submitChallengeAttempt(d, { token: 'tok', answer: 'x' }, guest)
+    await new Promise((r) => setTimeout(r, 0))
+    const second = await submitChallengeAttempt(d, { token: 'tok', answer: 'x' }, guest)
+    expect(second).toEqual({ ok: false, refusal: 'in_progress' })
+    release()
+    await first
+    expect(slow).toHaveBeenCalledTimes(1)
+  })
+
+  it('only essay and discussion are challengeable', async () => {
+    const quiz = { exercises: [{ id: 7, tenant_id: TENANT, exercise_type: 'quiz', status: 'published', is_challengeable: true }] }
+    expect(await submitChallengeAttempt(deps(world(quiz)), { token: 'tok', answer: 'x' }, guest)).toEqual({ ok: false, refusal: 'exercise_unavailable' })
   })
 })

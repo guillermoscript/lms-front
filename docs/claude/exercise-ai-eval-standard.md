@@ -37,8 +37,8 @@ the model never returns a number. It returns a verdict per criterion; code compu
   `{ "criteria": [{ "id": "thesis", "description": "States a clear thesis", "weight": 2 }] }`
   (`id` optional, `weight` defaults to 1; a bare array or array of strings also works).
 - Fallback when absent: one equal-weight criterion per line of `evaluation_criteria`, else a
-  generic 4-criterion rubric. Max 20 criteria.
-- Model output: `{ criteria: [{id, met}], feedback, strengths, improvements }`, temperature 0.
+  generic 4-criterion rubric. Max 10 criteria.
+- Model output: one isolated call per criterion returning `{met}` (it sees only that criterion + the answer, never the answer key), temperature 0; feedback comes from a separate call that cannot change the score and is dropped if it quotes grading material.
 - Score = `round(100 * sum(weight of met criteria) / sum(weight))`. Unknown ids are ignored,
   omitted criteria count as not met. Passing = `exercise_config.passing_score` (default 70).
-- Text-engine types only. The grade is stored once in `challenge_attempts` and never regraded.
+- `essay` and `discussion` only (closed-question options are not shown to guests). The grade is stored once in `challenge_attempts` and never regraded.

@@ -15,6 +15,7 @@ export type AttemptRefusal =
   | 'plan_feature_required'
   | 'rate_limited'
   | 'paused'
+  | 'in_progress'
 
 export interface AttemptIdentity {
   userId: string | null
@@ -83,7 +84,30 @@ function fromRow(
  * One challenge attempt: validate, grade once, persist. Never writes
  * `exercise_completions` / `exercise_evaluations`, never returns answer keys.
  */
+/**
+ * In-flight submissions per identity+exercise. Per server instance only: it
+ * stops one browser (or script) from paying for N identical concurrent grades
+ * on one instance; across instances the unique official index is the backstop
+ * (residual: parallel practice grades on different instances).
+ */
+const inFlight = new Set<string>()
+
 export async function submitChallengeAttempt(
+  deps: AttemptDeps,
+  input: { token: string; answer: string },
+  identity: AttemptIdentity
+): Promise<AttemptOutcome> {
+  const key = `${identity.userId ?? identity.guestTokenHash}:${input.token}`
+  if (inFlight.has(key)) return { ok: false, refusal: 'in_progress' }
+  inFlight.add(key)
+  try {
+    return await runAttempt(deps, input, identity)
+  } finally {
+    inFlight.delete(key)
+  }
+}
+
+async function runAttempt(
   deps: AttemptDeps,
   input: { token: string; answer: string },
   identity: AttemptIdentity
@@ -154,13 +178,15 @@ export async function submitChallengeAttempt(
     exerciseId: link.exercise_id as number,
     ipHash: identity.ipHash,
     guestTokenHash: identity.guestTokenHash,
+    userId: identity.userId,
   })
   if (limits.status === 'rate_limited') return refuse('rate_limited')
   if (limits.status === 'paused') return refuse('paused')
 
   const graded = await deps.grade(exercise as ChallengeGradingExercise, input.answer)
 
-  const hasOfficial = (attempts ?? []).some((a) => a.is_official)
+  // WS7 may force practice (e.g. the guest monthly cap is spent).
+  const hasOfficial = limits.official === false || (attempts ?? []).some((a) => a.is_official)
   const base = {
     tenant_id: tenantId,
     exercise_id: link.exercise_id as number,
@@ -186,7 +212,7 @@ export async function submitChallengeAttempt(
     .insert({ ...base, is_official: isOfficial })
     .select('id, score, passed, feedback, is_official')
     .single()
-  if (error?.code === '23505' && isOfficial) {
+  if (isOfficial && error?.code === '23505' && /challenge_attempts_official_/.test(`${error.message ?? ''} ${error.details ?? ''}`)) {
     // A concurrent request took the official slot first: this one is practice.
     isOfficial = false
     ;({ data: row, error } = await admin

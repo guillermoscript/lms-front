@@ -4,10 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
 import { aiFailureResponse } from '@/lib/exercises/ai-failure'
 import { hasPlanFeature } from '@/lib/plans/server'
-import { getClientIp } from '@/lib/rate-limit'
 import { gradeChallengeAnswer } from '@/lib/challenges/grade'
 import { MAX_ANSWER_CHARS, submitChallengeAttempt, type AttemptRefusal } from '@/lib/challenges/attempt'
-import { GUEST_COOKIE, GUEST_COOKIE_MAX_AGE, hashWithSecret, newGuestToken } from '@/lib/challenges/identity'
+import {
+  GUEST_COOKIE,
+  GUEST_COOKIE_MAX_AGE,
+  hashWithSecret,
+  isChallengeSecretConfigured,
+  newGuestToken,
+  trustedClientIp,
+  verifyGuestToken,
+} from '@/lib/challenges/identity'
 
 export const maxDuration = 120
 
@@ -20,6 +27,7 @@ const REFUSAL_STATUS: Record<AttemptRefusal, number> = {
   plan_feature_required: 403,
   rate_limited: 429,
   paused: 503,
+  in_progress: 429,
 }
 
 /**
@@ -28,7 +36,9 @@ const REFUSAL_STATUS: Record<AttemptRefusal, number> = {
  * Body: `{ token, answer }`. The score is never taken from the request.
  */
 export async function POST(req: Request) {
-  const hostTenantId = (await headers()).get('x-tenant-id')
+  if (!isChallengeSecretConfigured()) return Response.json({ error: 'not_configured' }, { status: 503 })
+  const requestHeaders = await headers()
+  const hostTenantId = requestHeaders.get('x-tenant-id')
   if (!hostTenantId) return Response.json({ error: 'not_found' }, { status: 404 })
 
   let token: string
@@ -50,14 +60,26 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser()
   const cookieStore = await cookies()
-  let guestToken = cookieStore.get(GUEST_COOKIE)?.value
+  // Only a token this server signed is trusted; anything else gets a fresh one.
+  const presented = cookieStore.get(GUEST_COOKIE)?.value
+  let guestToken = verifyGuestToken(presented) ? presented : undefined
   const issueCookie = !user && !guestToken
   if (issueCookie) guestToken = newGuestToken()
+  const withCookie = (response: Response) => {
+    if (issueCookie && guestToken) {
+      const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
+      response.headers.append(
+        'Set-Cookie',
+        `${GUEST_COOKIE}=${guestToken}; Path=/; Max-Age=${GUEST_COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax${secure}`
+      )
+    }
+    return response
+  }
 
   const identity = {
     userId: user?.id ?? null,
     guestTokenHash: !user && guestToken ? hashWithSecret('guest', guestToken) : null,
-    ipHash: hashWithSecret('ip', getClientIp(req)),
+    ipHash: hashWithSecret('ip', trustedClientIp(requestHeaders)),
   }
 
   const ai = createTenantAi(hostTenantId, { actorId: user?.id })
@@ -85,20 +107,12 @@ export async function POST(req: Request) {
       identity
     )
   } catch (err) {
-    return aiFailure(err)
+    return withCookie(await aiFailure(err))
   }
 
   if (!outcome.ok) {
-    return Response.json({ error: outcome.refusal }, { status: REFUSAL_STATUS[outcome.refusal] })
+    return withCookie(Response.json({ error: outcome.refusal }, { status: REFUSAL_STATUS[outcome.refusal] }))
   }
 
-  const response = Response.json(outcome.result)
-  if (issueCookie && guestToken) {
-    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-    response.headers.append(
-      'Set-Cookie',
-      `${GUEST_COOKIE}=${guestToken}; Path=/; Max-Age=${GUEST_COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax${secure}`
-    )
-  }
-  return response
+  return withCookie(Response.json(outcome.result))
 }
