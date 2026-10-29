@@ -2,7 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { lessonTaskStaff } from '@/lib/ai/evals/route-auth'
 import { ensureLessonTaskVersion, loadLiveLessonTaskConfig } from '@/lib/ai/evals/store'
-import { draftConfigSchema, EVAL_LIMITS, type DraftConfig } from '@/lib/ai/evals/schema'
+import { draftConfigSchema, EVAL_LIMITS, LESSON_TASK_REPEATS, lessonRepeatsSchema, type DraftConfig } from '@/lib/ai/evals/schema'
 import { executeEvalRun, freeStaleRuns, runLimitReached } from '@/lib/ai/evals/runner'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -28,7 +28,12 @@ export async function GET(req: Request, { params }: Params) {
   return NextResponse.json({ runs: data ?? [] })
 }
 
-const bodySchema = z.object({ draft: draftConfigSchema.optional() }).default({})
+const bodySchema = z
+  .object({ draft: draftConfigSchema.optional(), repeats: lessonRepeatsSchema.default(LESSON_TASK_REPEATS) })
+  .default({ repeats: LESSON_TASK_REPEATS })
+
+/** Rough model requests per case run once: student and tutor turns, verifier checks, the judge. */
+const CALLS_PER_CASE = 12
 
 /**
  * Queue a run of every case against a version — the live task, or the editor's
@@ -69,7 +74,7 @@ export async function POST(req: Request, { params }: Params) {
       await Promise.all(
         (['lesson_tutor', 'lesson_verifier', 'eval_simulator', 'eval_judge'] as const).map((f) => ai.getModelForFeature(f))
       )
-      return queueRun(ctx, admin, config, caseCount)
+      return queueRun(ctx, admin, config, caseCount, parsed.data.repeats)
     }
   )
 }
@@ -78,7 +83,8 @@ async function queueRun(
   ctx: Exclude<Awaited<ReturnType<typeof lessonTaskStaff>>, NextResponse>,
   admin: ReturnType<typeof createAdminClient>,
   config: DraftConfig,
-  caseCount: number
+  caseCount: number,
+  repeats: number
 ) {
   const versionId = await ensureLessonTaskVersion(admin, ctx.lesson.id, config)
 
@@ -103,7 +109,8 @@ async function queueRun(
     return NextResponse.json({ error: 'Could not start the run' }, { status: 500 })
   }
 
-  after(() => executeEvalRun(run.id, { actorId: ctx.user.id }))
+  after(() => executeEvalRun(run.id, { actorId: ctx.user.id, repeats }))
 
-  return NextResponse.json({ run, estimated_model_calls: caseCount * 12 }, { status: 202 })
+  // Every case runs `repeats` times, so the cost scales with it.
+  return NextResponse.json({ run, repeats, estimated_model_calls: caseCount * CALLS_PER_CASE * repeats }, { status: 202 })
 }
