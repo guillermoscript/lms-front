@@ -3,8 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const CHALLENGES_ENABLED_KEY = 'challenges_enabled'
 
-/** Engines the first cut grades as free text. Code/audio/video/simulation are out (#1025). */
-const TEXT_TYPES = new Set(['essay', 'discussion', 'fill_in_the_blank', 'quiz', 'multiple_choice', 'true_false'])
+/** Free-text types only: closed-question options are never shown to guests (#1025). */
+const TEXT_TYPES = new Set(['essay', 'discussion'])
 
 export interface ChallengePageData {
   link: { id: string; token: string; ownerAttemptId: string | null }
@@ -50,28 +50,38 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
   if (!/^[A-Za-z0-9_-]{6,128}$/.test(token)) return null
   const admin = createAdminClient()
 
-  const { data: link } = await admin
-    .from('challenge_links')
-    .select('id, token, tenant_id, exercise_id, owner_attempt_id, active')
-    .eq('token', token)
-    .maybeSingle()
-  if (!link || !link.active || link.tenant_id !== tenantId) return null
-
-  const [{ data: setting }, { data: exercise }] = await Promise.all([
+  const [{ data: link }, { data: setting }] = await Promise.all([
+    admin
+      .from('challenge_links')
+      .select('id, token, tenant_id, exercise_id, owner_attempt_id, active')
+      .eq('token', token)
+      .maybeSingle(),
     admin
       .from('tenant_settings')
       .select('setting_value')
       .eq('tenant_id', tenantId)
       .eq('setting_key', CHALLENGES_ENABLED_KEY)
       .maybeSingle(),
+  ])
+  if (!link || !link.active || link.tenant_id !== tenantId) return null
+  if (!isChallengesEnabled(setting?.setting_value)) return null
+
+  const [{ data: exercise }, { data: attempt }] = await Promise.all([
     admin
       .from('exercises')
       .select('id, title, instructions, exercise_type, exercise_config, is_challengeable, status')
       .eq('id', link.exercise_id)
       .eq('tenant_id', tenantId)
       .maybeSingle(),
+    link.owner_attempt_id
+      ? admin
+          .from('challenge_attempts')
+          .select('score, passed, user_id')
+          .eq('id', link.owner_attempt_id)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
-  if (!isChallengesEnabled(setting?.setting_value)) return null
   if (!exercise || !exercise.is_challengeable || exercise.status !== 'published') return null
   if (!TEXT_TYPES.has(exercise.exercise_type)) return null
 
@@ -79,21 +89,13 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
   const passingScore = typeof config.passing_score === 'number' ? config.passing_score : 70
 
   let challenger: ChallengePageData['challenger'] = null
-  if (link.owner_attempt_id) {
-    const { data: attempt } = await admin
-      .from('challenge_attempts')
-      .select('score, passed, user_id')
-      .eq('id', link.owner_attempt_id)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
-    if (attempt) {
-      let name: string | null = null
-      if (attempt.user_id) {
-        const { data: profile } = await admin.from('profiles').select('full_name').eq('id', attempt.user_id).maybeSingle()
-        name = displayName(profile?.full_name)
-      }
-      challenger = { score: attempt.score, passed: attempt.passed, name, userId: attempt.user_id }
+  if (attempt) {
+    let name: string | null = null
+    if (attempt.user_id) {
+      const { data: profile } = await admin.from('profiles').select('full_name').eq('id', attempt.user_id).maybeSingle()
+      name = displayName(profile?.full_name)
     }
+    challenger = { score: attempt.score, passed: attempt.passed, name, userId: attempt.user_id }
   }
 
   return {
@@ -108,3 +110,6 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
     challenger,
   }
 })
+
+/** Same gating as the page, one name for both callers (page + OG card). */
+export const loadPublicChallenge = loadChallengePage

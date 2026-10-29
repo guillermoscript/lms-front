@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const metadata = await buildPageMetadata({
     title,
     description: t('metaDescription'),
-    ogParams: { type: 'challenge', token, title, badge: t('ogBadge') },
+    ogParams: { type: 'challenge', token, locale },
   })
   return { ...metadata, robots: { index: false, follow: false } }
 }

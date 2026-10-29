@@ -27,15 +27,31 @@ export interface ChallengePageClientProps {
   challenger: { score: number; passed: boolean; name: string | null } | null
   /** The signed-in viewer is the challenger: show the card and share, not the form. */
   isOwner: boolean
+  /** Per-exercise ranking, supplied by the page once WS6's server helper is wired in. */
+  rankingEntries?: ChallengeResultContext['rankingEntries']
 }
 
-/** Feedback arrives as a string or as `{ feedback, strengths, improvements }` (WS2 contract). */
-function feedbackText(feedback: unknown): string {
-  if (typeof feedback === 'string') return feedback
-  if (feedback && typeof feedback === 'object' && typeof (feedback as { feedback?: unknown }).feedback === 'string') {
-    return (feedback as { feedback: string }).feedback
+interface ParsedFeedback {
+  feedback: string
+  strengths: string[]
+  improvements: string[]
+}
+
+const strings = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : []
+
+/** Feedback arrives as a string or as `{ feedback, strengths, improvements }` (WS2 contract); any part may be empty. */
+function parseFeedback(feedback: unknown): ParsedFeedback {
+  if (typeof feedback === 'string') return { feedback, strengths: [], improvements: [] }
+  if (feedback && typeof feedback === 'object') {
+    const f = feedback as Record<string, unknown>
+    return {
+      feedback: typeof f.feedback === 'string' ? f.feedback : '',
+      strengths: strings(f.strengths),
+      improvements: strings(f.improvements),
+    }
   }
-  return ''
+  return { feedback: '', strengths: [], improvements: [] }
 }
 
 function PassedBadge({ passed }: { passed: boolean }) {
@@ -56,7 +72,7 @@ function PassedBadge({ passed }: { passed: boolean }) {
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { token, exerciseId, title, instructions, passingScore, challenger, isOwner } = props
+  const { token, exerciseId, title, instructions, passingScore, challenger, isOwner, rankingEntries } = props
   const t = useTranslations('challenges.page')
   const [answer, setAnswer] = useState('')
   const [pending, setPending] = useState(false)
@@ -96,6 +112,8 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
     }
   }
 
+  const fb = parseFeedback(result?.feedback)
+
   const ctx: ChallengeResultContext | null = result
     ? {
         token,
@@ -104,6 +122,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         guestPassed: result.passed,
         challengerScore: challenger?.score ?? null,
         challengerName: challenger?.name ?? null,
+        rankingEntries,
       }
     : null
 
@@ -184,8 +203,24 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
             <span className="text-5xl font-semibold tabular-nums" data-testid="challenge-score">{result.score}</span>
             <PassedBadge passed={result.passed} />
           </div>
-          {feedbackText(result.feedback) ? (
-            <p className="max-w-[68ch] text-base leading-relaxed text-foreground/85">{feedbackText(result.feedback)}</p>
+          {fb.feedback ? (
+            <p className="max-w-[68ch] text-base leading-relaxed text-foreground/85">{fb.feedback}</p>
+          ) : null}
+          {fb.strengths.length > 0 ? (
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold">{t('strengths')}</h3>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/85">
+                {fb.strengths.map((x) => <li key={x}>{x}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          {fb.improvements.length > 0 ? (
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold">{t('improvements')}</h3>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/85">
+                {fb.improvements.map((x) => <li key={x}>{x}</li>)}
+              </ul>
+            </div>
           ) : null}
           {/* WS6 slot */}
           <ChallengeDuelSlot ctx={ctx} />

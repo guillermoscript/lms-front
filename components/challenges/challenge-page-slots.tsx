@@ -9,6 +9,8 @@ export interface ChallengeResultContext {
   guestPassed: boolean
   challengerScore: number | null
   challengerName: string | null
+  /** Ranking rows from WS6's `getChallengeRankingServer`; absent until wired. */
+  rankingEntries?: readonly Record<string, unknown>[]
 }
 
 /**
