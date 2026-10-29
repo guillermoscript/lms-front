@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
 import { IconCheck, IconCopy, IconShare3 } from '@tabler/icons-react'
 import { toast } from 'sonner'
@@ -10,7 +10,12 @@ import { Button } from '@/components/ui/button'
 export function ChallengeShareButton({ title, text }: { title: string; text: string }) {
   const t = useTranslations('challenges.page')
   const [copied, setCopied] = useState(false)
-  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+  // Read after mount: `navigator` differs between server and client render.
+  const canShare = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator.share === 'function',
+    () => false
+  )
 
   async function copy(url: string) {
     try {

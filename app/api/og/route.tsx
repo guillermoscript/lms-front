@@ -4,6 +4,8 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { readHeadingFont } from '@/lib/themes/brand-fonts'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getTranslations } from 'next-intl/server'
+import { loadPublicChallenge } from '@/lib/challenges/public-page'
 import { fetchImageAsDataUrl } from '@/lib/og/fetch-image'
 import { ogCardPalette, type OgCardPalette } from '@/lib/og/palette'
 import type { KitHeadingFont } from '@/lib/themes/brand-outputs'
@@ -463,9 +465,9 @@ function renderCourseCard({
  * Variants (via ?type=):
  *  - generic (default): site + title + subtitle — used by most public pages
  *  - certificate: student achievement card — used by /verify/[code]
- *  - challenge: score ring + "X scored N on Y" headline for /reto/[token]; the score
- *    is read from the link's owner attempt (never from a query param), the
- *    headline arrives localized in `title`. Unresolvable token -> generic card.
+ *  - challenge: score ring + "X scored N on Y" headline for /reto/[token]; name, score and title
+ *    all come from the DB via loadPublicChallenge (same gating as the page), the
+ *    headline is built server-side. Ungated/unresolvable token -> generic card.
  *  - course: brand column (logo, school name, badge, course title) beside a framed thumbnail,
  *    or the generic layout with the course description when there is no
  *    thumbnail — used by /courses/[id]; falls back to the generic card when the course id
@@ -525,33 +527,25 @@ export async function GET(request: NextRequest) {
   }
 
   if (type === 'challenge') {
-    const token = sp.get('token') ?? ''
-    const title = clamp(sp.get('title'), 120) || site
-    const badge = clamp(sp.get('badge'), 40)
-    let score: number | null = null
-    if (/^[A-Za-z0-9_-]{6,128}$/.test(token)) {
-      const admin = createAdminClient()
-      const { data: link } = await admin
-        .from('challenge_links')
-        .select('owner_attempt_id')
-        .eq('token', token)
-        .eq('tenant_id', tenantId)
-        .eq('active', true)
-        .maybeSingle()
-      if (link?.owner_attempt_id) {
-        const { data: attempt } = await admin
-          .from('challenge_attempts')
-          .select('score')
-          .eq('id', link.owner_attempt_id)
-          .eq('tenant_id', tenantId)
-          .maybeSingle()
-        score = attempt?.score ?? null
-      }
+    // Everything on this card comes from the database through the same
+    // loader (and gating) as the page; the query string only picks the
+    // token and one of two locales. An ungated link falls through to the
+    // generic card, which carries no score.
+    const locale = sp.get('locale') === 'es' ? 'es' : 'en'
+    const data = await loadPublicChallenge(sp.get('token') ?? '', tenantId)
+    if (data) {
+      const t = await getTranslations({ locale, namespace: 'challenges.page' })
+      const title = clamp(
+        data.challenger
+          ? t('challengerLine', { name: data.challenger.name ?? t('guestName'), score: data.challenger.score, exercise: data.exercise.title })
+          : data.exercise.title,
+        120
+      )
+      return new ImageResponse(
+        renderChallengeCard({ site, title, score: data.challenger?.score ?? null, badge: t('ogBadge'), logo, palette, headingFontFamily }),
+        { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts }
+      )
     }
-    return new ImageResponse(
-      renderChallengeCard({ site, title, score, badge, logo, palette, headingFontFamily }),
-      { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts }
-    )
   }
 
   if (type === 'certificate') {

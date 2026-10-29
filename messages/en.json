@@ -10886,7 +10886,9 @@
       "errorGeneric": "We could not grade your answer. Try again in a moment.",
       "errorRateLimited": "Too many attempts. Try again later.",
       "errorPaused": "This challenge is paused for now.",
-      "errorAlreadyPlayed": "You already played this challenge."
+      "errorAlreadyPlayed": "You already played this challenge.",
+      "strengths": "Strengths",
+      "improvements": "To improve"
     }
   }
 }
