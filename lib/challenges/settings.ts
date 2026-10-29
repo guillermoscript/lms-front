@@ -5,10 +5,7 @@
  */
 export function isChallengesEnabled(raw: unknown): boolean {
   if (raw === true || raw === 'true') return true
-  if (raw && typeof raw === 'object') {
-    const enabled = (raw as { enabled?: unknown }).enabled
-    return enabled === true || enabled === 'true'
-  }
+  if (raw && typeof raw === 'object') return (raw as { enabled?: unknown }).enabled === true
   return false
 }
 

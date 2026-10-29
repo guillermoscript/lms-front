@@ -290,7 +290,7 @@ describe('claimChallenge', () => {
   })
 
   it.each([
-    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: 'true' }, true],
+    [true, true], ['true', true], [{ enabled: true }, true], [{ enabled: 'true' }, false],
     [false, false], [{ enabled: false }, false], ['false', false], [null, false], [undefined, false], [{}, false],
   ])('challenges_enabled shape %j => %s', (raw, want) => {
     expect(isChallengesEnabled(raw)).toBe(want)
