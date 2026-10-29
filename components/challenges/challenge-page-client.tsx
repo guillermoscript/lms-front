@@ -174,7 +174,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         </div>
       </section>
 
-      {!isOwner && !result ? (
+      {!isOwner && !result && !claiming ? (
         <form onSubmit={submit} className="space-y-3" aria-busy={pending}>
           <label htmlFor="challenge-answer" className="text-sm font-semibold">{t('yourAnswer')}</label>
           <Textarea
