@@ -27,3 +27,18 @@ ingest audio/video, nor run the realtime voice partner. So:
 
 Add templates to both locale files (parity test), call `useBuiltInTemplates`, map `onApply`
 (`instructions`, `system_prompt`, optional `scenario`) onto that step's form fields.
+
+## Challenge rubric (cold grading, `lib/challenges/grade.ts`)
+
+Public exercise challenges (#1025) need the same answer to always get the same score, so
+the model never returns a number. It returns a verdict per criterion; code computes the score.
+
+- Format, in `exercise_config.rubric` (a secret config key, lives in `exercise_grading_secrets`):
+  `{ "criteria": [{ "id": "thesis", "description": "States a clear thesis", "weight": 2 }] }`
+  (`id` optional, `weight` defaults to 1; a bare array or array of strings also works).
+- Fallback when absent: one equal-weight criterion per line of `evaluation_criteria`, else a
+  generic 4-criterion rubric. Max 20 criteria.
+- Model output: `{ criteria: [{id, met}], feedback, strengths, improvements }`, temperature 0.
+- Score = `round(100 * sum(weight of met criteria) / sum(weight))`. Unknown ids are ignored,
+  omitted criteria count as not met. Passing = `exercise_config.passing_score` (default 70).
+- Text-engine types only. The grade is stored once in `challenge_attempts` and never regraded.
