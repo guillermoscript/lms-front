@@ -10858,6 +10858,28 @@
     "exerciseStart": "**How to start:** write your answer, or a first draft, right here. I'll give you feedback and hints (not the answer), and I'll mark the exercise complete once it meets the goal."
   },
   "challenges": {
+    "ranking": {
+      "title": "Ranking",
+      "loading": "Loading ranking",
+      "empty": "No one is ranked yet. Be the first!",
+      "error": "Couldn't load the ranking.",
+      "retry": "Retry",
+      "you": "(you)",
+      "duel": {
+        "tie": "Technical tie",
+        "tieHint": "Less than {points} points apart.",
+        "youWin": "You win!",
+        "theyWin": "{name} wins",
+        "you": "You",
+        "diff": "{diff} points apart"
+      },
+      "columns": {
+        "rank": "Rank",
+        "name": "Name",
+        "score": "Score"
+      },
+      "anonymous": "Student"
+    },
     "page": {
       "eyebrow": "Challenge",
       "challengerLine": "{name} scored {score} on {exercise}. Can you beat it?",

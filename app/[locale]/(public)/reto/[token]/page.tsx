@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { loadChallengePage } from '@/lib/challenges/public-page'
 import { buildPageMetadata } from '@/lib/seo'
+import { getChallengeRankingServer } from '@/lib/challenges/ranking-server'
 import { ChallengePageClient } from '@/components/challenges/challenge-page-client'
 
 export const dynamic = 'force-dynamic'
@@ -36,6 +37,8 @@ export default async function ChallengePage({ params }: Props) {
   if (!data) notFound()
 
   const isOwner = Boolean(userId && data.challenger?.userId && data.challenger.userId === userId)
+  // A ranking failure must not take the challenge page down.
+  const rankingEntries = await getChallengeRankingServer(tenantId, data.exercise.id).catch(() => undefined)
 
   return (
     <ChallengePageClient
@@ -46,6 +49,7 @@ export default async function ChallengePage({ params }: Props) {
       passingScore={data.exercise.passingScore}
       challenger={data.challenger ? { score: data.challenger.score, passed: data.challenger.passed, name: data.challenger.name } : null}
       isOwner={isOwner}
+      rankingEntries={rankingEntries}
     />
   )
 }

@@ -10858,6 +10858,28 @@
     "exerciseStart": "**Cómo empezar:** escribe aquí tu respuesta o un primer borrador. Te daré retroalimentación y pistas (no la respuesta) y marcaré el ejercicio como completado cuando cumpla el objetivo."
   },
   "challenges": {
+    "ranking": {
+      "title": "Ranking",
+      "loading": "Cargando ranking",
+      "empty": "Aún no hay nadie en el ranking. ¡Sé el primero!",
+      "error": "No se pudo cargar el ranking.",
+      "retry": "Reintentar",
+      "you": "(tú)",
+      "duel": {
+        "tie": "Empate técnico",
+        "tieHint": "Menos de {points} puntos de diferencia.",
+        "youWin": "¡Ganaste!",
+        "theyWin": "Gana {name}",
+        "you": "Tú",
+        "diff": "{diff} puntos de diferencia"
+      },
+      "columns": {
+        "rank": "Posición",
+        "name": "Nombre",
+        "score": "Puntaje"
+      },
+      "anonymous": "Estudiante"
+    },
     "page": {
       "eyebrow": "Reto",
       "challengerLine": "{name} sacó {score} en {exercise}. ¿Lo superas?",
