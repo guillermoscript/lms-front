@@ -10855,5 +10855,24 @@
     "exerciseGreetingGeneric": "¡Hola! 👋 Soy tu coach para este ejercicio.",
     "exerciseInstructions": "Las instrucciones completas están junto a este chat; léelas antes de empezar.",
     "exerciseStart": "**Cómo empezar:** escribe aquí tu respuesta o un primer borrador. Te daré retroalimentación y pistas (no la respuesta) y marcaré el ejercicio como completado cuando cumpla el objetivo."
+  },
+  "challenges": {
+    "ranking": {
+      "title": "Ranking",
+      "loading": "Cargando ranking",
+      "empty": "Aún no hay nadie en el ranking. ¡Sé el primero!",
+      "error": "No se pudo cargar el ranking.",
+      "retry": "Reintentar",
+      "you": "(tú)",
+      "points": "puntos",
+      "duel": {
+        "tie": "Empate técnico",
+        "tieHint": "Menos de 3 puntos de diferencia.",
+        "youWin": "¡Ganaste!",
+        "theyWin": "Gana {name}",
+        "you": "Tú",
+        "diff": "{diff} puntos de diferencia"
+      }
+    }
   }
 }
