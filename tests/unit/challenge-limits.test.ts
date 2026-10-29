@@ -1,37 +1,50 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-type Row = { setting_value?: unknown }
+type Attempt = {
+  tenant_id: string
+  exercise_id: number
+  ip_hash: string
+  guest_token_hash: string | null
+  user_id: string | null
+  is_official: boolean
+  created_at: string
+}
+type Pred = (r: Record<string, unknown>) => boolean
+
 const state = {
-  settingValue: undefined as unknown,
-  monthly: 0,
-  ipHour: 0,
-  deviceHour: 0,
-  official: 0,
+  attempts: [] as Attempt[],
+  settings: [] as { tenant_id: string; setting_key: string; setting_value: unknown }[],
+  settingsError: false,
+  attemptsError: false,
 }
 
+// Fake builder that really applies every filter, so a missing .eq('tenant_id')
+// returns other tenants' rows and fails the tests.
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: (table: string) => {
-      const filters: string[] = []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const q: any = {
-        select: () => q,
-        eq: (col: string) => (filters.push(col), q),
-        not: () => (filters.push('not_guest'), q),
-        gte: () => q,
-        maybeSingle: async () => ({
-          data: state.settingValue === undefined ? null : ({ setting_value: state.settingValue } as Row),
-        }),
-        then: (res: (v: unknown) => void) => {
-          let count = 0
-          if (filters.includes('not_guest')) count = state.monthly
-          else if (filters.includes('ip_hash')) count = state.ipHour
-          else if (filters.includes('is_official')) count = state.official
-          else if (filters.includes('guest_token_hash')) count = state.deviceHour
-          res({ count, error: null })
-        },
+      const preds: Pred[] = []
+      const rows = () =>
+        (table === 'tenant_settings' ? state.settings : state.attempts) as unknown as Record<string, unknown>[]
+      const run = () => {
+        const failed = table === 'tenant_settings' ? state.settingsError : state.attemptsError
+        if (failed) return { data: null, count: null, error: new Error('db down') }
+        const out = rows().filter((r) => preds.every((p) => p(r)))
+        return { data: out, count: out.length, error: null }
       }
-      return table === 'tenant_settings' || table === 'challenge_attempts' ? q : q
+      const q = {
+        select: () => q,
+        eq: (c: string, v: unknown) => (preds.push((r) => r[c] === v), q),
+        not: (c: string, _op: string, v: unknown) => (preds.push((r) => r[c] !== v), q),
+        is: (c: string, v: unknown) => (preds.push((r) => r[c] === v), q),
+        gte: (c: string, v: string) => (preds.push((r) => (r[c] as string) >= v), q),
+        maybeSingle: async () => {
+          const res = run()
+          return { data: res.data?.[0] ?? null, error: res.error }
+        },
+        then: (res: (v: unknown) => void) => res(run()),
+      }
+      return q
     },
   }),
 }))
@@ -39,6 +52,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 import {
   checkChallengeLimits,
   DEFAULT_GUEST_MONTHLY_CAP,
+  SAFE_GUEST_MONTHLY_CAP,
   GUEST_HOURLY_CAP,
   BURST_PER_MINUTE,
   hashIp,
@@ -46,99 +60,188 @@ import {
 } from '@/lib/challenges/limits'
 
 let n = 0
-const input = () => ({
-  tenantId: 't1',
+let T = ''
+beforeEach(() => {
+  T = `tenant-${n++}` // pending/burst state is module-level: isolate per test
+  Object.assign(state, { attempts: [], settings: [], settingsError: false, attemptsError: false })
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+})
+
+const guest = (over: Record<string, unknown> = {}) => ({
+  tenantId: T,
   exerciseId: 1,
   ipHash: `ip-${n++}`,
-  guestTokenHash: 'g1',
+  guestTokenHash: `g-${n++}`,
+  ...over,
 })
-
-beforeEach(() => {
-  Object.assign(state, { settingValue: undefined, monthly: 0, ipHour: 0, deviceHour: 0, official: 0 })
+const attempt = (over: Partial<Attempt> = {}): Attempt => ({
+  tenant_id: T,
+  exercise_id: 1,
+  ip_hash: 'x',
+  guest_token_hash: 'other',
+  user_id: null,
+  is_official: false,
+  created_at: new Date().toISOString(),
+  ...over,
 })
+const seed = (k: number, over: Partial<Attempt> = {}) => {
+  for (let i = 0; i < k; i++) state.attempts.push(attempt(over))
+}
+const setCap = (v: unknown) =>
+  state.settings.push({ tenant_id: T, setting_key: 'challenges_guest_monthly_cap', setting_value: v })
 
-describe('checkChallengeLimits', () => {
-  it('ok when under every cap', async () => {
-    expect(await checkChallengeLimits(input())).toEqual({ status: 'ok' })
+describe('guest path', () => {
+  it('ok and official when clean', async () => {
+    expect(await checkChallengeLimits(guest())).toEqual({ status: 'ok', official: true })
   })
 
-  it('hourly IP cap boundary', async () => {
-    state.ipHour = GUEST_HOURLY_CAP - 1
-    expect((await checkChallengeLimits(input())).status).toBe('ok')
-    state.ipHour = GUEST_HOURLY_CAP
-    expect((await checkChallengeLimits(input())).status).toBe('rate_limited')
+  it('missing or empty guest token is rate_limited', async () => {
+    expect((await checkChallengeLimits(guest({ guestTokenHash: null }))).status).toBe('rate_limited')
+    expect((await checkChallengeLimits(guest({ guestTokenHash: '' }))).status).toBe('rate_limited')
+  })
+
+  it('already has an official attempt: ok but official=false, never rate_limited', async () => {
+    const g = guest()
+    seed(1, { guest_token_hash: g.guestTokenHash, is_official: true })
+    expect(await checkChallengeLimits(g)).toEqual({ status: 'ok', official: false })
+  })
+
+  it('official attempt on another exercise or tenant does not count', async () => {
+    const g = guest()
+    seed(1, { guest_token_hash: g.guestTokenHash, is_official: true, exercise_id: 2 })
+    seed(1, { guest_token_hash: g.guestTokenHash, is_official: true, tenant_id: 'other-tenant' })
+    expect(await checkChallengeLimits(g)).toEqual({ status: 'ok', official: true })
+  })
+
+  it('hourly IP cap boundary, ignoring other tenants, old rows and member rows', async () => {
+    const g = guest()
+    seed(GUEST_HOURLY_CAP, { ip_hash: g.ipHash, tenant_id: 'other-tenant' })
+    seed(GUEST_HOURLY_CAP, { ip_hash: g.ipHash, created_at: new Date(Date.now() - 61 * 60_000).toISOString() })
+    seed(GUEST_HOURLY_CAP, { ip_hash: g.ipHash, user_id: 'u1', guest_token_hash: null })
+    seed(GUEST_HOURLY_CAP - 1, { ip_hash: g.ipHash })
+    expect((await checkChallengeLimits(g)).status).toBe('ok')
+    // the allowed call is now pending, so the next one hits the cap
+    expect((await checkChallengeLimits({ ...g, guestTokenHash: 'fresh' })).status).toBe('rate_limited')
   })
 
   it('hourly device cap boundary', async () => {
-    state.deviceHour = GUEST_HOURLY_CAP - 1
-    expect((await checkChallengeLimits(input())).status).toBe('ok')
-    state.deviceHour = GUEST_HOURLY_CAP
-    expect((await checkChallengeLimits(input())).status).toBe('rate_limited')
+    const g = guest()
+    seed(GUEST_HOURLY_CAP - 1, { guest_token_hash: g.guestTokenHash })
+    expect((await checkChallengeLimits(g)).status).toBe('ok')
+    state.attempts = []
+    seed(GUEST_HOURLY_CAP, { guest_token_hash: g.guestTokenHash })
+    const g2 = { ...g, tenantId: T, guestTokenHash: g.guestTokenHash, ipHash: 'new-ip' }
+    expect((await checkChallengeLimits(g2)).status).toBe('rate_limited')
   })
 
-  it('one official attempt per guest per exercise', async () => {
-    state.official = 0
-    expect((await checkChallengeLimits(input())).status).toBe('ok')
-    state.official = 1
-    expect((await checkChallengeLimits(input())).status).toBe('rate_limited')
+  it('pending count stops parallel overshoot on one instance', async () => {
+    const g = guest()
+    const results: string[] = []
+    for (let i = 0; i < GUEST_HOURLY_CAP + 2; i++) results.push((await checkChallengeLimits(g)).status)
+    expect(results.filter((s) => s === 'ok')).toHaveLength(GUEST_HOURLY_CAP)
+  })
+})
+
+describe('monthly cap', () => {
+  it('boundary uses the tenant setting, counting only this tenant\'s guest rows', async () => {
+    setCap(10)
+    seed(50, { tenant_id: 'other-tenant' })
+    seed(50, { guest_token_hash: null, user_id: 'u1' })
+    seed(9)
+    expect((await checkChallengeLimits(guest())).status).toBe('ok')
+    // 9 rows + 1 pending == cap
+    expect((await checkChallengeLimits(guest())).status).toBe('paused')
   })
 
-  it('skips device and official checks without a guest token', async () => {
-    state.deviceHour = 99
-    state.official = 99
-    expect((await checkChallengeLimits({ ...input(), guestTokenHash: null })).status).toBe('ok')
+  it('ignores rows from a previous month', async () => {
+    setCap(1)
+    seed(5, { created_at: new Date(monthStart().getTime() - 86_400_000).toISOString() })
+    expect((await checkChallengeLimits(guest())).status).toBe('ok')
   })
 
-  it('monthly cap boundary uses tenant setting', async () => {
-    state.settingValue = 10
-    state.monthly = 9
-    expect((await checkChallengeLimits(input())).status).toBe('ok')
-    state.monthly = 10
-    expect((await checkChallengeLimits(input())).status).toBe('paused')
+  it('missing setting uses the default', async () => {
+    seed(DEFAULT_GUEST_MONTHLY_CAP - 1)
+    expect((await checkChallengeLimits(guest())).status).toBe('ok')
+    expect((await checkChallengeLimits(guest())).status).toBe('paused')
   })
 
-  it('monthly cap falls back to default when missing or invalid', async () => {
-    state.monthly = DEFAULT_GUEST_MONTHLY_CAP - 1
-    expect((await checkChallengeLimits(input())).status).toBe('ok')
-    state.monthly = DEFAULT_GUEST_MONTHLY_CAP
-    expect((await checkChallengeLimits(input())).status).toBe('paused')
-    state.settingValue = 'garbage'
-    expect((await checkChallengeLimits(input())).status).toBe('paused')
+  it.each([['garbage'], [-5], [1.5], [null], ['']])('malformed cap %j falls back to the low safe cap', async (v) => {
+    setCap(v)
+    seed(SAFE_GUEST_MONTHLY_CAP)
+    expect((await checkChallengeLimits(guest())).status).toBe('paused')
   })
 
-  it('cap of 0 pauses immediately; numeric strings are accepted', async () => {
-    state.settingValue = 0
-    expect((await checkChallengeLimits(input())).status).toBe('paused')
-    state.settingValue = '5'
-    state.monthly = 5
-    expect((await checkChallengeLimits(input())).status).toBe('paused')
+  it('cap 0 pauses; numeric string accepted', async () => {
+    setCap(0)
+    expect((await checkChallengeLimits(guest())).status).toBe('paused')
   })
 
-  it('paused wins over hourly limit', async () => {
-    state.settingValue = 1
-    state.monthly = 1
-    state.ipHour = 99
-    expect((await checkChallengeLimits(input())).status).toBe('paused')
+  it('paused wins over the hourly limit', async () => {
+    setCap(1)
+    const g = guest()
+    seed(1, { ip_hash: g.ipHash })
+    expect((await checkChallengeLimits(g)).status).toBe('paused')
+  })
+})
+
+describe('members', () => {
+  const member = (over: Record<string, unknown> = {}) => ({
+    tenantId: T, exerciseId: 1, ipHash: 'shared-nat', guestTokenHash: null, userId: 'u1', ...over,
   })
 
-  it('in-memory burst limiter trips after BURST_PER_MINUTE calls', async () => {
-    const i = input()
-    for (let k = 0; k < BURST_PER_MINUTE; k++) {
-      expect((await checkChallengeLimits(i)).status).toBe('ok')
-    }
-    expect((await checkChallengeLimits(i)).status).toBe('rate_limited')
+  it('skip the IP cap and the monthly cap', async () => {
+    setCap(0)
+    seed(GUEST_HOURLY_CAP * 3, { ip_hash: 'shared-nat' })
+    expect(await checkChallengeLimits(member())).toEqual({ status: 'ok', official: true })
+  })
+
+  it('official=false when the user already has one', async () => {
+    seed(1, { user_id: 'u1', guest_token_hash: null, is_official: true })
+    expect(await checkChallengeLimits(member())).toEqual({ status: 'ok', official: false })
+  })
+
+  it('are capped per user per hour', async () => {
+    seed(GUEST_HOURLY_CAP, { user_id: 'u1', guest_token_hash: null })
+    expect((await checkChallengeLimits(member())).status).toBe('rate_limited')
+  })
+})
+
+describe('burst limiter and failures', () => {
+  it('trips after BURST_PER_MINUTE calls from one tenant+IP', async () => {
+    // member path so the hourly cap does not trip first
+    const m = { tenantId: T, exerciseId: 1, ipHash: 'ip', guestTokenHash: null, userId: 'burst' }
+    let last = ''
+    for (let k = 0; k <= BURST_PER_MINUTE; k++) last = (await checkChallengeLimits(m)).status
+    expect(last).toBe('rate_limited')
+  })
+
+  it('fails closed (paused) when tenant_settings errors', async () => {
+    state.settingsError = true
+    expect((await checkChallengeLimits(guest())).status).toBe('paused')
+  })
+
+  it('fails closed (paused) when challenge_attempts errors', async () => {
+    state.attemptsError = true
+    expect((await checkChallengeLimits(guest())).status).toBe('paused')
   })
 })
 
 describe('hashIp', () => {
-  it('is deterministic, hex, and does not contain the raw IP', () => {
+  it('is deterministic, hex, keyed by the secret, and hides the raw IP', () => {
     process.env.CHALLENGE_IP_HASH_SECRET = 'secret-a'
     const h = hashIp('203.0.113.9')
     expect(h).toBe(hashIp('203.0.113.9'))
     expect(h).toMatch(/^[0-9a-f]{64}$/)
-    expect(h).not.toContain('203')
     process.env.CHALLENGE_IP_HASH_SECRET = 'secret-b'
     expect(hashIp('203.0.113.9')).not.toBe(h)
+  })
+
+  it('throws in production without the secret and ignores the service-role key', () => {
+    delete process.env.CHALLENGE_IP_HASH_SECRET
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'srk'
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(() => hashIp('1.1.1.1')).toThrow(/CHALLENGE_IP_HASH_SECRET/)
+    vi.unstubAllEnvs()
   })
 })
 
