@@ -80,6 +80,7 @@ tests/
 
 Highest-value specs when something in auth, tenancy or money changes:
 `tenant-isolation`, `auth-security`, `payment-flows`, `evaluations-security`,
+`exercise-challenges` (public guest endpoints: tenant isolation, free-vs-paid access grant),
 and the three loop specs (`loop-1-creator-publishes`, `loop-2-student-learns`,
 `loop-3-student-pays`).
 
@@ -105,6 +106,12 @@ and the three loop specs (`loop-1-creator-publishes`, `loop-2-student-learns`,
   Playwright click on a Button sometimes needs `page.evaluate(() => el.click())`.
 - Specs that change shared DB state (plans, subscriptions, entitlements) gate on
   `testInfo.project.name === 'desktop-chromium'` so they run once per suite.
+
+## Exercise challenges
+
+`exercise-challenges.spec.ts` needs `CHALLENGE_HASH_SECRET` in `.env.local` (same
+value for the app server and the spec; CI sets it). Google OAuth and AI grading
+cannot run locally: the spec states what it mocks in its header.
 
 ## Skips
 

@@ -145,6 +145,8 @@ jobs:
       AI_KEYS_ACTIVE_VERSION: "1"
       # Gated specs (platform-billing-*, access-cutoff-lifecycle, webhook claims)
       CRON_SECRET: ci-cron-secret-synthetic
+      # exercise-challenges.spec.ts mints guest cookies with the same secret the app server verifies them with
+      CHALLENGE_HASH_SECRET: ci-challenge-hash-secret-synthetic
       # Loop 3 (loop-3-student-pays) charges a real test-mode card through Stripe
       # Connect, so it needs the repo's sk_test key, its matching pk_test key (a
       # build-time NEXT_PUBLIC_*, hence set on the job) and a connected account
