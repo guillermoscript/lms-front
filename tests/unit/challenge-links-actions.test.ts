@@ -68,7 +68,7 @@ beforeEach(() => {
   h.inserts = []
   h.tables = {
     tenant_settings: [{ tenant_id: TENANT, setting_key: 'challenges_enabled', setting_value: { enabled: true } }],
-    exercises: [{ id: 5, tenant_id: TENANT, course_id: 9, is_challengeable: true }],
+    exercises: [{ id: 5, tenant_id: TENANT, course_id: 9, is_challengeable: true, exercise_type: 'essay' }],
     courses: [{ course_id: 9, tenant_id: TENANT, author_id: SOMEONE }],
     challenge_attempts: [{ id: 'a1', tenant_id: TENANT, exercise_id: 5, user_id: ME, is_official: true }],
     challenge_links: [{ id: 'l1', tenant_id: TENANT, created_by: SOMEONE }],
@@ -160,5 +160,17 @@ describe('deactivateChallengeLink', () => {
     expect((await deactivateChallengeLink('l1')).success).toBe(true)
     h.ctx.tenantId = OTHER
     expect((await deactivateChallengeLink('l1')).success).toBe(false)
+  })
+})
+
+describe('setExerciseChallengeable type and tenant gates', () => {
+  it('rejects non-essay/discussion types and a disabled tenant', async () => {
+    h.ctx.role = 'admin'
+    h.tables.exercises[0].exercise_type = 'quiz'
+    expect((await setExerciseChallengeable(5, true)).success).toBe(false)
+    h.tables.exercises[0].exercise_type = 'essay'
+    h.tables.tenant_settings = []
+    expect((await setExerciseChallengeable(5, true)).success).toBe(false)
+    expect((await setExerciseChallengeable(5, false)).success).toBe(true)
   })
 })

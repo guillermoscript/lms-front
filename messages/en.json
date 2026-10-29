@@ -10876,7 +10876,9 @@
         "hint": "Students can share this exercise as a link so friends can try it and compare scores.",
         "warning": "Heads up: the exercise instructions become public to anyone with a link. For paid courses, guests only get this one exercise as a sample and no access to the course.",
         "saved": "Challenge setting updated",
-        "error": "Could not update the exercise"
+        "error": "Could not update the exercise",
+        "unsupportedType": "Only essay and discussion exercises can be challenges.",
+        "disabledHint": "Challenges are switched off for this school. An admin can enable them in Settings > Enrollment."
       },
       "links": {
         "title": "Challenge links",
@@ -10891,7 +10893,10 @@
         "inactive": "Deactivated",
         "deactivate": "Deactivate",
         "deactivated": "Link deactivated",
-        "error": "Could not deactivate the link"
+        "error": "Could not deactivate the link",
+        "copy": "Copy link",
+        "copied": "Link copied",
+        "copyError": "Could not copy the link"
       }
     }
   }

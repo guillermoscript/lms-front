@@ -10876,7 +10876,9 @@
         "hint": "Los estudiantes pueden compartir este ejercicio con un enlace para que sus amigos lo intenten y comparen puntajes.",
         "warning": "Ojo: las instrucciones del ejercicio serán públicas para cualquiera con el enlace. En cursos de pago, los invitados solo acceden a este ejercicio como muestra, sin acceso al curso.",
         "saved": "Configuración del reto actualizada",
-        "error": "No se pudo actualizar el ejercicio"
+        "error": "No se pudo actualizar el ejercicio",
+        "unsupportedType": "Solo los ejercicios de ensayo y discusión pueden ser retos.",
+        "disabledHint": "Los retos están desactivados en esta escuela. Un administrador puede activarlos en Configuración > Inscripción."
       },
       "links": {
         "title": "Enlaces de reto",
@@ -10891,7 +10893,10 @@
         "inactive": "Desactivado",
         "deactivate": "Desactivar",
         "deactivated": "Enlace desactivado",
-        "error": "No se pudo desactivar el enlace"
+        "error": "No se pudo desactivar el enlace",
+        "copy": "Copiar enlace",
+        "copied": "Enlace copiado",
+        "copyError": "No se pudo copiar el enlace"
       }
     }
   }

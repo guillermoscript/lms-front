@@ -16,6 +16,9 @@ export type ChallengeActionResult<T = undefined> =
   | { success: true; data: T }
   | { success: false; error: string }
 
+/** Guests can only play free-text exercises; quiz-like types are out. */
+const CHALLENGEABLE_TYPES = ['essay', 'discussion']
+
 const fail = (error: string): { success: false; error: string } => ({ success: false, error })
 
 async function isChallengesEnabled(tenantId: string): Promise<boolean> {
@@ -28,6 +31,16 @@ async function isChallengesEnabled(tenantId: string): Promise<boolean> {
   const v = data?.setting_value as unknown
   if (v && typeof v === 'object') return (v as { enabled?: unknown }).enabled === true
   return v === true
+}
+
+/** Whether the caller's school has challenges switched on (for UI hints). */
+export async function getChallengesEnabled(): Promise<boolean> {
+  try {
+    const ctx = await authenticateUser()
+    return await isChallengesEnabled(ctx.tenantId)
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -72,24 +85,42 @@ export async function createChallengeLink(
       return { success: true, data: { ...existing, path: `/reto/${existing.token}` } }
     }
 
-    const token = nanoid(12)
-    const { data: link, error } = await admin
-      .from('challenge_links')
-      .insert({
-        tenant_id: ctx.tenantId,
-        exercise_id: attempt.exercise_id,
-        token,
-        created_by: ctx.userId,
-        owner_attempt_id: attempt.id,
-      })
-      .select('id, token')
-      .single()
-    if (error || !link) return fail('Failed to create link')
+    let link: { id: string; token: string } | null = null
+    for (let i = 0; i < 3 && !link; i++) {
+      const { data, error } = await admin
+        .from('challenge_links')
+        .insert({
+          tenant_id: ctx.tenantId,
+          exercise_id: attempt.exercise_id,
+          token: nanoid(12),
+          created_by: ctx.userId,
+          owner_attempt_id: attempt.id,
+        })
+        .select('id, token')
+        .single()
+      if (data) {
+        link = data
+        break
+      }
+      if (error?.code !== '23505') return fail('Failed to create link')
+      // Unique violation: either a token collision (retry with a fresh one) or a
+      // concurrent request already created the active link for this attempt.
+      const { data: raced } = await admin
+        .from('challenge_links')
+        .select('id, token')
+        .eq('tenant_id', ctx.tenantId)
+        .eq('owner_attempt_id', attempt.id)
+        .eq('active', true)
+        .maybeSingle()
+      if (raced) link = raced
+    }
+    if (!link) return fail('Failed to create link')
 
     revalidatePath('/dashboard/student/challenges')
     return { success: true, data: { ...link, path: `/reto/${link.token}` } }
   } catch (err) {
-    return fail(err instanceof Error ? err.message : 'Failed to create link')
+    console.error('createChallengeLink failed', err)
+    return fail('Failed to create link')
   }
 }
 
@@ -119,7 +150,8 @@ export async function deactivateChallengeLink(linkId: string): Promise<Challenge
     revalidatePath('/dashboard/student/challenges')
     return { success: true, data: undefined }
   } catch (err) {
-    return fail(err instanceof Error ? err.message : 'Failed to deactivate link')
+    console.error('deactivateChallengeLink failed', err)
+    return fail('Failed to deactivate link')
   }
 }
 
@@ -175,7 +207,8 @@ export async function listChallengeLinks(): Promise<ChallengeActionResult<Challe
       })),
     }
   } catch (err) {
-    return fail(err instanceof Error ? err.message : 'Failed to load links')
+    console.error('listChallengeLinks failed', err)
+    return fail('Failed to load links')
   }
 }
 
@@ -190,12 +223,21 @@ export async function setExerciseChallengeable(
 
     const { data: exercise } = await ctx.supabase
       .from('exercises')
-      .select('id, course_id')
+      .select('id, course_id, exercise_type')
       .eq('id', exerciseId)
       .eq('tenant_id', ctx.tenantId)
       .maybeSingle()
     if (!exercise || exercise.course_id == null) return fail('Exercise not found')
     await verifyCourseOwnership(ctx, exercise.course_id)
+
+    if (value) {
+      if (!CHALLENGEABLE_TYPES.includes(exercise.exercise_type as string)) {
+        return fail('Only essay and discussion exercises can be challenges')
+      }
+      if (!(await isChallengesEnabled(ctx.tenantId))) {
+        return fail('Challenges are not enabled for this school')
+      }
+    }
 
     const { error } = await ctx.supabase
       .from('exercises')
@@ -207,6 +249,9 @@ export async function setExerciseChallengeable(
     revalidatePath(`/dashboard/teacher/courses/${exercise.course_id}/exercises/${exercise.id}`)
     return { success: true, data: { isChallengeable: value } }
   } catch (err) {
-    return fail(err instanceof Error ? err.message : 'Failed to update exercise')
+    console.error('setExerciseChallengeable failed', err)
+    // Auth / ownership errors from the shared helpers are safe to surface.
+    const msg = err instanceof Error ? err.message : ''
+    return fail(msg.startsWith('Unauthorized') ? 'Unauthorized' : 'Failed to update exercise')
   }
 }

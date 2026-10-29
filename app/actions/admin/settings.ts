@@ -163,6 +163,12 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
  * `custom_branding`. A generic upsert here would skip both, so these actions
  * refuse the key on every plan (#763).
  */
+/** `challenges_*` keys have a typed writer (`updateChallengeSettings`) with validation. */
+const CHALLENGE_KEY_REFUSAL: SettingsResponse = {
+  success: false,
+  error: 'Use updateChallengeSettings for challenge settings',
+}
+
 const THEME_KEY_REFUSAL: SettingsResponse = {
   success: false,
   error: 'The school theme is saved from Appearance, not from settings.',
@@ -203,6 +209,7 @@ export async function updateSetting(
     }
 
     if (key === SCHOOL_THEME_SETTING_KEY) return THEME_KEY_REFUSAL
+    if (key.startsWith('challenges_')) return CHALLENGE_KEY_REFUSAL
 
     // Same gate as updateSettings (#890): blank -> null, emails validated.
     const normalized = normalizeGeneralSettings({ [key]: value })
@@ -246,6 +253,7 @@ export async function updateSettings(
     }
 
     if (Object.keys(settings).includes(SCHOOL_THEME_SETTING_KEY)) return THEME_KEY_REFUSAL
+    if (Object.keys(settings).some((k) => k.startsWith('challenges_'))) return CHALLENGE_KEY_REFUSAL
 
     // Optional contact emails: blank -> null, non-blank must be an address (#890).
     const normalized = normalizeGeneralSettings(settings)
@@ -312,11 +320,12 @@ export async function updateChallengeSettings(input: {
 
     // Blank cap = back to the application default: drop any stored override.
     if (cap === null) {
-      await supabase
+      const { error: delError } = await supabase
         .from('tenant_settings')
         .delete()
         .eq('tenant_id', tenantId)
         .eq('setting_key', 'challenges_guest_monthly_cap')
+      if (delError) throw delError
     }
 
     revalidatePath('/dashboard/admin/settings')

@@ -10,9 +10,13 @@ import { setExerciseChallengeable } from '@/app/actions/challenge-links'
 interface Props {
   exerciseId: number
   initialValue: boolean
+  /** The school's `challenges_enabled` switch. */
+  challengesEnabled: boolean
+  /** Only essay/discussion exercises can be played by guests. */
+  supportedType: boolean
 }
 
-export function ChallengeableToggle({ exerciseId, initialValue }: Props) {
+export function ChallengeableToggle({ exerciseId, initialValue, challengesEnabled, supportedType }: Props) {
   const t = useTranslations('challenges.admin.exercise')
   const [value, setValue] = useState(initialValue)
   const [saving, setSaving] = useState(false)
@@ -25,7 +29,7 @@ export function ChallengeableToggle({ exerciseId, initialValue }: Props) {
         setValue(res.data.isChallengeable)
         toast.success(t('saved'))
       } else {
-        toast.error(t('error'))
+        toast.error(res.error.startsWith('Only') || res.error.includes('not enabled') ? res.error : t('error'))
       }
     } catch {
       toast.error(t('error'))
@@ -44,13 +48,19 @@ export function ChallengeableToggle({ exerciseId, initialValue }: Props) {
         <Switch
           id="is_challengeable"
           checked={value}
-          disabled={saving}
+          disabled={saving || (!supportedType && !value)}
           onCheckedChange={(checked) => void onChange(checked === true)}
         />
       </div>
       <p className="mt-3 text-sm text-warning" role="note">
         {t('warning')}
       </p>
+      {!supportedType && (
+        <p className="mt-2 text-sm text-muted-foreground">{t('unsupportedType')}</p>
+      )}
+      {!challengesEnabled && (
+        <p className="mt-2 text-sm text-muted-foreground">{t('disabledHint')}</p>
+      )}
     </div>
   )
 }
