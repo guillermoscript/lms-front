@@ -10855,5 +10855,44 @@
     "exerciseGreetingGeneric": "Hi! 👋 I'm your coach for this exercise.",
     "exerciseInstructions": "The full instructions are next to this chat — read them before you start.",
     "exerciseStart": "**How to start:** write your answer, or a first draft, right here. I'll give you feedback and hints (not the answer), and I'll mark the exercise complete once it meets the goal."
+  },
+  "challenges": {
+    "admin": {
+      "settings": {
+        "title": "Exercise challenges",
+        "description": "Let students share an exercise as a public challenge. Guests are graded with your AI key.",
+        "enabled": "Enable exercise challenges",
+        "enabledHint": "Off by default. When off, every challenge link shows as not found.",
+        "cap": "Monthly guest attempt cap",
+        "capHint": "Maximum official guest attempts per month. Leave blank to use the default. The challenge pauses when the cap is reached.",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Challenge settings saved",
+        "error": "Could not save challenge settings",
+        "invalidCap": "Enter a whole number, 0 or more"
+      },
+      "exercise": {
+        "label": "Allow as a public challenge",
+        "hint": "Students can share this exercise as a link so friends can try it and compare scores.",
+        "warning": "Heads up: the exercise instructions become public to anyone with a link. For paid courses, guests only get this one exercise as a sample and no access to the course.",
+        "saved": "Challenge setting updated",
+        "error": "Could not update the exercise"
+      },
+      "links": {
+        "title": "Challenge links",
+        "description": "Links you created for your own official attempts.",
+        "loading": "Loading links…",
+        "loadError": "Could not load challenge links.",
+        "retry": "Try again",
+        "empty": "No challenge links yet.",
+        "untitled": "Untitled exercise",
+        "score": "Score {score}",
+        "active": "Active",
+        "inactive": "Deactivated",
+        "deactivate": "Deactivate",
+        "deactivated": "Link deactivated",
+        "error": "Could not deactivate the link"
+      }
+    }
   }
 }

@@ -24,6 +24,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { isGradedEvalExerciseType } from '@/lib/ai/evals/schema'
 import { IconUsers } from '@tabler/icons-react'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
+import { ChallengeableToggle } from '@/components/challenges/challengeable-toggle'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -101,6 +102,8 @@ export default async function EditExercisePage({ params }: PageProps) {
           </div>
         }
       />
+
+      <ChallengeableToggle exerciseId={exercise.id} initialValue={exercise.is_challengeable === true} />
 
       <ExerciseBuilder
         courseId={parseInt(courseId)}
