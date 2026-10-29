@@ -10856,5 +10856,37 @@
     "exerciseGreetingGeneric": "Hi! 👋 I'm your coach for this exercise.",
     "exerciseInstructions": "The full instructions are next to this chat — read them before you start.",
     "exerciseStart": "**How to start:** write your answer, or a first draft, right here. I'll give you feedback and hints (not the answer), and I'll mark the exercise complete once it meets the goal."
+  },
+  "challenges": {
+    "page": {
+      "eyebrow": "Challenge",
+      "challengerLine": "{name} scored {score} on {exercise}. Can you beat it?",
+      "beatIt": "Answer below. You get one graded attempt, with no hints.",
+      "passingScore": "Passing score {score}",
+      "guestName": "Guest",
+      "passed": "Passed",
+      "notPassed": "Not passed",
+      "instructions": "Instructions",
+      "yourAnswer": "Your answer",
+      "answerPlaceholder": "Write your answer here",
+      "coldNote": "One graded attempt. No hints, no tutor.",
+      "submit": "Submit answer",
+      "grading": "Grading…",
+      "resultHeading": "Your result",
+      "duelBasic": "{name}: {challenger} · You: {you}",
+      "shareHeading": "Share your challenge",
+      "shareBody": "Send this link to a friend. They play without an account.",
+      "share": "Share",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "copyFailed": "Could not copy the link",
+      "shareText": "{name} scored {score} on {exercise}. Can you beat it?",
+      "metaDescription": "Take the challenge and compare your score.",
+      "ogBadge": "Challenge",
+      "errorGeneric": "We could not grade your answer. Try again in a moment.",
+      "errorRateLimited": "Too many attempts. Try again later.",
+      "errorPaused": "This challenge is paused for now.",
+      "errorAlreadyPlayed": "You already played this challenge."
+    }
   }
 }
