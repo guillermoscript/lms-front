@@ -2,7 +2,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createTenantAi } from '@/lib/ai/tenant-ai'
 import { DRIFT_THRESHOLD } from './deviation'
-import { draftScenarios, runCase, type EngineContext } from './lesson-task-engine'
+import { draftScenarios, runCaseRepeated, type EngineContext } from './lesson-task-engine'
 import { CASE_COLUMNS, loadCheckpointGradingExercise, loadGradingExercise, loadScenarioExercise, snapshotToConfig, toCaseRow, toExamCaseRow, toGradedCaseRow } from './store'
 import { runCoachCase, type CoachEngineContext } from './coach-engine'
 import { runVoiceCase, type VoiceEngineContext } from './voice-engine'
@@ -13,7 +13,7 @@ import { runGradedCase, type GradedEngineContext } from './graded-answer-engine'
 import { gradeCheckpointAnswer } from '@/lib/checkpoints/grade-checkpoint-answer'
 import type { WrittenGradingExercise } from '@/lib/exercises/evaluate-written'
 import type { LanguageModel } from 'ai'
-import { EVAL_LIMITS, type CaseOutcome, type CoachCaseRow, type CoachOutcome, type EvalCaseRow, type ExamCaseRow, type ExamOutcome, type ExamRunSummary, type GradedCaseRow, type GradedOutcome, type GradedRunSummary, type RunSummary, type VoiceCaseRow, type VoiceOutcome } from './schema'
+import { EVAL_LIMITS, LESSON_TASK_REPEATS, type CaseOutcome, type CoachCaseRow, type CoachOutcome, type EvalCaseRow, type ExamCaseRow, type ExamOutcome, type ExamRunSummary, type GradedCaseRow, type GradedOutcome, type GradedRunSummary, type RunSummary, type VoiceCaseRow, type VoiceOutcome } from './schema'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -112,7 +112,7 @@ async function regenerateStaleScenarios(
  * request that queued it). The tenant comes from the run row the caller
  * inserted under RLS; every read and write below is pinned to it.
  */
-export async function executeEvalRun(runId: string, opts: { actorId?: string | null; locale?: string } = {}) {
+export async function executeEvalRun(runId: string, opts: { actorId?: string | null; locale?: string; repeats?: number } = {}) {
   const admin = createAdminClient()
 
   const { data: run } = await admin
@@ -144,6 +144,9 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
     await executeExamRun(admin, { runId, tenantId, examId: run.target_id, actorId: opts.actorId ?? null, locale: opts.locale ?? 'en' })
     return
   }
+
+  // Each lesson case runs this many times; the majority decides the result row.
+  const repeats = opts.repeats ?? LESSON_TASK_REPEATS
 
   try {
     const [{ data: version }, { data: lesson }, { data: suite }] = await Promise.all([
@@ -203,7 +206,7 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
     await mapLimit(cases, EVAL_LIMITS.concurrency, async (testCase) => {
       let outcome: CaseOutcome
       try {
-        outcome = await runCase(ctx, testCase)
+        outcome = await runCaseRepeated(ctx, testCase, repeats)
       } catch (error) {
         outcome = { transcript: [], completed: false, completed_turn: null, verdicts: [], deviation: 100, passed: false, error: errorMessage(error) }
       }
@@ -221,6 +224,7 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
         verdicts: outcome.verdicts,
         deviation: outcome.deviation,
         passed: outcome.passed,
+        output: (outcome.output ?? null) as never,
         error: outcome.error ?? null,
       })
     })
@@ -237,6 +241,8 @@ export async function executeEvalRun(runId: string, opts: { actorId?: string | n
       avg_deviation: scored.length ? Math.round(scored.reduce((sum, o) => sum + o.outcome.deviation, 0) / scored.length) : 0,
       model_calls: modelCalls,
       regenerated_scenarios: regenerated,
+      repeats,
+      unstable_cases: scored.filter((o) => o.outcome.output?.unstable).length,
     }
 
     await admin

@@ -7,8 +7,8 @@
 import { describe, expect, it } from 'vitest'
 import { MockLanguageModelV4 } from 'ai/test'
 import { computeDeviation } from '@/lib/ai/evals/deviation'
-import { runGoldenCase, runScenarioCase, type EngineContext } from '@/lib/ai/evals/lesson-task-engine'
-import { goldenInputSchema, type EvalCaseRow } from '@/lib/ai/evals/schema'
+import { foldCaseRepeats, runCaseRepeated, runGoldenCase, runScenarioCase, type EngineContext } from '@/lib/ai/evals/lesson-task-engine'
+import { goldenInputSchema, type CaseOutcome, type EvalCaseRow } from '@/lib/ai/evals/schema'
 
 const usage = {
   inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
@@ -201,5 +201,87 @@ describe('runGoldenCase', () => {
     expect(outcome.completed).toBe(false)
     expect(outcome.passed).toBe(false)
     expect(outcome.deviation).toBe(100)
+  })
+})
+
+describe('foldCaseRepeats', () => {
+  const repeat = (completed: boolean, passes: boolean[], turn = 2): CaseOutcome => ({
+    transcript: [{ role: 'user', text: completed ? 'done' : 'not done' }],
+    completed,
+    completed_turn: completed ? turn : null,
+    verdicts: passes.map((passed, i) => ({ criterion: `c${i}`, passed, evidence: `${passed ? 'yes' : 'no'}-${i}` })),
+    deviation: 0,
+    passed: true,
+  })
+
+  it('decides completion and each criterion by majority, and flags the disagreement', () => {
+    const folded = foldCaseRepeats(scenario({ expected: { completed: true } }), [
+      repeat(true, [true, false]),
+      repeat(false, [true, false]),
+      repeat(true, [true, true], 3),
+    ])
+    expect(folded.completed).toBe(true)
+    expect(folded.verdicts.map((v) => v.passed)).toEqual([true, false])
+    // Evidence comes from a repeat that voted with the majority.
+    expect(folded.verdicts[1].evidence).toBe('no-1')
+    // The shown transcript and turn are from the repeat closest to the majority.
+    expect(folded.completed_turn).toBe(2)
+    expect(folded.transcript[0].text).toBe('done')
+    expect(folded.passed).toBe(false)
+    expect(folded.output).toEqual({ repeats: 3, completed_flags: [true, false, true], criteria_passes: [3, 1], errored_repeats: 0, unstable: true })
+  })
+
+  it('passes a case whose repeats all agree, and is stable', () => {
+    const folded = foldCaseRepeats(scenario(), [repeat(true, [true]), repeat(true, [true]), repeat(true, [true])])
+    expect(folded.passed).toBe(true)
+    expect(folded.deviation).toBe(0)
+    expect(folded.output?.unstable).toBe(false)
+  })
+
+  it('one judge slip out of three does not fail the case', () => {
+    const folded = foldCaseRepeats(scenario(), [repeat(true, [true]), repeat(true, [false]), repeat(true, [true])])
+    expect(folded.passed).toBe(true)
+    expect(folded.output?.unstable).toBe(true)
+  })
+
+  it('fails a completion tie (a repeat errored) even when either outcome is accepted', () => {
+    const folded = foldCaseRepeats(scenario({ expected: { completed: null } }), [repeat(true, [true]), repeat(false, [true])], 1)
+    expect(folded.completed).toBe(false)
+    expect(folded.passed).toBe(false)
+    expect(folded.output).toMatchObject({ repeats: 3, errored_repeats: 1, unstable: true })
+  })
+
+  it('compares a golden against its saved outcome', () => {
+    const folded = foldCaseRepeats(golden(), [repeat(false, [true]), repeat(false, [true]), repeat(true, [true])])
+    expect(folded.completed).toBe(false)
+    expect(folded.deviation).toBeGreaterThanOrEqual(60)
+    expect(folded.passed).toBe(false)
+  })
+})
+
+describe('runCaseRepeated', () => {
+  it('runs the case N times and counts every model call', async () => {
+    let calls = 0
+    const outcome = await runCaseRepeated(ctx({}, () => { calls++ }), scenario(), 3)
+    expect(outcome.passed).toBe(true)
+    expect(outcome.output).toMatchObject({ repeats: 3, completed_flags: [true, true, true], unstable: false })
+    // 4 calls per repeat (see runScenarioCase).
+    expect(calls).toBe(12)
+  })
+
+  it('folds the repeats that finished when one errors, and throws when all do', async () => {
+    let n = 0
+    const flaky = new MockLanguageModelV4({
+      doGenerate: (async () => {
+        n++
+        if (n === 1) throw new Error('overloaded')
+        return textResult(JSON.stringify({ verdicts: [{ criterion: 'x', passed: true, evidence: 'ok' }] }))
+      }) as never,
+    })
+    const outcome = await runCaseRepeated(ctx({ judge: flaky }), scenario(), 3)
+    expect(outcome.output).toMatchObject({ repeats: 3, errored_repeats: 1, completed_flags: [true, true] })
+
+    const broken = new MockLanguageModelV4({ doGenerate: (async () => { throw new Error('down') }) as never })
+    await expect(runCaseRepeated(ctx({ judge: broken }), scenario(), 3)).rejects.toThrow('down')
   })
 })

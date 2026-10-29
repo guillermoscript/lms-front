@@ -2729,6 +2729,7 @@
           "tiles": {
             "passed": "Aprobados",
             "verdictChanges": "Cambios de veredicto",
+            "unstableCases": "Casos inestables (de {repeats} repeticiones)",
             "avgDeviation": "Desviación promedio",
             "modelCalls": "Llamadas al modelo"
           },
