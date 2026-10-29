@@ -267,6 +267,98 @@ function renderCertificateCard({
   )
 }
 
+function renderChallengeCard({
+  site,
+  title,
+  score,
+  badge,
+  logo,
+  palette,
+  headingFontFamily,
+}: {
+  site: string
+  title: string
+  score: number | null
+  badge: string
+  logo: string | null
+  palette: OgCardPalette
+  headingFontFamily?: string
+}) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: 72,
+        background: cardBackground(palette),
+        color: palette.primaryText,
+        fontFamily: 'sans-serif',
+      }}
+    >
+      <BrandRow logo={logo} label={site} textColor={palette.secondaryText} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 56 }}>
+        {score !== null ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 240,
+              height: 240,
+              flexShrink: 0,
+              borderRadius: 9999,
+              border: `8px solid ${palette.accent}`,
+              fontSize: 120,
+              fontWeight: 700,
+              color: palette.primaryText,
+              ...headingFontStyle(headingFontFamily),
+            }}
+          >
+            {score}
+          </div>
+        ) : null}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
+          {badge ? (
+            <div
+              style={{
+                display: 'flex',
+                alignSelf: 'flex-start',
+                fontSize: 22,
+                letterSpacing: 4,
+                textTransform: 'uppercase',
+                color: palette.secondaryText,
+                border: `1px solid ${palette.accent}`,
+                borderRadius: 9999,
+                padding: '10px 26px',
+              }}
+            >
+              {badge}
+            </div>
+          ) : null}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: title.length > 70 ? 46 : title.length > 40 ? 58 : 70,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              color: palette.primaryText,
+              ...headingFontStyle(headingFontFamily),
+            }}
+          >
+            {title}
+          </div>
+        </div>
+      </div>
+
+      <AccentBar color={palette.accent} />
+    </div>
+  )
+}
+
 function renderCourseCard({
   site,
   title,
@@ -371,6 +463,9 @@ function renderCourseCard({
  * Variants (via ?type=):
  *  - generic (default): site + title + subtitle — used by most public pages
  *  - certificate: student achievement card — used by /verify/[code]
+ *  - challenge: score ring + "X scored N on Y" headline for /reto/[token]; the score
+ *    is read from the link's owner attempt (never from a query param), the
+ *    headline arrives localized in `title`. Unresolvable token -> generic card.
  *  - course: brand column (logo, school name, badge, course title) beside a framed thumbnail,
  *    or the generic layout with the course description when there is no
  *    thumbnail — used by /courses/[id]; falls back to the generic card when the course id
@@ -427,6 +522,36 @@ export async function GET(request: NextRequest) {
     }
     // Unresolved course id (deleted, unpublished, wrong tenant) — the generic
     // card below still carries this tenant's brand.
+  }
+
+  if (type === 'challenge') {
+    const token = sp.get('token') ?? ''
+    const title = clamp(sp.get('title'), 120) || site
+    const badge = clamp(sp.get('badge'), 40)
+    let score: number | null = null
+    if (/^[A-Za-z0-9_-]{6,128}$/.test(token)) {
+      const admin = createAdminClient()
+      const { data: link } = await admin
+        .from('challenge_links')
+        .select('owner_attempt_id')
+        .eq('token', token)
+        .eq('tenant_id', tenantId)
+        .eq('active', true)
+        .maybeSingle()
+      if (link?.owner_attempt_id) {
+        const { data: attempt } = await admin
+          .from('challenge_attempts')
+          .select('score')
+          .eq('id', link.owner_attempt_id)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        score = attempt?.score ?? null
+      }
+    }
+    return new ImageResponse(
+      renderChallengeCard({ site, title, score, badge, logo, palette, headingFontFamily }),
+      { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts }
+    )
   }
 
   if (type === 'certificate') {
