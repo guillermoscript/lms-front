@@ -1,6 +1,9 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { DuelResult } from '@/components/challenges/duel-result'
+import { Ranking } from '@/components/challenges/ranking'
+import type { RankingEntry } from '@/lib/challenges/ranking'
 
 export interface ChallengeResultContext {
   token: string
@@ -10,22 +13,23 @@ export interface ChallengeResultContext {
   challengerScore: number | null
   challengerName: string | null
   /** Ranking rows from WS6's `getChallengeRankingServer`; absent until wired. */
-  rankingEntries?: readonly Record<string, unknown>[]
+  rankingEntries?: RankingEntry[]
 }
 
-/**
- * SLOT (WS6, #1031): the duel result — guest vs challenger with the
- * "Empate técnico" tie band and the per-exercise ranking. The WS6 PR replaces
- * the body of this component with `<DuelResult … />` / `<Ranking … />`.
- * Until then it shows the plain comparison, with no tie logic.
- */
+/** The duel result (guest vs challenger, with the tie band) and the per-exercise ranking. */
 export function ChallengeDuelSlot({ ctx }: { ctx: ChallengeResultContext }) {
   const t = useTranslations('challenges.page')
-  if (ctx.challengerScore === null) return null
   return (
-    <p data-testid="challenge-duel-slot" className="text-sm text-muted-foreground">
-      {t('duelBasic', { name: ctx.challengerName ?? t('guestName'), challenger: ctx.challengerScore, you: ctx.guestScore })}
-    </p>
+    <div className="space-y-5">
+      {ctx.challengerScore !== null ? (
+        <DuelResult
+          mine={ctx.guestScore}
+          theirs={ctx.challengerScore}
+          theirName={ctx.challengerName ?? t('guestName')}
+        />
+      ) : null}
+      {ctx.rankingEntries ? <Ranking entries={ctx.rankingEntries} /> : null}
+    </div>
   )
 }
 
