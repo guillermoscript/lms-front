@@ -55,6 +55,13 @@ const DEFAULT_BASE = tenantBase('default')
 const admin = getAdmin()
 let world: ChallengeWorld
 
+/**
+ * Page status, polled: the proxy caches its link lookup for a few seconds
+ * (lib/challenges/proxy-guard.ts), so a flip is visible within that window.
+ */
+const pageStatus = (request: import('@playwright/test').APIRequestContext, url: string) => async () =>
+  (await request.get(url, { maxRedirects: 0 })).status()
+
 const page_ = (token: string, locale = LOCALE) => `${QA_BASE}/${locale}/reto/${token}`
 
 test.describe.configure({ mode: 'serial' })
@@ -273,15 +280,13 @@ test.describe('exercise challenges (#1025)', () => {
         )
       expect((await set({ enabled: false })).error).toBeNull()
       try {
-        const off = await request.get(page_(world.links.scored), { maxRedirects: 0 })
-        expect(off.status()).toBe(404)
+        await expect.poll(pageStatus(request, page_(world.links.scored)), { timeout: 20_000 }).toBe(404)
         const api = await request.post(`${QA_BASE}/api/reto/attempt`, { data: { token: world.links.scored, answer: 'x' } })
         expect(api.status()).toBe(404)
       } finally {
         expect((await set({ enabled: true })).error).toBeNull()
       }
-      const on = await request.get(page_(world.links.scored), { maxRedirects: 0 })
-      expect(on.status()).toBe(200)
+      await expect.poll(pageStatus(request, page_(world.links.scored)), { timeout: 20_000 }).toBe(200)
     })
   })
 
@@ -302,7 +307,7 @@ test.describe('exercise challenges (#1025)', () => {
 
       const { data: link } = await admin.from('challenge_links').select('active').eq('token', world.links.studentOwned).single()
       expect(link?.active).toBe(false)
-      expect((await request.get(page_(world.links.studentOwned), { maxRedirects: 0 })).status()).toBe(404)
+      await expect.poll(pageStatus(request, page_(world.links.studentOwned)), { timeout: 20_000 }).toBe(404)
       const api = await request.post(`${QA_BASE}/api/reto/attempt`, { data: { token: world.links.studentOwned, answer: 'x' } })
       expect(api.status()).toBe(404)
     })
