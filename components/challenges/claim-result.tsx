@@ -29,7 +29,7 @@ export function ClaimResult({ token }: { token: string }) {
       return (
         <div className="flex flex-col items-start gap-2">
           <p>{t('notMember')}</p>
-          <Button nativeButton={false} render={<Link href={joinSchoolPath(`/reto/${encodeURIComponent(token)}?claim=1`)} />}>{t('joinCta')}</Button>
+          <Button render={<Link href={joinSchoolPath(`/reto/${encodeURIComponent(token)}?claim=1`)} />}>{t('joinCta')}</Button>
         </div>
       )
     }
@@ -53,7 +53,7 @@ export function ClaimResult({ token }: { token: string }) {
       {outcome.requiresPurchase ? (
         <>
           <p>{t('paidBody', { score: outcome.score })}</p>
-          <Button nativeButton={false} render={<Link href={`/courses/${outcome.courseId}`} />}>{t('buyCta')}</Button>
+          <Button render={<Link href={`/courses/${outcome.courseId}`} />}>{t('buyCta')}</Button>
         </>
       ) : (
         <>
@@ -62,7 +62,6 @@ export function ClaimResult({ token }: { token: string }) {
             <>
               <p>{t('freeNext')}</p>
               <Button
-                nativeButton={false}
                 render={
                   <Link
                     href={`/dashboard/student/courses/${outcome.courseId}/exercises/${outcome.nextExerciseId}`}
