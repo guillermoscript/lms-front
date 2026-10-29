@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { DuelResult } from '@/components/challenges/duel-result'
+import { ClaimCta } from '@/components/challenges/claim-cta'
 import { Ranking } from '@/components/challenges/ranking'
 import type { RankingEntry } from '@/lib/challenges/ranking'
 
@@ -33,11 +34,7 @@ export function ChallengeDuelSlot({ ctx }: { ctx: ChallengeResultContext }) {
   )
 }
 
-/**
- * SLOT (WS4, #1029): the claim CTA — "sign in with Google to save your result
- * and join the ranking". The WS4 PR replaces this body with its component.
- * Renders nothing until then.
- */
-export function ChallengeClaimSlot(_props: { ctx: ChallengeResultContext }) {
-  return null
+/** The claim CTA: "continue with Google" to save the result and join the ranking. */
+export function ChallengeClaimSlot({ ctx }: { ctx: ChallengeResultContext }) {
+  return <ClaimCta token={ctx.token} />
 }
