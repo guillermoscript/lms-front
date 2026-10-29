@@ -18,6 +18,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | **Required** | Supabase project API URL. Used everywhere (client, server, proxy, admin). | Supabase Dashboard > Project Settings > API > Project URL | `https://abcdefghij.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY` | **Required** | Supabase anon/publishable key. Safe for client-side. Used by `createClient()` in both client and server. | Supabase Dashboard > Project Settings > API > Project API keys > `anon` `public` | `eyJhbGciOi...` (JWT) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Required** | Service-role key that **bypasses RLS**. Used by `createAdminClient()`, proxy middleware, webhooks, and scripts. Keep secret. | Supabase Dashboard > Project Settings > API > Project API keys > `service_role` | `eyJhbGciOi...` (JWT) |
+| `CHALLENGE_IP_HASH_SECRET` | **Required** in production | HMAC secret used by `hashIp()` (`lib/challenges/limits.ts`) so raw guest IPs are never stored in `challenge_attempts`. Without it guest challenges fail closed (paused). Rotating it resets the per-IP hourly counters. | Generate yourself | `openssl rand -hex 32` |
 
 **Local Supabase:** For local development with `supabase start`, use:
 ```
@@ -104,6 +105,7 @@ AI is BYOK: each school stores its own provider keys (Admin > Settings > AI). Th
 | Variable | Required | Description | Where to get it | Example |
 |----------|----------|-------------|-----------------|---------|
 | `CRON_SECRET` | Optional | Shared secret to authenticate `/api/cron/*` endpoints (e.g., expire-subscriptions). If set, cron requests must include this as a bearer token. | Generate with `openssl rand -hex 32` | `a1b2c3d4...` (64 hex chars) |
+| `CHALLENGE_HASH_SECRET` | Required for challenges | Keyed hash (HMAC) for exercise-challenge guest cookies and IPs (#1027). No fallback: unset = `/api/reto/attempt` returns 503. | Generate with `openssl rand -hex 32` | `a1b2c3d4...` |
 
 ### PayPal (Alternative Payment Provider)
 
