@@ -10856,5 +10856,39 @@
     "exerciseGreetingGeneric": "¡Hola! 👋 Soy tu coach para este ejercicio.",
     "exerciseInstructions": "Las instrucciones completas están junto a este chat; léelas antes de empezar.",
     "exerciseStart": "**Cómo empezar:** escribe aquí tu respuesta o un primer borrador. Te daré retroalimentación y pistas (no la respuesta) y marcaré el ejercicio como completado cuando cumpla el objetivo."
+  },
+  "challenges": {
+    "page": {
+      "eyebrow": "Reto",
+      "challengerLine": "{name} sacó {score} en {exercise}. ¿Lo superas?",
+      "beatIt": "Responde abajo. Tienes un intento calificado, sin pistas.",
+      "passingScore": "Nota para aprobar {score}",
+      "guestName": "Invitado",
+      "passed": "Aprobado",
+      "notPassed": "No aprobado",
+      "instructions": "Instrucciones",
+      "yourAnswer": "Tu respuesta",
+      "answerPlaceholder": "Escribe tu respuesta aquí",
+      "coldNote": "Un intento calificado. Sin pistas ni tutor.",
+      "submit": "Enviar respuesta",
+      "grading": "Calificando…",
+      "resultHeading": "Tu resultado",
+      "duelBasic": "{name}: {challenger} · Tú: {you}",
+      "shareHeading": "Comparte tu reto",
+      "shareBody": "Envía este enlace a un amigo. Juega sin crear cuenta.",
+      "share": "Compartir",
+      "copyLink": "Copiar enlace",
+      "linkCopied": "Enlace copiado",
+      "copyFailed": "No se pudo copiar el enlace",
+      "shareText": "{name} sacó {score} en {exercise}. ¿Lo superas?",
+      "metaDescription": "Acepta el reto y compara tu puntaje.",
+      "ogBadge": "Reto",
+      "errorGeneric": "No pudimos calificar tu respuesta. Inténtalo de nuevo en un momento.",
+      "errorRateLimited": "Demasiados intentos. Inténtalo más tarde.",
+      "errorPaused": "Este reto está en pausa por ahora.",
+      "errorAlreadyPlayed": "Ya jugaste este reto.",
+      "strengths": "Fortalezas",
+      "improvements": "Por mejorar"
+    }
   }
 }
