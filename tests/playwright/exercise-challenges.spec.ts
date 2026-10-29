@@ -27,7 +27,7 @@
  * Fixtures: one throwaway school, own users, removed in afterAll. The seeded
  * schools and the evidence rows (exercises 3001-3003, demo-token-*) are untouched.
  */
-import { test, expect } from './utils/test'
+import { test, expect, type APIRequestContext } from './utils/test'
 import { login } from './utils/auth'
 import { LOCALE } from './utils/constants'
 import { SEEDED, getAdmin, tenantBase, type QaTenant } from './utils/plan-gate-fixtures'
@@ -59,8 +59,16 @@ let world: ChallengeWorld
  * Page status, polled: the proxy caches its link lookup for a few seconds
  * (lib/challenges/proxy-guard.ts), so a flip is visible within that window.
  */
-const pageStatus = (request: import('@playwright/test').APIRequestContext, url: string) => async () =>
-  (await request.get(url, { maxRedirects: 0 })).status()
+async function waitForStatus(request: APIRequestContext, url: string, want: number): Promise<void> {
+  const deadline = Date.now() + 20_000
+  let got = -1
+  while (Date.now() < deadline) {
+    got = (await request.get(url, { maxRedirects: 0 })).status()
+    if (got === want) return
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  throw new Error(`${url} answered ${got}, expected ${want}`)
+}
 
 const page_ = (token: string, locale = LOCALE) => `${QA_BASE}/${locale}/reto/${token}`
 
@@ -280,13 +288,13 @@ test.describe('exercise challenges (#1025)', () => {
         )
       expect((await set({ enabled: false })).error).toBeNull()
       try {
-        await expect.poll(pageStatus(request, page_(world.links.scored)), { timeout: 20_000 }).toBe(404)
+        await waitForStatus(request, page_(world.links.scored), 404)
         const api = await request.post(`${QA_BASE}/api/reto/attempt`, { data: { token: world.links.scored, answer: 'x' } })
         expect(api.status()).toBe(404)
       } finally {
         expect((await set({ enabled: true })).error).toBeNull()
       }
-      await expect.poll(pageStatus(request, page_(world.links.scored)), { timeout: 20_000 }).toBe(200)
+      await waitForStatus(request, page_(world.links.scored), 200)
     })
   })
 
@@ -307,7 +315,7 @@ test.describe('exercise challenges (#1025)', () => {
 
       const { data: link } = await admin.from('challenge_links').select('active').eq('token', world.links.studentOwned).single()
       expect(link?.active).toBe(false)
-      await expect.poll(pageStatus(request, page_(world.links.studentOwned)), { timeout: 20_000 }).toBe(404)
+      await waitForStatus(request, page_(world.links.studentOwned), 404)
       const api = await request.post(`${QA_BASE}/api/reto/attempt`, { data: { token: world.links.studentOwned, answer: 'x' } })
       expect(api.status()).toBe(404)
     })
