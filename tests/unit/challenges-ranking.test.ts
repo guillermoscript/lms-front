@@ -89,7 +89,7 @@ function fakeAdmin(tables: Record<string, unknown[]>) {
 
 describe('getChallengeRankingServer', () => {
   it('scopes the query by tenant, exercise, official and claimed; orders with id tiebreak', async () => {
-    const { admin, calls } = fakeAdmin({ challenge_attempts: [], profiles: [] })
+    const { admin, calls } = fakeAdmin({ challenge_attempts: [], profiles: [], tenant_users: [] })
     await getChallengeRankingServer('tenant-1', 7, admin)
     const q = calls.filter((c) => c.table === 'challenge_attempts')
     expect(q).toContainEqual({ table: 'challenge_attempts', method: 'eq', args: ['tenant_id', 'tenant-1'] })
@@ -110,6 +110,7 @@ describe('getChallengeRankingServer', () => {
         { id: 'u1', full_name: 'Ana Pérez' },
         { id: 'u2', full_name: null },
       ],
+      tenant_users: [{ user_id: 'u1' }, { user_id: 'u2' }, { user_id: 'u3' }],
     })
     const out = await getChallengeRankingServer('t', 1, admin)
     expect(out.map((e) => [e.userId, e.rank, e.displayName])).toEqual([
@@ -119,6 +120,34 @@ describe('getChallengeRankingServer', () => {
     ])
     const selects = calls.filter((c) => c.method === 'select').map((c) => String(c.args[0]))
     expect(selects.join(',')).not.toMatch(/email/)
+  })
+
+  it('only ACTIVE members of the tenant rank; non-members and banned are dropped, ranks stay sequential', async () => {
+    const { admin, calls } = fakeAdmin({
+      challenge_attempts: [
+        { id: '1', user_id: 'outsider', score: 99, passed: true, created_at: 't' },
+        { id: '2', user_id: 'u1', score: 90, passed: true, created_at: 't' },
+        { id: '3', user_id: 'banned', score: 80, passed: true, created_at: 't' },
+        { id: '4', user_id: 'u2', score: 70, passed: true, created_at: 't' },
+      ],
+      profiles: [{ id: 'u1', full_name: 'Ana Pérez' }],
+      // The DB applies the active filter; the fake returns what such a query would.
+      tenant_users: [{ user_id: 'u1' }, { user_id: 'u2' }],
+    })
+    const out = await getChallengeRankingServer('t', 1, admin)
+    expect(out.map((e) => [e.userId, e.rank])).toEqual([['u1', 1], ['u2', 2]])
+    const tu = calls.filter((c) => c.table === 'tenant_users')
+    expect(tu).toContainEqual({ table: 'tenant_users', method: 'eq', args: ['tenant_id', 't'] })
+    expect(tu).toContainEqual({ table: 'tenant_users', method: 'eq', args: ['status', 'active'] })
+  })
+
+  it('returns nothing when no attempt belongs to an active member', async () => {
+    const { admin } = fakeAdmin({
+      challenge_attempts: [{ id: '1', user_id: 'outsider', score: 99, passed: true, created_at: 't' }],
+      profiles: [],
+      tenant_users: [],
+    })
+    expect(await getChallengeRankingServer('t', 1, admin)).toEqual([])
   })
 })
 

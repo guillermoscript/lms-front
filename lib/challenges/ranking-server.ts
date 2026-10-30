@@ -3,7 +3,7 @@ import { formatDisplayName, type RankingEntry } from './ranking'
 
 /**
  * Server-only ranking for pages that guests can see (admin client, RLS
- * bypassed). Official, claimed attempts of ONE tenant; no emails.
+ * bypassed). Official, claimed attempts of ACTIVE members of ONE tenant; no emails.
  * Order: score desc, earliest first, id as final tiebreak (same as the RPC).
  * Callers must have validated that `tenantId` is the host tenant.
  */
@@ -25,7 +25,18 @@ export async function getChallengeRankingServer(
   if (error) throw new Error(error.message)
   if (!attempts?.length) return []
 
-  const userIds = [...new Set(attempts.map((a) => a.user_id as string))]
+  const candidateIds = [...new Set(attempts.map((a) => a.user_id as string))]
+  // Only ACTIVE members of this tenant rank (never a non-member or banned user).
+  const { data: members, error: mErr } = await admin
+    .from('tenant_users')
+    .select('user_id')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .in('user_id', candidateIds)
+  if (mErr) throw new Error(mErr.message)
+  const active = new Set((members ?? []).map((m) => m.user_id as string))
+  const userIds = candidateIds.filter((id) => active.has(id))
+  if (!userIds.length) return []
   const { data: profiles, error: pErr } = await admin
     .from('profiles')
     .select('id, full_name')
@@ -33,7 +44,9 @@ export async function getChallengeRankingServer(
   if (pErr) throw new Error(pErr.message)
   const names = new Map((profiles ?? []).map((p) => [p.id, formatDisplayName(p.full_name)]))
 
-  return attempts.map((a, i) => ({
+  return attempts
+    .filter((a) => active.has(a.user_id as string))
+    .map((a, i) => ({
     rank: i + 1,
     userId: a.user_id as string,
     displayName: names.get(a.user_id as string) ?? '',
