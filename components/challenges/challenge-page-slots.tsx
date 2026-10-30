@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { DuelResult } from '@/components/challenges/duel-result'
 import { ClaimCta } from '@/components/challenges/claim-cta'
 import { Ranking } from '@/components/challenges/ranking'
+import { ChallengeFriendsShare } from '@/components/challenges/challenge-friends-share'
 import type { RankingEntry } from '@/lib/challenges/ranking'
 
 export interface ChallengeResultContext {
@@ -15,6 +16,9 @@ export interface ChallengeResultContext {
   challengerName: string | null
   /** Ranking rows from WS6's `getChallengeRankingServer`; absent until wired. */
   rankingEntries?: RankingEntry[]
+  title?: string
+  /** Active member: "challenge your friends", no Google claim (it would sign them out). */
+  viewerIsMember?: boolean
 }
 
 /** The duel result (guest vs challenger, with the tie band) and the per-exercise ranking. */
@@ -36,5 +40,8 @@ export function ChallengeDuelSlot({ ctx }: { ctx: ChallengeResultContext }) {
 
 /** The claim CTA: "continue with Google" to save the result and join the ranking. */
 export function ChallengeClaimSlot({ ctx }: { ctx: ChallengeResultContext }) {
+  if (ctx.viewerIsMember) {
+    return <ChallengeFriendsShare exerciseId={ctx.exerciseId} title={ctx.title ?? ''} />
+  }
   return <ClaimCta token={ctx.token} />
 }

@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { authenticateUser, requireTeacherOrAdmin } from '@/lib/actions/utils'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasPlanFeature } from '@/lib/plans/server'
-import { createLinkCore, deactivateLinkCore, loadChallengesEnabled, setChallengeableCore } from '@/lib/challenges/links'
+import {
+  createLinkCore,
+  deactivateLinkCore,
+  loadChallengesEnabled,
+  setChallengeableCore,
+  shareableExerciseIds,
+} from '@/lib/challenges/links'
 
 /**
  * Challenge-link management (epic #1025, WS5 #1030). `challenge_links` and
@@ -50,6 +56,116 @@ export async function createChallengeLink(
   } catch (err) {
     console.error('createChallengeLink failed', err)
     return fail('Failed to create link')
+  }
+}
+
+const coreDeps = () => ({
+  admin: createAdminClient(),
+  hasAiGrading: (tenantId: string) => hasPlanFeature(tenantId, 'ai_grading'),
+})
+
+export type ShareLinkData = {
+  id: string
+  token: string
+  path: string
+  reused: boolean
+  score: number | null
+  /** Staff without an official attempt get a score-less open link. */
+  fellBackToOpen?: boolean
+}
+
+/**
+ * Teacher/admin: the OPEN link of a challengeable exercise (no score), created
+ * on first use and reused afterwards. Ownership/plan/tenant rules are the
+ * shared core's (#1047).
+ */
+export async function createOpenChallengeLink(exerciseId: number): Promise<ChallengeActionResult<ShareLinkData>> {
+  try {
+    const ctx = await requireTeacherOrAdmin()
+    const r = await createLinkCore(coreDeps(), ctx, { exerciseId })
+    if (!r.ok) return fail(r.error)
+    return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}`, reused: r.data.reused, score: null } }
+  } catch (err) {
+    console.error('createOpenChallengeLink failed', err)
+    const msg = err instanceof Error ? err.message : ''
+    return fail(msg.startsWith('Unauthorized') ? 'Unauthorized' : 'Failed to create link')
+  }
+}
+
+/**
+ * Signed-in member: link carrying their BEST official attempt on the exercise
+ * ("beat my 87"), reusing the active one. Students without an official attempt
+ * are refused by the core.
+ */
+export async function createBestAttemptChallengeLink(exerciseId: number): Promise<ChallengeActionResult<ShareLinkData>> {
+  try {
+    const ctx = await authenticateUser()
+    const r = await createLinkCore(coreDeps(), ctx, { exerciseId, useBestAttempt: true })
+    if (!r.ok) return fail(r.error)
+    revalidatePath('/dashboard/student/challenges')
+    return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}`, reused: r.data.reused, score: r.data.score, fellBackToOpen: r.data.fellBackToOpen } }
+  } catch (err) {
+    console.error('createBestAttemptChallengeLink failed', err)
+    return fail('Failed to create link')
+  }
+}
+
+export interface OfficialAttemptRow {
+  attemptId: string
+  exerciseId: number
+  exerciseTitle: string
+  score: number
+  createdAt: string
+}
+
+/** The caller's official attempts that have no ACTIVE link yet (student "Create link" list). */
+export async function listUnsharedOfficialAttempts(): Promise<ChallengeActionResult<OfficialAttemptRow[]>> {
+  try {
+    const ctx = await authenticateUser()
+    const admin = createAdminClient()
+    const { data: attempts, error } = await admin
+      .from('challenge_attempts')
+      .select('id, exercise_id, score, created_at')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('user_id', ctx.userId)
+      .eq('is_official', true)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    if (error) return fail('Failed to load attempts')
+    if (!attempts?.length) return { success: true, data: [] }
+
+    const [{ data: links }, { data: exercises }] = await Promise.all([
+      admin
+        .from('challenge_links')
+        .select('owner_attempt_id')
+        .eq('tenant_id', ctx.tenantId)
+        .eq('created_by', ctx.userId)
+        .eq('active', true)
+        .in('owner_attempt_id', attempts.map((a) => a.id)),
+      admin
+        .from('exercises')
+        .select('id, title, is_challengeable, exercise_type')
+        .eq('tenant_id', ctx.tenantId)
+        .in('id', [...new Set(attempts.map((a) => a.exercise_id))]),
+    ])
+    const shareable = await shareableExerciseIds(coreDeps(), ctx.tenantId, exercises ?? [])
+    const linked = new Set((links ?? []).map((l) => l.owner_attempt_id))
+    const byId = new Map((exercises ?? []).map((e) => [e.id, e]))
+    return {
+      success: true,
+      data: attempts
+        .filter((a) => !linked.has(a.id) && shareable.has(a.exercise_id))
+        .map((a) => ({
+          attemptId: a.id,
+          exerciseId: a.exercise_id,
+          exerciseTitle: byId.get(a.exercise_id)?.title ?? '',
+          score: a.score,
+          createdAt: a.created_at,
+        })),
+    }
+  } catch (err) {
+    console.error('listUnsharedOfficialAttempts failed', err)
+    return fail('Failed to load attempts')
   }
 }
 

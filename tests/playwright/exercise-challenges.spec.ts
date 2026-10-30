@@ -19,16 +19,17 @@
  *    API would have stored it) because grading cannot run to create it.
  *  - NOT mocked: the caps/paused specs hit the real attempt API (limits run
  *    before any AI call), and every 404 assertion is a real HTTP status.
- *  - NOT covered: creating a link from a student's attempt. `createChallengeLink`
- *    has no caller in the UI yet, so a spec can only seed the row (see the
- *    "challenge links" block); creation is covered by tests/unit/challenge-links-actions.test.ts.
+ *  - Link creation from the web (#1047) is REAL: the teacher/admin editor button and the
+ *    student "Create link" button run the server actions and the shared core. The local
+ *    origin is http, so `navigator.clipboard` is undefined and the specs read the link
+ *    from the selectable fallback field (which is what the fallback is for).
  *
  * Needs CHALLENGE_HASH_SECRET in the spec's env AND the app server's (same value).
  * Fixtures: one throwaway school, own users, removed in afterAll. The seeded
  * schools and the evidence rows (exercises 3001-3003, demo-token-*) are untouched.
  */
 import { test, expect, type APIRequestContext } from './utils/test'
-import { login } from './utils/auth'
+import { login, loginAsNonMember } from './utils/auth'
 import { LOCALE } from './utils/constants'
 import { SEEDED, getAdmin, tenantBase, type QaTenant } from './utils/plan-gate-fixtures'
 import {
@@ -318,6 +319,137 @@ test.describe('exercise challenges (#1025)', () => {
       await waitForStatus(request, page_(world.links.studentOwned), 404)
       const api = await request.post(`${QA_BASE}/api/reto/attempt`, { data: { token: world.links.studentOwned, answer: 'x' } })
       expect(api.status()).toBe(404)
+    })
+  })
+
+  test.describe('create links from the web (#1047)', () => {
+    const linkFrom = async (field: import('@playwright/test').Locator) => {
+      await expect(field).toBeVisible({ timeout: 60_000 })
+      const url = await field.inputValue()
+      expect(url).toMatch(/\/reto\/[A-Za-z0-9_-]+$/)
+      return { url, token: url.split('/reto/')[1] }
+    }
+
+    test('teacher/admin copies the OPEN link from the exercise editor; a guest opens it', async ({ page, browser }) => {
+      test.setTimeout(180_000)
+      await login(page, SEEDED.owner.email, SEEDED.owner.password, QA_BASE)
+      await page.goto(`${QA_BASE}/${LOCALE}/dashboard/teacher/courses/${world.freeCourseId}/exercises/${world.playEx}`)
+      const toggle = page.getByTestId('challengeable-toggle')
+      await expect(toggle).toBeVisible({ timeout: 90_000 })
+      // base-ui Buttons swallow some Playwright clicks: click in the page.
+      await toggle.getByTestId('challenge-copy-open-link').evaluate((el) => (el as HTMLButtonElement).click())
+      const { token } = await linkFrom(toggle.getByTestId('challenge-link-field'))
+
+      const { data: link } = await admin
+        .from('challenge_links')
+        .select('exercise_id, owner_attempt_id, active, created_by')
+        .eq('tenant_id', QA.id)
+        .eq('token', token)
+        .single()
+      expect(link).toEqual({ exercise_id: world.playEx, owner_attempt_id: null, active: true, created_by: SEEDED.owner.id })
+
+      // Idempotent: a second click returns the same link.
+      await toggle.getByTestId('challenge-copy-open-link').evaluate((el) => (el as HTMLButtonElement).click())
+      await expect(toggle.getByTestId('challenge-link-field')).toHaveValue(new RegExp(`/reto/${token}$`))
+
+      const guest = await browser.newContext()
+      try {
+        const gp = await guest.newPage()
+        expect((await gp.goto(page_(token)))?.status()).toBe(200)
+        await expect(gp.getByTestId('open-challenge-heading')).toContainText(`Play target ${RUN}`)
+        await expect(gp.getByTestId('challenger-card')).toHaveCount(0)
+      } finally {
+        await guest.close()
+      }
+    })
+
+    test('student creates a link from an official attempt without one; a guest sees the score', async ({ page, browser }) => {
+      test.setTimeout(180_000)
+      // The previous block deactivated the seeded link, so the attempt (77) is unshared.
+      await login(page, SEEDED.student.email, SEEDED.student.password, QA_BASE)
+      await page.goto(`${QA_BASE}/${LOCALE}/dashboard/student/challenges`)
+      const pending = page.getByTestId('challenge-unshared')
+      await expect(pending).toContainText('Score 77', { timeout: 60_000 })
+      const { data: attempt } = await admin
+        .from('challenge_attempts')
+        .select('id')
+        .eq('tenant_id', QA.id)
+        .eq('user_id', SEEDED.student.id)
+        .eq('exercise_id', world.capEx)
+        .single()
+      await pending.getByRole('button', { name: 'Create link' }).evaluate((el) => (el as HTMLButtonElement).click())
+
+      let token = ''
+      await expect
+        .poll(
+          async () => {
+            const { data } = await admin
+              .from('challenge_links')
+              .select('token')
+              .eq('tenant_id', QA.id)
+              .eq('owner_attempt_id', attempt!.id)
+              .eq('active', true)
+              .maybeSingle()
+            token = data?.token ?? ''
+            return token
+          },
+          { timeout: 60_000 },
+        )
+        .not.toBe('')
+      // On http the manual field stays on screen (no refresh); a reload shows the new row.
+      await expect(pending.getByTestId('challenge-link-field')).toHaveValue(new RegExp(`/reto/${token}$`))
+      await page.reload()
+      await expect(page.getByTestId('challenge-links-list')).toContainText(`/reto/${token}`, { timeout: 60_000 })
+      await expect(page.getByTestId('challenge-unshared')).toHaveCount(0)
+
+      const guest = await browser.newContext()
+      try {
+        const gp = await guest.newPage()
+        expect((await gp.goto(page_(token)))?.status()).toBe(200)
+        await expect(gp.getByTestId('challenger-card')).toContainText('77')
+      } finally {
+        await guest.close()
+      }
+    })
+  })
+
+  test.describe('claim CTA by viewer (#1047)', () => {
+    // A seeded guest attempt makes the result card reachable without grading: the
+    // attempt endpoint is mocked as in "guest plays".
+    const play = async (page: import('@playwright/test').Page, token: string) => {
+      await page.route('**/api/reto/attempt', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            attemptId: 'mock', score: 66, passed: false, passingScore: 70,
+            feedback: 'Mocked grader feedback', strengths: [], improvements: [],
+            isOfficial: true, alreadyGraded: false,
+          }),
+        }),
+      )
+      await page.goto(page_(token))
+      await page.getByLabel(/your answer/i).fill('An answer long enough to submit.')
+      await page.getByTestId('challenge-submit').click()
+      await expect(page.getByTestId('challenge-score')).toHaveText('66', { timeout: 60_000 })
+    }
+
+    test('an active member sees "challenge your friends" and NO Google button', async ({ page }) => {
+      test.setTimeout(180_000)
+      await login(page, SEEDED.student.email, SEEDED.student.password, QA_BASE)
+      await play(page, world.links.open)
+      await expect(page.getByTestId('challenge-friends')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Continue with Google' })).toHaveCount(0)
+    })
+
+    test('a signed-in user who is NOT a member of the school still gets the claim CTA', async ({ page }) => {
+      test.setTimeout(180_000)
+      // The ranking users A/B are not members of the QA school.
+      // The proxy sends a non-member to /join-school, never to a dashboard.
+      await loginAsNonMember(page, world.users.a.email, 'password123', QA_BASE)
+      await play(page, world.links.open)
+      await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible()
+      await expect(page.getByTestId('challenge-friends')).toHaveCount(0)
     })
   })
 
