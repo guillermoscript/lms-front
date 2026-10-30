@@ -11048,6 +11048,28 @@
       "viewLink": "Open link",
       "viewAll": "See all challenge details",
       "claimedBadge": "Signed up"
+    },
+    "shared": {
+      "leaderboardEmpty": "No official scores yet.",
+      "guest": "Guest",
+      "student": "Student",
+      "you": "You",
+      "ahead": "you are +{points} ahead",
+      "behind": "you are {points} behind",
+      "tied": "tied"
+    },
+    "student": {
+      "title": "My challenges",
+      "description": "Challenges you created or played, and how you stand against your friends.",
+      "empty": "You have not played or shared a challenge yet.",
+      "position": "Position",
+      "positionValue": "#{rank} of {total}",
+      "myScore": "My score",
+      "myPlays": "My plays",
+      "friendPlays": "Plays from my links",
+      "joined": "Joined through your links",
+      "guest": "Guest",
+      "student": "Student"
     }
   }
 }

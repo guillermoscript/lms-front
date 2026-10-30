@@ -69,6 +69,16 @@ test.describe('challenges staff view', () => {
     await expect(page.getByTestId('challenge-attempt')).toHaveCount(3)
   })
 
+  test('a student sees only their own retos, with safe names and no answers', async ({ page }) => {
+    await login(page, SEEDED.student.email, SEEDED.student.password, BASE_URL)
+    await page.goto(`${BASE_URL}/${LOCALE}/dashboard/student/challenges`)
+    const reto = page.getByTestId('student-reto').filter({ hasText: `Cap target ${RUN}` })
+    await expect(reto).toBeVisible()
+    await expect(reto.getByTestId('student-reto-leaderboard')).toContainText('77')
+    await expect(page.getByText(`Play target ${RUN}`)).toHaveCount(0)
+    expect(await page.content()).not.toContain('seeded answer')
+  })
+
   test('a teacher who authored nothing sees the empty state and gets 404 on detail', async ({ page }) => {
     await admin.from('tenant_users').update({ role: 'teacher' }).eq('tenant_id', QA.id).eq('user_id', SEEDED.student.id)
     await login(page, SEEDED.student.email, SEEDED.student.password, BASE_URL)

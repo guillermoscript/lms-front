@@ -94,3 +94,32 @@ describe('helpers', () => {
     expect(out.map((x) => x.id)).toEqual(['c', 'b', 'a'])
   })
 })
+
+import { buildStudentRetos } from '@/lib/challenges/student'
+
+describe('buildStudentRetos', () => {
+  const at = (id: string, user: string | null, score: number, extra: Record<string, unknown> = {}) =>
+    ({ id, exercise_id: 1, user_id: user, guest_token_hash: user ? null : `h-${id}`, link_id: null, score, is_official: true, created_at: `2026-10-0${id}`, ...extra })
+  const base = {
+    userId: 'me', exercises: [{ id: 1, title: 'Ex', courseTitle: 'C' }], myLinkIds: new Set(['L']),
+    labels: new Map([['me', 'Me M.'], ['f1', 'Fran G.']]), activeMembers: new Set(['me', 'f1']),
+  }
+
+  it('ranks me against friends with deltas, guests as null, no hashes', () => {
+    const [r] = buildStudentRetos({
+      ...base,
+      attempts: [at('1', 'f1', 90, { link_id: 'L' }), at('2', 'me', 70), at('3', null, 30, { link_id: 'L' }), at('4', 'me', 99, { is_official: false })],
+    })
+    expect(r).toMatchObject({ myScore: 70, myRank: 2, totalPlayers: 3, myPlays: 2, friendPlays: 2, createdLink: true })
+    expect(r.leaderboard.map((e) => [e.label, e.delta])).toEqual([['Fran G.', -20], ['Me M.', null], [null, 40]])
+    expect(r.joined).toEqual(['Fran G.', null])
+    expect(JSON.stringify(r)).not.toMatch(/h-3|guest_token_hash|answer/)
+  })
+
+  it('non-active members show as guests; no official score → no rank/deltas', () => {
+    const [r] = buildStudentRetos({ ...base, activeMembers: new Set(['me']), attempts: [at('1', 'f1', 90), at('2', 'me', 50, { is_official: false })] })
+    expect(r.leaderboard[0].label).toBeNull()
+    expect(r.myRank).toBeNull()
+    expect(r.leaderboard[0].delta).toBeNull()
+  })
+})

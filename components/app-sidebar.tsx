@@ -283,6 +283,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     ],
                 },
                 { title: t('community'), href: "/dashboard/student/community", icon: IconMessages, badgeKey: 'community' },
+                { title: t('challenges'), href: "/dashboard/student/challenges", icon: IconTrophy },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
                 {
                     title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,

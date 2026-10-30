@@ -11048,6 +11048,28 @@
       "viewLink": "Abrir enlace",
       "viewAll": "Ver detalle de retos",
       "claimedBadge": "Se registró"
+    },
+    "shared": {
+      "leaderboardEmpty": "Aún no hay puntajes oficiales.",
+      "guest": "Invitado",
+      "student": "Estudiante",
+      "you": "Tú",
+      "ahead": "vas +{points} arriba",
+      "behind": "vas {points} abajo",
+      "tied": "empate"
+    },
+    "student": {
+      "title": "Mis retos",
+      "description": "Retos que creaste o jugaste, y cómo vas frente a tus amigos.",
+      "empty": "Aún no has jugado ni compartido un reto.",
+      "position": "Posición",
+      "positionValue": "#{rank} de {total}",
+      "myScore": "Mi puntaje",
+      "myPlays": "Mis jugadas",
+      "friendPlays": "Jugadas desde mis enlaces",
+      "joined": "Se unieron con tus enlaces",
+      "guest": "Invitado",
+      "student": "Estudiante"
     }
   }
 }

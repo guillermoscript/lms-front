@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { PageHeader, PageShell } from '@/components/dashboard/page-shell'
 import { Badge } from '@/components/ui/badge'
+import { RetoLeaderboard } from '@/components/challenges/shared/reto-leaderboard'
 import { StaffAttemptList } from '@/components/challenges/staff-attempt-list'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -53,18 +54,10 @@ export default async function StaffChallengeDetailPage({ params }: PageProps) {
 
       <section aria-labelledby="ch-board" className="space-y-2">
         <h2 id="ch-board" className="text-base font-semibold">{t('leaderboard')}</h2>
-        {board.length === 0 ? <p className="text-sm text-muted-foreground">{t('leaderboardEmpty')}</p> : (
-          <ol className="divide-y rounded-lg border" data-testid="challenge-leaderboard">
-            {board.map((a, i) => (
-              <li key={a.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <span className="w-6 tabular-nums text-muted-foreground">{i + 1}</span>
-                <span className="font-medium">{a.playerName ?? (a.isGuest ? t('guest') : t('member'))}</span>
-                {a.isGuest && <Badge variant="outline">{t('guest')}</Badge>}
-                <span className="ml-auto font-semibold tabular-nums">{a.score}</span>
-              </li>
-            ))}
-          </ol>
-        )}
+        <RetoLeaderboard
+          testId="challenge-leaderboard"
+          entries={board.map((a) => ({ key: a.id, label: a.playerName ?? (a.isGuest ? null : ''), score: a.score }))}
+        />
       </section>
 
       <section aria-labelledby="ch-attempts" className="space-y-2">
