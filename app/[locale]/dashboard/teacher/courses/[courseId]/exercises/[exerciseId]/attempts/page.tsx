@@ -1,11 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import Link from 'next/link'
 import { PageHeader, PageShell } from '@/components/dashboard/page-shell'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isGradedEvalExerciseType } from '@/lib/ai/evals/schema'
 import { parseExerciseAiResult } from '@/lib/exercises/latest-evaluation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { loadExerciseChallengePlays } from '@/lib/challenges/staff'
+import { StaffAttemptList } from '@/components/challenges/staff-attempt-list'
 import { ExerciseAttemptList, type ExerciseAttempt } from '@/components/teacher/exercise-attempts/attempt-list'
 
 interface PageProps {
@@ -81,10 +85,26 @@ export default async function ExerciseAttemptsPage({ params }: PageProps) {
     reviewedAt: r.reviewed_at,
   }))
 
+  // Ownership (course author or admin) was verified above; challenge tables are
+  // server-write/read only, hence the admin client with an explicit tenant filter.
+  const [locale, tc, challenge] = await Promise.all([
+    getLocale(),
+    getTranslations('challenges.staff'),
+    loadExerciseChallengePlays(tenantId, exercise.id, createAdminClient()),
+  ])
+
   return (
     <PageShell variant="reading">
       <PageHeader back={back} title={t('title')} description={t('description', { passingScore })} />
       <ExerciseAttemptList exerciseId={exercise.id} passingScore={passingScore} attempts={attempts} limited={attempts.length === ATTEMPT_LIMIT} />
+      <section aria-labelledby="challenge-attempts" className="space-y-3 border-t pt-6" data-testid="challenge-attempts-section">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="challenge-attempts" className="text-base font-semibold">{tc('attemptsTitle')}</h2>
+          <Link className="text-sm underline underline-offset-2" href={`/dashboard/teacher/challenges/${exercise.id}`}>{tc('viewAll')}</Link>
+        </div>
+        <p className="text-sm text-muted-foreground">{tc('attemptsDescription')}</p>
+        <StaffAttemptList attempts={challenge.attempts} locale={locale} limited={challenge.attempts.length === 500} />
+      </section>
     </PageShell>
   )
 }
