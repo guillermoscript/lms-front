@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Menu } from 'lucide-react'
 
 type NavLink = {
   label: string
@@ -114,6 +116,35 @@ export const Header: ComponentConfig<HeaderProps> = {
 
     const isAuthenticated = !loading && user !== null
 
+    const actions = (
+      <>
+        {showLanguageSwitcher && <LanguageSwitcher />}
+        {!loading && isAuthenticated ? (
+          <>
+            <ButtonLink href="/dashboard" variant="ghost" size="sm">
+              {t('dashboard')}
+            </ButtonLink>
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              {t('logOut')}
+            </Button>
+          </>
+        ) : (
+          <>
+            {showLogin && (
+              <ButtonLink href="/auth/login" variant="ghost" size="sm">
+                {t('logIn')}
+              </ButtonLink>
+            )}
+            {ctaLabel && ctaHref && (
+              <ButtonLink href={ctaHref} size="sm">
+                {ctaLabel}
+              </ButtonLink>
+            )}
+          </>
+        )}
+      </>
+    )
+
     return (
       <header
         className={cn(
@@ -149,7 +180,7 @@ export const Header: ComponentConfig<HeaderProps> = {
           </Link>
 
           {/* Nav */}
-          <nav aria-label={t('mainNavigation')} className="flex items-center gap-8">
+          <nav aria-label={t('mainNavigation')} className="hidden md:flex items-center gap-8">
             {navLinks.map((link, i) => (
               <a
                 key={i}
@@ -167,32 +198,42 @@ export const Header: ComponentConfig<HeaderProps> = {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
-            {showLanguageSwitcher && <LanguageSwitcher />}
-            {!loading && isAuthenticated ? (
-              <>
-                <ButtonLink href="/dashboard" variant="ghost" size="sm">
-                    {t('dashboard')}
-                  </ButtonLink>
-                <Button variant="outline" size="sm" onClick={handleSignOut}>
-                  {t('logOut')}
-                </Button>
-              </>
-            ) : (
-              <>
-                {showLogin && (
-                  <ButtonLink href="/auth/login" variant="ghost" size="sm">
-                      {t('logIn')}
-                    </ButtonLink>
-                )}
-                {ctaLabel && ctaHref && (
-                  <ButtonLink href={ctaHref} size="sm">
-                      {ctaLabel}
-                    </ButtonLink>
-                )}
-              </>
-            )}
+          <div className="hidden md:flex items-center gap-3">
+            {actions}
           </div>
+
+          {/* Mobile: nav + actions collapse into a sheet */}
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn('md:hidden', transparent && 'text-white')}
+                  aria-label={t('openMenu')}
+                />
+              }
+            >
+              <Menu className="size-5" />
+            </SheetTrigger>
+            <SheetContent side="right" className="gap-6 p-6">
+              <SheetTitle className="sr-only">{t('mainNavigation')}</SheetTitle>
+              <nav aria-label={t('mainNavigation')} className="mt-8 flex flex-col gap-4">
+                {navLinks.map((link, i) => (
+                  <a
+                    key={i}
+                    href={safeHref(link.href)}
+                    className="text-base font-medium text-foreground no-underline"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+              <div className="mt-auto flex flex-col gap-3 [&_a]:w-full [&_button]:w-full">
+                {actions}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
     )
