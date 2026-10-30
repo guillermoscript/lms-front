@@ -8846,6 +8846,7 @@
       "enrollPaid": "Enroll for {price}",
       "buyNow": "Buy now",
       "previewBadge": "Free preview",
+      "openMenu": "Open menu",
       "moreLessons": "{count, plural, one {+# more lesson} other {+# more lessons}}",
       "includesCount": "{count, plural, one {Includes # course} other {Includes # courses}}",
       "interval": {
