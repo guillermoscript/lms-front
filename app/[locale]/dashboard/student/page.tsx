@@ -13,6 +13,7 @@ import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { PageShell } from '@/components/dashboard/page-shell'
 import Link from 'next/link'
+import { StudentRetosCard } from '@/components/challenges/student-retos-card'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
 import { WeeklyLeague } from '@/components/gamification/weekly-league'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
@@ -219,6 +220,9 @@ export default async function StudentDashboard() {
                 </div>
               </section>
             )}
+
+            {/* "Your challenges" (F2) — hidden when the school has them off or there are none */}
+            <StudentRetosCard tenantId={tenantId} userId={user.id} />
 
             {/* Empty State — no courses at all */}
             {data.courses.length === 0 && (

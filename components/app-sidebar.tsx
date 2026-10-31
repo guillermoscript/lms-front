@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { withoutChallenges } from "@/lib/challenges/nav"
 import { useLocale, useTranslations } from "next-intl"
 import {
     IconBook,
@@ -96,6 +97,8 @@ function UnreadLabel({ title, count }: { title: string; count: number }) {
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     userRole: 'student' | 'teacher' | 'admin' | null
+    /** The school's `challenges_enabled` switch; false hides every Retos entry. */
+    challengesEnabled?: boolean
 }
 
 function NavEntry({ item }: { item: NavItem }) {
@@ -193,7 +196,7 @@ function NavSubEntry({ sub, active }: { sub: NavSubItem; active: boolean }) {
     )
 }
 
-export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
+export function AppSidebar({ userRole, challengesEnabled = false, ...props }: AppSidebarProps) {
     const t = useTranslations('sidebar')
     const tenant = useTenant()
     const logout = useLogout()
@@ -295,8 +298,8 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             ],
         }
 
-        return items[userRole] || []
-    }, [userRole, t])
+        return withoutChallenges(items[userRole] || [], challengesEnabled)
+    }, [userRole, t, challengesEnabled])
 
     return (
         <Sidebar collapsible="icon" {...props}>

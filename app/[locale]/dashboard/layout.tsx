@@ -2,7 +2,9 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { getUserRole } from "@/lib/supabase/get-user-role"
-import { getSessionUser } from "@/lib/supabase/tenant"
+import { getCurrentTenantId, getSessionUser } from "@/lib/supabase/tenant"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { loadChallengesEnabled } from "@/lib/challenges/links"
 import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -25,13 +27,17 @@ export default async function DashboardLayout({
 }) {
     const role = await getUserRole()
     const user = await getSessionUser()
+    // Per-school switch for the Retos nav item (F2). Unknown = hidden.
+    const challengesEnabled = await getCurrentTenantId()
+        .then((tenantId) => loadChallengesEnabled(createAdminClient(), tenantId))
+        .catch(() => false)
 
     return (
         // One unread-count poll for the sidebar Community badge and the
         // header bell (#870).
         <NotificationCountsProvider userId={user?.id ?? null}>
             <SidebarProvider>
-                <AppSidebar userRole={role} />
+                <AppSidebar userRole={role} challengesEnabled={challengesEnabled} />
                 <SidebarInset>
                     <header className="flex h-16 min-w-0 shrink-0 items-center gap-2 border-b px-4">
                         <SidebarTrigger className="-ml-1" />

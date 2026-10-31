@@ -17,6 +17,8 @@ export interface StudentExercise {
   difficulty_level?: string | null
   time_limit?: number | null
   exercise_completions?: unknown[] | null
+  /** Present only for challengeable exercises of a school with challenges on. */
+  challenge?: { myScore: number | null; myRank: number | null; total: number } | null
 }
 
 type Status = 'all' | 'pending' | 'completed'

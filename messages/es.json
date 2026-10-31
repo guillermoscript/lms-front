@@ -8303,7 +8303,9 @@
       },
       "cardFallbackDescription": "Práctica interactiva para reforzar este curso.",
       "minutes": "{minutes} min",
-      "completed": "Completado"
+      "completed": "Completado",
+      "reto": "Reto",
+      "retoStanding": "Reto · {score} pts · #{rank}"
     },
     "workspace": {
       "brief": "Instrucciones",
@@ -11092,7 +11094,13 @@
       "friendPlays": "Jugadas desde mis enlaces",
       "joined": "Se unieron con tus enlaces",
       "guest": "Invitado",
-      "student": "Estudiante"
+      "student": "Estudiante",
+      "homeTitle": "Tus retos"
+    },
+    "entry": {
+      "title": "Reta a un amigo",
+      "position": "Vas #{rank} de {total} con {score} puntos.",
+      "seeAll": "Ver todo el ranking"
     }
   }
 }

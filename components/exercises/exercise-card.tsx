@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconClock, IconCheck, IconChevronRight } from "@tabler/icons-react";
+import { IconClock, IconCheck, IconChevronRight, IconTrophy } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { EXERCISE_TYPE_ICONS, FALLBACK_EXERCISE_ICON, isKnownExerciseType } from "@/components/exercises/exercise-type-meta";
 
@@ -18,6 +18,7 @@ interface ExerciseCardProps {
         difficulty_level?: string | null;
         time_limit?: number | null;
         exercise_completions?: unknown[] | null;
+        challenge?: { myScore: number | null; myRank: number | null; total: number } | null;
     };
     courseId: string;
 }
@@ -73,12 +74,20 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                     </div>
 
                     <div className="flex items-center justify-between mt-3 pt-2.5 sm:mt-4 sm:pt-3 border-t border-border/50">
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                             {exercise.time_limit && (
                                 <span className="flex items-center gap-1">
                                     <IconClock size={14} aria-hidden="true" />
                                     {t("minutes", { minutes: exercise.time_limit })}
                                 </span>
+                            )}
+                            {exercise.challenge && (
+                                <Badge variant="secondary" data-testid="exercise-reto-badge" className="gap-1">
+                                    <IconTrophy aria-hidden="true" />
+                                    {exercise.challenge.myScore != null && exercise.challenge.myRank != null
+                                        ? t("retoStanding", { score: exercise.challenge.myScore, rank: exercise.challenge.myRank })
+                                        : t("reto")}
+                                </Badge>
                             )}
                             {isCompleted && (
                                 <span className="flex items-center gap-1 text-success">
