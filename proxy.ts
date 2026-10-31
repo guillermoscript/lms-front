@@ -324,6 +324,11 @@ export default async function proxy(request: NextRequest) {
 
   // --- Inject tenant ID into request headers so server components can read it ---
   request.headers.set('x-tenant-id', tenantId)
+  // Where the request came from, for layouts that must redirect before the
+  // page streams (they get neither the full path nor the query). Always
+  // overwritten here, so a caller cannot choose them.
+  request.headers.set('x-pathname', request.nextUrl.pathname)
+  request.headers.set('x-search', request.nextUrl.search)
 
   // --- Real 404 for dead challenge links (a page-level notFound() is a soft 404 under loading.tsx) ---
   const challengeNotFound = await guardChallengePath({
