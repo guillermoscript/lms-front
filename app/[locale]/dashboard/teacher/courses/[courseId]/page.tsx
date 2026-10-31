@@ -1,4 +1,5 @@
 import { ContentListExplorer } from '@/components/teacher/content-list-explorer'
+import { ContentStatusBadge } from '@/components/teacher/content-status-badge'
 import { BulkContentCheckbox } from '@/components/teacher/bulk-content-manager'
 import { createClient } from '@/lib/supabase/server'
 import { fetchLiveEntitlementKeys, liveEntitlementKey } from '@/lib/services/course-access'
@@ -437,10 +438,8 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                           <div className="min-w-0">
                             <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                              {lesson.status !== 'published' && (
-                                <Badge variant="secondary" className="text-[10px] h-4">
-                                  {t(`status.${lesson.status}`)}
-                                </Badge>
+                              {lesson.status && (
+                                <ContentStatusBadge status={lesson.status} label={t(`status.${lesson.status}`)} />
                               )}
                               {lesson.video_url && (
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -534,12 +533,10 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                               <span className="text-xs text-muted-foreground capitalize">
                                 {t(`difficulty.${exercise.difficulty_level}`)}
                               </span>
-                              {exercise.status !== 'published' && (
+                              {exercise.status && (
                                 <>
                                   <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                                  <Badge variant="secondary" className="text-[10px] h-4">
-                                    {t(`status.${exercise.status}`)}
-                                  </Badge>
+                                  <ContentStatusBadge status={exercise.status} label={t(`status.${exercise.status}`)} />
                                 </>
                               )}
                             </div>
@@ -603,12 +600,10 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                                 <IconClock className="h-3 w-3" />
                                 {exam.duration} {t('min')}
                               </span>
-                              {exam.status !== 'published' && (
+                              {exam.status && (
                                 <>
                                   <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                                  <Badge variant="secondary" className="text-[10px] h-4">
-                                    {t(`status.${exam.status}`)}
-                                  </Badge>
+                                  <ContentStatusBadge status={exam.status} label={t(`status.${exam.status}`)} />
                                 </>
                               )}
                             </div>

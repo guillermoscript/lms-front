@@ -7,8 +7,9 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { motion } from 'motion/react'
 import { Card, CardContent } from '@/components/ui/card'
+import { ContentStatusBadge } from '@/components/teacher/content-status-badge'
 import { Badge } from '@/components/ui/badge'
-import { IconBooks, IconChecklist, IconCircleCheck, IconChevronRight, IconClock, IconTarget } from '@tabler/icons-react'
+import { IconBooks, IconChecklist, IconChevronRight, IconClock, IconTarget } from '@tabler/icons-react'
 import ExerciseTypeFilter, { ALL_TYPES } from '@/components/exercises/exercise-type-filter'
 import {
     EXERCISE_TYPE_ICONS,
@@ -98,16 +99,7 @@ export default function ExerciseManageList({
                                                         {exercise.status && (
                                                             <>
                                                                 <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                                                                {exercise.status === 'published' ? (
-                                                                    <Badge className="h-4 gap-1 border-success/20 bg-success/15 text-[10px] text-success">
-                                                                        <IconCircleCheck className="h-3 w-3" aria-hidden="true" />
-                                                                        {t('status.published')}
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge variant="secondary" className="h-4 text-[10px]">
-                                                                        {t(`status.${exercise.status}`)}
-                                                                    </Badge>
-                                                                )}
+                                                                <ContentStatusBadge status={exercise.status} label={t(`status.${exercise.status}`)} />
                                                             </>
                                                         )}
                                                         {exercise.lessonTitle && (
