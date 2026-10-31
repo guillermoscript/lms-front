@@ -1346,6 +1346,8 @@
         "back": "Back"
       },
       "courseForm": {
+        "savedPublished": "Course saved and published",
+        "saved": "Course saved",
         "details": "Course Details",
         "saveError": "Failed to save course",
         "titleLabel": "Course Title",

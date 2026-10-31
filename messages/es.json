@@ -1346,6 +1346,8 @@
         "back": "Volver"
       },
       "courseForm": {
+        "savedPublished": "Curso guardado y publicado",
+        "saved": "Curso guardado",
         "details": "Detalles del Curso",
         "saveError": "Error al guardar el curso",
         "titleLabel": "Título del Curso",
