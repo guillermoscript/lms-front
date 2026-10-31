@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Markdown from 'react-markdown'
 import { IconAlertCircle, IconCircleCheck, IconCircleX, IconLoader2 } from '@tabler/icons-react'
@@ -42,6 +42,8 @@ export interface ChallengePageClientProps {
   /** Published course the exercise belongs to (context block + upsell). */
   course?: ChallengeCourse | null
   viewerId?: string | null
+  /** The viewer's own official attempt, when they already played (member or guest cookie). */
+  played?: { score: number; passed: boolean; answer: string; feedback: unknown; rank: number | null } | null
 }
 
 interface ParsedFeedback {
@@ -85,13 +87,17 @@ function PassedBadge({ passed }: { passed: boolean }) {
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId } = props
+  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId, played } = props
   const claiming = useSearchParams().get('claim') === '1'
   const t = useTranslations('challenges.page')
+  const router = useRouter()
   const [answer, setAnswer] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<AttemptResult | null>(null)
+  const [fresh, setFresh] = useState<AttemptResult | null>(null)
+  // Opening the link again shows the stored official attempt, not an empty form.
+  const alreadyPlayed = !fresh && !claiming && played ? played : null
+  const result: AttemptResult | null = fresh ?? (alreadyPlayed ? { score: alreadyPlayed.score, passed: alreadyPlayed.passed, feedback: alreadyPlayed.feedback } : null)
 
   const challengerName = challenger?.name ?? t('guestName')
 
@@ -114,10 +120,11 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         setError(t('errorPaused'))
       } else if (res.status === 409) {
         setError(t('errorAlreadyPlayed'))
+        router.refresh() // the server now finds the stored attempt and renders it
       } else if (!res.ok || typeof body?.score !== 'number') {
         setError(t('errorGeneric'))
       } else {
-        setResult({ score: body.score, passed: Boolean(body.passed), feedback: body.feedback })
+        setFresh({ score: body.score, passed: Boolean(body.passed), feedback: body.feedback })
       }
     } catch {
       setError(t('errorGeneric'))
@@ -228,6 +235,14 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
 
       {result && ctx ? (
         <section aria-labelledby="result-heading" className="space-y-5" data-testid="challenge-result" aria-live="polite">
+          {alreadyPlayed ? (
+            <div role="status" data-testid="challenge-already-played" className="rounded-xl border border-border bg-muted/50 p-4">
+              <p className="font-semibold">{t('alreadyPlayedTitle')}</p>
+              <p className="text-sm text-muted-foreground">
+                {alreadyPlayed.rank ? t('alreadyPlayedRank', { rank: alreadyPlayed.rank }) : t('alreadyPlayedBody')}
+              </p>
+            </div>
+          ) : null}
           <h2 id="result-heading" className="sr-only">{t('resultHeading')}</h2>
           {/* Same result surface the dashboard exercise page uses. */}
           <div data-testid="challenge-score" className="sr-only">{result.score}</div>
@@ -239,6 +254,12 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
             improvements={fb.improvements}
             passingScore={passingScore}
           />
+          {alreadyPlayed?.answer ? (
+            <details className="rounded-xl border border-border p-4" data-testid="challenge-played-answer">
+              <summary className="cursor-pointer text-sm font-semibold">{t('yourAnswerPlayed')}</summary>
+              <p className="mt-3 max-w-[68ch] whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/85">{alreadyPlayed.answer}</p>
+            </details>
+          ) : null}
           {/* WS6 slot */}
           <ChallengeDuelSlot ctx={ctx} />
           {/* WS4 slot */}

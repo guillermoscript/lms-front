@@ -10978,7 +10978,11 @@
       "strengths": "Strengths",
       "improvements": "To improve",
       "openLine": "{name} challenges you on {exercise}. How much can you score?",
-      "openLineAnon": "You are challenged on {exercise}. How much can you score?"
+      "openLineAnon": "You are challenged on {exercise}. How much can you score?",
+      "alreadyPlayedTitle": "You already played this challenge",
+      "alreadyPlayedBody": "This is your graded attempt. You get one per challenge.",
+      "alreadyPlayedRank": "This is your graded attempt. You are #{rank} in the ranking.",
+      "yourAnswerPlayed": "Your answer"
     },
     "share": {
       "copyLink": "Copy challenge link",
