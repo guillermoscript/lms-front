@@ -612,6 +612,11 @@ export default function ConversationExercise({
           )}
         </div>
 
+        {/* GPT-Live can't hang up by itself: say how the grade is reached. */}
+        {phase === 'live' && live && status === 'connected' && (
+          <p className="mt-4 text-center text-sm text-muted-foreground">{t('finishToGrade')}</p>
+        )}
+
         {/* On a phone the alert rides with the result tab's retry button. */}
         {hasError && <div className={cn('mt-4', retryInResult && 'hidden lg:block')}>{errorAlert}</div>}
 

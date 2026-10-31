@@ -8401,6 +8401,10 @@
       "easy": "Easy",
       "medium": "Medium",
       "retryGrading": "Retry grading",
+      "finishToGrade": "When you are done, press “Finish and get feedback” to end the call. Your grade is only calculated after you end it.",
+      "partner": "Partner",
+      "you": "You",
+      "retryGrading": "Retry grading",
       "partner": "Partner",
       "you": "You",
       "hard": "Hard"
