@@ -54,6 +54,11 @@ export interface AttemptDeps {
    * fails the attempt. Guests are materialized later, at claim time.
    */
   materialize?: (input: { attemptId: string; tenantId: string; userId: string }) => Promise<unknown>
+  /**
+   * Called once a NEW official attempt is persisted (F5: tell link owners they were
+   * beaten). Best-effort: a failure or rejection never fails the attempt.
+   */
+  onOfficialAttempt?: (input: { attemptId: string; tenantId: string }) => Promise<unknown>
 }
 
 /** True when PostgREST/Postgres says `challenge_attempts.rubric_version` does not exist yet. */
@@ -250,6 +255,7 @@ async function runAttempt(
   if (error || !row) throw new Error('challenge_attempt_persist_failed')
 
   if (isOfficial && identity.userId) await safeMaterialize(deps, row.id as string, tenantId, identity.userId)
+  if (isOfficial && identity.userId) await safeOnOfficial(deps, row.id as string, tenantId)
 
   return { ok: true, result: fromRow(row, graded.passingScore, false, officialAlreadyTaken) }
 }
@@ -260,5 +266,14 @@ async function safeMaterialize(deps: AttemptDeps, attemptId: string, tenantId: s
     await deps.materialize({ attemptId, tenantId, userId })
   } catch (err) {
     console.error('challenge attempt materialization failed:', err instanceof Error ? err.message : err)
+  }
+}
+
+async function safeOnOfficial(deps: AttemptDeps, attemptId: string, tenantId: string) {
+  if (!deps.onOfficialAttempt) return
+  try {
+    await deps.onOfficialAttempt({ attemptId, tenantId })
+  } catch (err) {
+    console.error('challenge official-attempt hook failed:', err instanceof Error ? err.message : err)
   }
 }

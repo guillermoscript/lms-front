@@ -7,6 +7,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { GUEST_COOKIE } from '@/lib/challenges/identity'
 import { BANNED_MESSAGE } from '@/lib/tenant/join-school'
 import { materializeChallengeAttempt } from '@/lib/challenges/materialize'
+import { notifyChallengeBeaten } from '@/lib/challenges/beaten'
 import {
   claimChallengeAttempt,
   findNextExercise,
@@ -66,6 +67,16 @@ export async function claimChallenge(linkToken: string): Promise<ClaimChallengeO
       success: false,
       code: claim.code,
       error: claim.code === 'banned' ? BANNED_MESSAGE : undefined,
+    }
+  }
+
+  // A guest's official attempt just became a member's: it may have beaten a
+  // link owner. Best-effort, never fails the claim.
+  if (claim.status === 'claimed' && claim.attempt.isOfficial) {
+    try {
+      await notifyChallengeBeaten({ admin, tenantId, attemptId: claim.attempt.id })
+    } catch (err) {
+      console.error('challenge claim beaten-notify failed:', err instanceof Error ? err.message : err)
     }
   }
 

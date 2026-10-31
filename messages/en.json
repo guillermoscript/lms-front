@@ -10869,6 +10869,11 @@
     "exerciseStart": "**How to start:** write your answer, or a first draft, right here. I'll give you feedback and hints (not the answer), and I'll mark the exercise complete once it meets the goal."
   },
   "challenges": {
+    "notifyBeaten": {
+      "title": "Someone beat your score",
+      "content": "{name} beat your score on {exercise}. Take it back!",
+      "friend": "a friend"
+    },
     "admin": {
       "settings": {
         "title": "Exercise challenges",

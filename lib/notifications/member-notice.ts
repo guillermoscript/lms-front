@@ -40,8 +40,10 @@ export async function writeUserNotification(params: {
   type: 'info' | 'success' | 'warning'
   kind: string
   link?: string
+  /** Extra metadata keys (e.g. ids a later lookup can dedupe on). */
+  extraMetadata?: Record<string, unknown>
 }): Promise<boolean> {
-  const { admin, tenantId, userId, actorId, title, content, type, kind, link } = params
+  const { admin, tenantId, userId, actorId, title, content, type, kind, link, extraMetadata } = params
   const { data: notification, error } = await admin
     .from('notifications')
     .insert({
@@ -55,7 +57,7 @@ export async function writeUserNotification(params: {
       sent_at: new Date().toISOString(),
       created_by: actorId ?? null,
       tenant_id: tenantId,
-      metadata: link ? { link, kind } : { kind },
+      metadata: { ...(extraMetadata ?? {}), ...(link ? { link, kind } : { kind }) },
     })
     .select('id')
     .single()

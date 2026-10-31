@@ -10869,6 +10869,11 @@
     "exerciseStart": "**Cómo empezar:** escribe aquí tu respuesta o un primer borrador. Te daré retroalimentación y pistas (no la respuesta) y marcaré el ejercicio como completado cuando cumpla el objetivo."
   },
   "challenges": {
+    "notifyBeaten": {
+      "title": "Alguien superó tu puntaje",
+      "content": "{name} superó tu puntaje en {exercise}. ¡Recupéralo!",
+      "friend": "un amigo"
+    },
     "admin": {
       "settings": {
         "title": "Retos de ejercicios",
