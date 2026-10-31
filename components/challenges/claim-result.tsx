@@ -2,26 +2,38 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { claimChallenge, type ClaimChallengeOutcome } from '@/app/actions/challenge-claim'
 import { joinSchoolPath } from '@/lib/auth/route-access'
 import { ChallengeFriendsShare } from '@/components/challenges/challenge-friends-share'
+import { memberChallengePath } from '@/lib/challenges/routes'
 
-/** Runs the post-login claim for `/reto/<token>?claim=1` and shows the outcome. */
+/**
+ * Runs the post-login claim for `/reto/<token>?claim=1`. On success the user
+ * lands on the challenge inside the dashboard (their result and position), not
+ * on the public page; the outcome below only shows for the moment before the
+ * navigation and for refusals.
+ */
 export function ClaimResult({ token, exerciseId, title }: { token: string; exerciseId?: number; title?: string }) {
   const t = useTranslations('challenges.claim')
+  const router = useRouter()
   const [outcome, setOutcome] = useState<ClaimChallengeOutcome | null>(null)
 
   useEffect(() => {
     let cancelled = false
     claimChallenge(token)
-      .then((o) => !cancelled && setOutcome(o))
+      .then((o) => {
+        if (cancelled) return
+        setOutcome(o)
+        if (o.success) router.replace(`${memberChallengePath(token)}?claimed=1`)
+      })
       .catch(() => !cancelled && setOutcome({ success: false, code: 'retry' }))
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, router])
 
   if (!outcome) return <p className="text-sm text-muted-foreground">{t('working')}</p>
 

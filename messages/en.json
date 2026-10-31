@@ -11075,13 +11075,14 @@
       "claimedBadge": "Signed up"
     },
     "shared": {
-      "leaderboardEmpty": "No official scores yet.",
       "guest": "Guest",
       "student": "Student",
       "you": "You",
       "ahead": "you are +{points} ahead",
       "behind": "you are {points} behind",
-      "tied": "tied"
+      "tied": "tied",
+      "showAll": "Show all ({count})",
+      "showNearby": "Show nearby"
     },
     "student": {
       "title": "My challenges",
@@ -11095,12 +11096,20 @@
       "joined": "Joined through your links",
       "guest": "Guest",
       "student": "Student",
-      "homeTitle": "Your challenges"
+      "homeTitle": "Your challenges",
+      "breadcrumbChallenge": "Challenge"
     },
     "entry": {
       "title": "Challenge a friend",
       "position": "You are #{rank} of {total} with {score} points.",
       "seeAll": "See full ranking"
+    },
+    "play": {
+      "title": "Play it as a challenge",
+      "body": "Take this exercise again as a challenge: one graded attempt, no hints. Your score joins the ranking and you can challenge your friends.",
+      "cta": "Play as a challenge",
+      "opening": "Opening…",
+      "error": "Could not open the challenge. Try again."
     }
   }
 }

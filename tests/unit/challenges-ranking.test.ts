@@ -9,7 +9,8 @@ import {
   type RankingEntry,
 } from '@/lib/challenges/ranking'
 import { getChallengeRankingServer } from '@/lib/challenges/ranking-server'
-import { Ranking } from '@/components/challenges/ranking'
+import { ChallengeLeaderboard } from '@/components/challenges/challenge-leaderboard'
+import { rankingToRows } from '@/lib/challenges/leaderboard'
 import { DuelResult } from '@/components/challenges/duel-result'
 import en from '@/messages/en.json'
 
@@ -159,33 +160,27 @@ const entry = (o: Partial<RankingEntry>): RankingEntry => ({
   rank: 1, userId: 'u', displayName: 'Ana P.', score: 90, passed: true, createdAt: 't', ...o,
 })
 
-describe('Ranking component', () => {
-  it('loading', () => {
-    expect(render(createElement(Ranking, { entries: [], status: 'loading' }))).toContain('role="status"')
-  })
+describe('ChallengeLeaderboard (ranking entries)', () => {
   it('empty', () => {
-    expect(render(createElement(Ranking, { entries: [] }))).toContain(en.challenges.ranking.empty)
+    expect(render(createElement(ChallengeLeaderboard, { rows: [] }))).toContain(en.challenges.ranking.empty)
   })
-  it('error with retry', () => {
-    const html = render(createElement(Ranking, { entries: [], status: 'error', onRetry: () => {} }))
-    expect(html).toContain('role="alert"')
-    expect(html).toContain(en.challenges.ranking.retry)
-  })
-  it('table with headers, you label, fallback name, DB order kept', () => {
+  it('table with headers, you label, fallback name, DB order and ranks kept', () => {
     const html = render(
-      createElement(Ranking, {
-        currentUserId: 'me',
-        entries: [
-          entry({ userId: 'x', displayName: 'Zed', score: 10, rank: 1 }),
-          entry({ userId: 'me', displayName: '', score: 99, rank: 2 }),
-        ],
+      createElement(ChallengeLeaderboard, {
+        rows: rankingToRows(
+          [
+            entry({ userId: 'x', displayName: 'Zed', score: 10, rank: 1 }),
+            entry({ userId: 'me', displayName: '', score: 99, rank: 2 }),
+          ],
+          'me',
+        ),
       }),
     )
-    expect(html).toContain('<th scope="col">Rank</th>')
-    expect(html).toContain(en.challenges.ranking.anonymous)
-    expect(html).toContain(en.challenges.ranking.you)
-    expect(html).not.toContain('aria-current')
-    expect(html.indexOf('Zed')).toBeLessThan(html.indexOf(en.challenges.ranking.anonymous))
+    expect(html).toContain('>Rank</th>')
+    expect(html).toContain(en.challenges.shared.student)
+    expect(html).toContain(en.challenges.shared.you)
+    expect(html).toContain('data-me="true"')
+    expect(html.indexOf('Zed')).toBeLessThan(html.indexOf(en.challenges.shared.student))
   })
 })
 

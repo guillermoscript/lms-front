@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { PageHeader, PageShell } from '@/components/dashboard/page-shell'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -29,42 +30,42 @@ export default async function StaffChallengesPage() {
   return (
     <PageShell variant="default">
       <PageHeader title={t('title')} description={t('description')} />
-      {!enabled && <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">{t('disabled')}</p>}
-      {enabled && !aiGrading && <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">{t('noPlan')}</p>}
+      {!enabled && <p role="status" className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm">{t('disabled')}</p>}
+      {enabled && !aiGrading && <p role="status" className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm">{t('noPlan')}</p>}
       {rows.length === 0 ? (
         <p data-testid="challenges-empty" className="rounded-lg border border-dashed px-4 py-8 text-sm text-muted-foreground">{t('empty')}</p>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[56rem] text-sm" data-testid="challenges-table">
-              <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-                <tr>
+          <div className="rounded-lg border">
+            <Table className="min-w-[56rem] text-sm" data-testid="challenges-table">
+              <TableHeader>
+                <TableRow>
                   {(['colExercise', 'colCourse', 'colCreators', 'colCreated', 'colLinks', 'colPlays', 'colPlayers', 'colAvg', 'colTop', 'colClaimed'] as const).map((k) => (
-                    <th key={k} scope="col" className="px-3 py-2 font-medium">{t(k)}</th>
+                    <TableHead key={k} scope="col">{t(k)}</TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((r) => (
-                  <tr key={r.exerciseId} data-testid="challenge-row">
-                    <th scope="row" className="px-3 py-2 text-left font-medium">
+                  <TableRow key={r.exerciseId} data-testid="challenge-row">
+                    <TableHead scope="row" className="font-medium text-foreground">
                       <Link className="underline-offset-2 hover:underline" href={`/dashboard/teacher/challenges/${r.exerciseId}`}>{r.title}</Link>
-                    </th>
-                    <td className="px-3 py-2">{r.courseTitle}</td>
-                    <td className="px-3 py-2">{r.creators.join(', ') || '—'}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.firstLinkAt ? date.format(new Date(r.firstLinkAt)) : t('noLink')}</td>
-                    <td className="px-3 py-2">
+                    </TableHead>
+                    <TableCell>{r.courseTitle}</TableCell>
+                    <TableCell>{r.creators.join(', ') || '—'}</TableCell>
+                    <TableCell className="whitespace-nowrap">{r.firstLinkAt ? date.format(new Date(r.firstLinkAt)) : t('noLink')}</TableCell>
+                    <TableCell>
                       <Badge variant={r.activeLinks ? 'default' : 'secondary'}>{t('linksValue', { active: r.activeLinks, revoked: r.revokedLinks })}</Badge>
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">{r.plays} <span className="text-xs text-muted-foreground">({t('official', { count: r.officialPlays })})</span></td>
-                    <td className="px-3 py-2 tabular-nums">{r.uniquePlayers}</td>
-                    <td className="px-3 py-2 tabular-nums">{r.avgScore ?? '—'}</td>
-                    <td className="px-3 py-2 tabular-nums">{r.topScore ?? '—'}</td>
-                    <td className="px-3 py-2 tabular-nums">{r.claimedGuests}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="tabular-nums">{r.plays} <span className="text-xs text-muted-foreground">({t('official', { count: r.officialPlays })})</span></TableCell>
+                    <TableCell className="tabular-nums">{r.uniquePlayers}</TableCell>
+                    <TableCell className="tabular-nums">{r.avgScore ?? '—'}</TableCell>
+                    <TableCell className="tabular-nums">{r.topScore ?? '—'}</TableCell>
+                    <TableCell className="tabular-nums">{r.claimedGuests}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <p className="text-xs text-muted-foreground">{t('playsHint')}</p>
         </>
