@@ -24,6 +24,7 @@ import {
 import {
   FINISH_CONVERSATION_TOOL,
   GIVE_HINT_TOOL,
+  LIVE_GREETING_PROMPT,
   NOTE_CORRECTION_TOOL,
   type ConversationEvaluation,
   type ConversationNote,
@@ -41,6 +42,8 @@ import { AiErrorNotice } from '@/components/ai/ai-error-notice'
 import { parseAiChatError, isAiSetupErrorKind } from '@/lib/ai/chat-error'
 import type { AiErrorCode } from '@/lib/ai/error-codes'
 import { createLateBoundRealtimeModel, observeRealtimeSetup } from '@/lib/speech/realtime-model'
+import { LIVE_MODEL_ID } from '@/lib/ai/live-model'
+import { liveTurns } from '@/lib/speech/live-turns'
 
 type Phase = 'idle' | 'live' | 'grading' | 'error'
 
@@ -76,6 +79,8 @@ interface ConversationExerciseProps {
   /** Staff dry run: separate authorized token/evaluator endpoints, no student records. */
   preview?: {
     tokenEndpoint: string
+    /** Tutor instructions without function-tool lines, for GPT-Live. */
+    liveInstructions?: string
     sessionConfig: Parameters<typeof useRealtime>[0]['sessionConfig']
     evaluate: (transcript: ConversationTurn[], notes: ConversationNote[]) => Promise<Response>
   }
@@ -148,13 +153,50 @@ export default function ConversationExercise({
   const notesRef = useRef<ConversationNote[]>([])
 
   const tokenEndpoint = preview?.tokenEndpoint ?? `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}`
+  // GPT-Live (WebRTC): the audio is media, so the browser cancels the tutor's
+  // voice from the mic and the model handles barge-in itself. `null` = still
+  // asking the server which connection the school's provider supports.
+  const liveModel = useMemo(() => createLateBoundRealtimeModel(), [])
+  const [transport, setTransport] = useState<'webrtc' | 'websocket' | null>(null)
+  const live = transport === 'webrtc'
+  const sessionEndpoint = preview?.tokenEndpoint ?? `/api/exercises/realtime/session?exerciseId=${exercise.id}&tab=${tab}`
+  const transportRef = useRef(transport)
+  useEffect(() => {
+    transportRef.current = transport
+  }, [transport])
+  useEffect(() => {
+    let cancelled = false
+    const resolve = async () => {
+      try {
+        const res = await fetch('/api/exercises/realtime/transport', { cache: 'no-store' })
+        const body = res.ok ? ((await res.json()) as { transport?: string }) : null
+        if (body?.transport === 'webrtc') {
+          await liveModel.bind({ provider: 'openai', model: LIVE_MODEL_ID })
+          if (!cancelled) setTransport('webrtc')
+          return
+        }
+      } catch {
+        /* fall through to the WebSocket path */
+      }
+      if (!cancelled) setTransport('websocket')
+    }
+    void resolve()
+    return () => {
+      cancelled = true
+    }
+  }, [liveModel])
 
   // No `sessionConfig` on purpose: instructions, voice and turn detection are
   // embedded in the token by the server, where the student can't edit them.
   const realtime = useRealtime({
-    model: lateModel.model,
-    api: { token: tokenEndpoint },
-    sessionConfig: preview?.sessionConfig,
+    model: live ? liveModel.model : lateModel.model,
+    api: live ? { session: sessionEndpoint } : { token: tokenEndpoint },
+    // Live ignores everything but the preview's draft (the server rebuilds the rest).
+    sessionConfig: live
+      ? preview?.liveInstructions
+        ? { instructions: preview.liveInstructions, voice: preview.sessionConfig?.voice }
+        : undefined
+      : preview?.sessionConfig,
     // No tool carries a verdict — grading stays on the server. Returning a
     // value sends a tool output, which makes the tutor speak again: wanted
     // after a hint (it was asked to call that one BEFORE speaking), not after
@@ -181,6 +223,9 @@ export default function ConversationExercise({
       // and a dropped one is handled by the status watcher below.
       if (statusRef.current === 'connected') return
       releaseRef.current()
+      // GPT-Live refused to start (no access to the model, say): the provider
+      // WebSocket still works, so the next try uses it.
+      if (transportRef.current === 'webrtc') setTransport('websocket')
       const failure = setupFailureRef.current
       setupFailureRef.current = null
       const typed = failure ? parseSetupError(failure.body) : null
@@ -200,14 +245,16 @@ export default function ConversationExercise({
       setPhase('error')
     },
   })
-  const { status, messages, isPlaying, isCapturing } = realtime
+  const { status, messages, isPlaying, isCapturing, session } = realtime
   useEffect(() => {
     statusRef.current = status
   }, [status])
 
   const turns: ConversationTurn[] = useMemo(
     () =>
-      messages
+      live
+        ? liveTurns(session?.transcripts ?? [])
+        : messages
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({
           role: m.role as 'user' | 'assistant',
@@ -217,7 +264,7 @@ export default function ConversationExercise({
             .trim(),
         }))
         .filter((turn) => turn.text.length > 0),
-    [messages]
+    [live, messages, session?.transcripts]
   )
   useEffect(() => {
     turnsRef.current = turns
@@ -271,14 +318,18 @@ export default function ConversationExercise({
     setPhase('live')
     // The hook fetches the setup endpoint itself; watch that one response so
     // the model stand-in learns the provider/model BEFORE the socket opens.
-    const stopObserving = observeRealtimeSetup(tokenEndpoint, {
-      onDescriptor: (descriptor) => lateModel.bind(descriptor),
+    const stopObserving = observeRealtimeSetup(live ? sessionEndpoint : tokenEndpoint, {
+      // The WebRTC answer carries no model descriptor; only the WebSocket setup does.
+      ...(live ? {} : { onDescriptor: (descriptor) => lateModel.bind(descriptor) }),
       onFailure: (status, body) => {
         setupFailureRef.current = { status, body }
       },
     })
     try {
-      await realtime.connect()
+      // Live: hand over the mic we already opened (with echo cancellation) so
+      // the WebRTC sender uses it and a denied prompt never costs an attempt.
+      if (live) await realtime.connect({ stream: streamRef.current ?? undefined })
+      else await realtime.connect()
     } finally {
       stopObserving()
     }
@@ -290,9 +341,21 @@ export default function ConversationExercise({
     greetedRef.current = true
     // Counted here, not on click: a refused token (plan, daily cap) opens no session.
     setAttemptsUsed((n) => n + 1)
+    if (live) {
+      // Capture started with connect(); the tutor opens the conversation.
+      void realtime
+        .sendEvent({
+          type: 'context-append',
+          content: LIVE_GREETING_PROMPT,
+          delegationId: null,
+          providerOptions: { openai: { channel: 'commentary' } },
+        })
+        .catch(() => {})
+      return
+    }
     if (streamRef.current) realtime.startAudioCapture(streamRef.current)
     realtime.requestResponse()
-  }, [phase, status, realtime])
+  }, [phase, status, realtime, live])
 
   const finishingRef = useRef(false)
   // The transcript of a call that ended but could not be graded, kept so a
@@ -373,7 +436,11 @@ export default function ConversationExercise({
       setPhase('grading')
       // The transcript of the student's last words arrives AFTER their audio.
       // Hanging up at once graded conversations with the final turn missing.
-      if (statusRef.current === 'connected') await new Promise((r) => setTimeout(r, 1500))
+      if (statusRef.current === 'connected') {
+        // Live confirms the close once the last transcript has flushed.
+        if (transportRef.current === 'webrtc') await realtime.close().catch(() => {})
+        else await new Promise((r) => setTimeout(r, 1500))
+      }
       realtime.disconnect()
       const finalTurns = turnsRef.current
 
@@ -439,6 +506,8 @@ export default function ConversationExercise({
     []
   )
 
+  // Provider-WebSocket path only (GPT-Live cancels echo in the browser and
+  // handles interruptions itself, so there the mic stays open).
   // Half-duplex: the phone speaker (and many laptop speakers) leaks into the
   // mic past the browser's echo canceller, the server's VAD hears the tutor as
   // the student and interrupts/answers itself in a loop. So the mic is closed
@@ -457,11 +526,11 @@ export default function ConversationExercise({
   const tutorTalking = isPlaying || tail
 
   useEffect(() => {
-    const open = !muted && !(phase === 'live' && tutorTalking)
+    const open = !muted && !(phase === 'live' && !live && tutorTalking)
     streamRef.current?.getAudioTracks().forEach((track) => {
       track.enabled = open
     })
-  }, [muted, tutorTalking, phase, status])
+  }, [muted, tutorTalking, phase, status, live])
 
   const toggleMute = () => setMuted((m) => !m)
 
@@ -579,7 +648,7 @@ export default function ConversationExercise({
               variant={phase === 'error' && hasUngraded ? 'outline' : 'default'}
               className="h-11 text-sm"
               onClick={() => void start()}
-              disabled={limitReached}
+              disabled={limitReached || transport === null}
             >
               <IconMicrophone size={16} aria-hidden="true" />
               {result || phase === 'error' ? t('startAgain') : t('start')}

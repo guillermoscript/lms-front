@@ -108,6 +108,7 @@ function ExercisePreviewSession({ snapshot }: { snapshot: Snapshot }) {
   const conversationConfig = useMemo(() => parseConversationConfig(config), [config])
   const voicePreview = useMemo(() => ({
     tokenEndpoint: `/api/teacher/preview/realtime?courseId=${draft.courseId}`,
+    liveInstructions: buildConversationInstructions(draft, conversationConfig, { live: true }),
     sessionConfig: {
       instructions: buildConversationInstructions(draft, conversationConfig),
       voice: conversationConfig.voice,
