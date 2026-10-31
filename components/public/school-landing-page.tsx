@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, BookOpen, GraduationCap } from "lucide-react"
@@ -138,7 +139,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                         }
                       </span>
                       <Link
-                        href={`/courses/${product.product_id}`}
+                        href={`/products/${withSlug(product.product_id, product.name)}`}
                         className="text-sm font-semibold flex items-center gap-1 text-brand-text transition-colors duration-200"
                       >
                         {t('view')} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
