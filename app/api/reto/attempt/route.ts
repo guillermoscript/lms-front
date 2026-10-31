@@ -6,6 +6,7 @@ import { aiFailureResponse } from '@/lib/exercises/ai-failure'
 import { hasPlanFeature } from '@/lib/plans/server'
 import { gradeChallengeAnswer } from '@/lib/challenges/grade'
 import { materializeChallengeAttempt } from '@/lib/challenges/materialize'
+import { notifyChallengeBeaten } from '@/lib/challenges/beaten'
 import { MAX_ANSWER_CHARS, submitChallengeAttempt, type AttemptRefusal } from '@/lib/challenges/attempt'
 import {
   GUEST_COOKIE,
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
         hostTenantId,
         hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading'),
         materialize: (input) => materializeChallengeAttempt(admin, input),
+        onOfficialAttempt: (input) => notifyChallengeBeaten({ admin, ...input }),
         grade: async (exercise, text) => {
           grader ??= await ai.getModelForFeature('exercise_grader')
           return gradeChallengeAnswer(exercise, text, grader.model)
