@@ -16,6 +16,7 @@ import {
 } from '@tabler/icons-react'
 import { VersionHistorySheet } from '../version-history-sheet'
 import { cn } from '@/lib/utils'
+import { ContentStatusBadge } from '../content-status-badge'
 import { useLessonEditor } from './lesson-editor-context'
 import { ShareButton } from '../share-button'
 import { LessonEditorActions } from './lesson-editor-actions'
@@ -27,6 +28,7 @@ export function LessonEditorHeader() {
     steps,
   } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
+  const status = initialData?.status ?? 'draft'
   const router = useRouter()
 
   return (
@@ -44,6 +46,12 @@ export function LessonEditorHeader() {
             <IconChevronRight className="h-3 w-3 shrink-0" />
             <span className="font-medium text-foreground truncate">
               {initialData ? t('editTitle') : t('createTitle')}
+            </span>
+            <span className="ml-2 shrink-0">
+              <ContentStatusBadge
+                status={status}
+                label={status === 'published' ? t('statusPublished') : status === 'archived' ? t('statusArchived') : t('statusDraft')}
+              />
             </span>
             {formData.publish_at && (
               <Badge variant="secondary" className="ml-2 text-[10px] shrink-0">

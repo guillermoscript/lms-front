@@ -1346,6 +1346,8 @@
         "back": "Back"
       },
       "courseForm": {
+        "savedPublished": "Course saved and published",
+        "saved": "Course saved",
         "details": "Course Details",
         "saveError": "Failed to save course",
         "titleLabel": "Course Title",
@@ -1557,6 +1559,10 @@
       },
       "lessonEditor": {
         "stepsNav": "Lesson steps",
+        "publishSuccess": "Lesson published",
+        "statusPublished": "Published",
+        "statusDraft": "Draft",
+        "statusArchived": "Archived",
         "generateQuestions": {
           "button": "Generate questions",
           "title": "Generate questions from this lesson",
@@ -2043,6 +2049,7 @@
         "createExercise": "New Exercise",
         "saveDraft": "Save Draft",
         "publishExercise": "Publish",
+        "publishedToast": "Exercise published",
         "readyForAI": "Next: set up how the AI will evaluate student submissions.",
         "enterTitleFirst": "Add a title to continue.",
         "configureAI": "Set Up AI",

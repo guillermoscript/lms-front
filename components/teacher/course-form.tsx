@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { createCourse, updateCourse, checkCourseLimit } from '@/app/actions/teacher/courses'
 import { ImagePicker } from '@/components/teacher/image-picker'
 import { Button } from '@/components/ui/button'
@@ -109,6 +110,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
       if (initialData) {
         // Update existing course
         await updateCourse(initialData.course_id, courseData)
+        toast.success(t(formData.status === 'published' ? 'savedPublished' : 'saved'))
         router.push(`/dashboard/teacher/courses/${initialData.course_id}`)
       } else {
         // Create new course, then go straight to its first lesson (#675):

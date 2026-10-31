@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { motion } from 'motion/react'
 import { Card, CardContent } from '@/components/ui/card'
+import { ContentStatusBadge } from '@/components/teacher/content-status-badge'
 import { Badge } from '@/components/ui/badge'
 import { IconBooks, IconChecklist, IconChevronRight, IconClock, IconTarget } from '@tabler/icons-react'
 import ExerciseTypeFilter, { ALL_TYPES } from '@/components/exercises/exercise-type-filter'
@@ -95,12 +96,10 @@ export default function ExerciseManageList({
                                                                 </span>
                                                             </>
                                                         )}
-                                                        {exercise.status && exercise.status !== 'published' && (
+                                                        {exercise.status && (
                                                             <>
                                                                 <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                                                                <Badge variant="secondary" className="h-4 text-[10px]">
-                                                                    {t(`status.${exercise.status}`)}
-                                                                </Badge>
+                                                                <ContentStatusBadge status={exercise.status} label={t(`status.${exercise.status}`)} />
                                                             </>
                                                         )}
                                                         {exercise.lessonTitle && (

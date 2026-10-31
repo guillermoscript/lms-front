@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef, createContext, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { createExercise, updateExercise } from '@/app/actions/teacher/exercises'
 import { createExerciseSaveTarget } from './save-target'
 import { CONVERSATION_DEFAULTS } from '@/lib/speech/conversation'
@@ -259,6 +260,7 @@ export function ExerciseBuilderProvider({
       }
 
       if (publish) {
+        toast.success(t('publishedToast'))
         router.push(`/dashboard/teacher/courses/${courseId}/exercises`)
         router.refresh()
       } else {

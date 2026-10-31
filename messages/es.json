@@ -1346,6 +1346,8 @@
         "back": "Volver"
       },
       "courseForm": {
+        "savedPublished": "Curso guardado y publicado",
+        "saved": "Curso guardado",
         "details": "Detalles del Curso",
         "saveError": "Error al guardar el curso",
         "titleLabel": "Título del Curso",
@@ -1557,6 +1559,10 @@
       },
       "lessonEditor": {
         "stepsNav": "Pasos de la lección",
+        "publishSuccess": "Lección publicada",
+        "statusPublished": "Publicada",
+        "statusDraft": "Borrador",
+        "statusArchived": "Archivada",
         "generateQuestions": {
           "button": "Generar preguntas",
           "title": "Generar preguntas de esta lección",
@@ -2043,6 +2049,7 @@
         "createExercise": "Nuevo Ejercicio",
         "saveDraft": "Guardar Borrador",
         "publishExercise": "Publicar",
+        "publishedToast": "Ejercicio publicado",
         "readyForAI": "Siguiente: configura cómo la IA evaluará las entregas de los estudiantes.",
         "enterTitleFirst": "Añade un título para continuar.",
         "configureAI": "Configurar IA",

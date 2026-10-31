@@ -11,6 +11,7 @@ import {
   IconDeviceFloppy,
   IconCheck,
   IconEye,
+  IconCircleCheck,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { usePublishTestsGuard } from '../ai-evals/publish-tests-guard'
@@ -60,6 +61,22 @@ export function ExerciseBuilderToolbar() {
 
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium',
+            formData.status === 'published'
+              ? 'border-success/20 bg-success/15 text-success'
+              : 'border-border bg-muted text-muted-foreground'
+          )}
+          role="status"
+        >
+          {formData.status === 'published' && <IconCircleCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+          {formData.status === 'published'
+            ? t('statusPublished')
+            : formData.status === 'archived'
+              ? t('statusArchived')
+              : t('statusDraft')}
+        </span>
         <ExercisePreviewModal />
         {exerciseId !== null && (
           <VersionHistorySheet
