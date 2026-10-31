@@ -11110,6 +11110,13 @@
       "cta": "Play as a challenge",
       "opening": "Opening…",
       "error": "Could not open the challenge. Try again."
+    },
+    "guest": {
+      "ctaTitle": "Save your score and join {school}",
+      "ctaTitleNoSchool": "Save your score and join the school",
+      "emailCta": "Sign up with email",
+      "haveAccount": "Already have an account?",
+      "loginCta": "Log in"
     }
   }
 }

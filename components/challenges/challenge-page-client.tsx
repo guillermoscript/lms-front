@@ -44,6 +44,8 @@ export interface ChallengePageClientProps {
   course?: ChallengeCourse | null
   viewerId?: string | null
   /** The viewer's own official attempt, when they already played (member or guest cookie). */
+  /** School name for the guest CTA copy. */
+  schoolName?: string | null
   played?: { score: number; passed: boolean; answer: string; feedback: unknown; rank: number | null } | null
 }
 
@@ -74,7 +76,7 @@ function ClaimedNotice({ score, next }: { score: number | null; next: ChallengeP
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { variant = 'public', claimed, claimedNext, token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId, played } = props
+  const { variant = 'public', claimed, claimedNext, token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId, played, schoolName } = props
   const member = variant === 'member'
   // The claim only runs on the public landing; the member route is where it ends up.
   const claiming = useSearchParams().get('claim') === '1' && !member
@@ -101,6 +103,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         viewerIsMember: viewerIsMember && !claiming,
         course,
         viewerId,
+        schoolName,
       }
     : null
 

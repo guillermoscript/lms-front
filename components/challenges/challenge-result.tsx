@@ -1,8 +1,9 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { ChallengeFriendsShare } from './challenge-friends-share'
 import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
-import { ChallengeClaimSlot, ChallengeDuelSlot, type ChallengeResultContext } from './challenge-page-slots'
+import { ChallengeClaimSlot, ChallengeDuelSlot, ChallengeRankingSlot, ChallengeUpsellSlot, type ChallengeResultContext } from './challenge-page-slots'
 import type { AttemptResult } from './challenge-player'
 
 interface ParsedFeedback {
@@ -77,8 +78,12 @@ export function ChallengeResult({
           <p className="mt-3 max-w-[68ch] whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/85">{alreadyPlayed.answer}</p>
         </details>
       ) : null}
+      {/* Order is deliberate: score -> (share, members) -> duel -> save-your-score CTA (guests) -> ranking -> course. */}
+      {ctx.viewerIsMember ? <ChallengeFriendsShare exerciseId={ctx.exerciseId} title={ctx.title ?? ''} /> : null}
       <ChallengeDuelSlot ctx={ctx} />
-      <ChallengeClaimSlot ctx={ctx} />
+      {ctx.viewerIsMember ? null : <ChallengeClaimSlot ctx={ctx} />}
+      <ChallengeRankingSlot ctx={ctx} />
+      <ChallengeUpsellSlot ctx={ctx} />
     </section>
   )
 }

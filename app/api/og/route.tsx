@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { loadPublicChallenge } from '@/lib/challenges/public-page'
 import { challengeHeadline } from '@/lib/challenges/headline'
+import { buildChallengeOgCard, loadOgBars, type OgBar } from '@/lib/challenges/og-card'
 import { fetchImageAsDataUrl } from '@/lib/og/fetch-image'
 import { fitTitle } from '@/lib/og/fit-title'
 import { ogCardPalette, type OgCardPalette } from '@/lib/og/palette'
@@ -278,10 +279,34 @@ function renderCertificateCard({
   )
 }
 
+/** One segment per rubric criterion, width by weight: filled = met. Carries no text, so no grading secret can leak. */
+function CriteriaBars({ bars, palette }: { bars: OgBar[]; palette: OgCardPalette }) {
+  if (bars.length === 0) return null
+  return (
+    <div style={{ display: 'flex', gap: 8, width: '100%', height: 14 }}>
+      {bars.map((bar, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'flex',
+            flexGrow: bar.weight,
+            flexBasis: 0,
+            borderRadius: 9999,
+            background: bar.met ? palette.accent : 'transparent',
+            border: `2px solid ${palette.accent}`,
+            opacity: bar.met ? 1 : 0.5,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function renderChallengeCard({
   site,
   title,
   score,
+  bars,
   badge,
   logo,
   palette,
@@ -290,6 +315,7 @@ function renderChallengeCard({
   site: string
   title: string
   score: number | null
+  bars: OgBar[]
   badge: string
   logo: string | null
   palette: OgCardPalette
@@ -365,6 +391,7 @@ function renderChallengeCard({
         </div>
       </div>
 
+      <CriteriaBars bars={bars} palette={palette} />
       <AccentBar color={palette.accent} />
     </div>
   )
@@ -550,10 +577,20 @@ export async function GET(request: NextRequest) {
     const data = await loadPublicChallenge(sp.get('token') ?? '', tenantId)
     if (data) {
       const t = await getTranslations({ locale, namespace: 'challenges.page' })
-      const title = clamp(challengeHeadline(t, data), 120)
+      const bars = data.challenger
+        ? await loadOgBars(createAdminClient(), { attemptId: data.link.ownerAttemptId, exerciseId: data.exercise.id, tenantId })
+        : []
+      // Everything below renders from this object: score, pass flag, bars, headline. No answer text.
+      const card = buildChallengeOgCard(data, clamp(challengeHeadline(t, data), 120), bars)
       return new ImageResponse(
-        renderChallengeCard({ site, title, score: data.challenger?.score ?? null, badge: t('ogBadge'), logo, palette, headingFontFamily }),
-        { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts }
+        renderChallengeCard({ site, title: card.headline, score: card.score, bars: card.bars, badge: t('ogBadge'), logo, palette, headingFontFamily }),
+        {
+          width: WIDTH,
+          height: HEIGHT,
+          // Same bytes for a given token: shared caches keep it, and refresh in the background.
+          headers: { 'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+          fonts,
+        }
       )
     }
   }

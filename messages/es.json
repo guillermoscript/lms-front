@@ -11110,6 +11110,13 @@
       "cta": "Jugar como reto",
       "opening": "Abriendo…",
       "error": "No se pudo abrir el reto. Inténtalo de nuevo."
+    },
+    "guest": {
+      "ctaTitle": "Guarda tu puntaje y únete a {school}",
+      "ctaTitleNoSchool": "Guarda tu puntaje y únete a la escuela",
+      "emailCta": "Registrarme con correo",
+      "haveAccount": "¿Ya tienes cuenta?",
+      "loginCta": "Inicia sesión"
     }
   }
 }
