@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { authenticateUser, requireTeacherOrAdmin } from '@/lib/actions/utils'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasPlanFeature } from '@/lib/plans/server'
+import { hasCourseAccess } from '@/lib/services/course-access'
 import {
   createLinkCore,
   deactivateLinkCore,
@@ -106,6 +107,35 @@ export async function createBestAttemptChallengeLink(exerciseId: number): Promis
     return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}`, reused: r.data.reused, score: r.data.score, fellBackToOpen: r.data.fellBackToOpen } }
   } catch (err) {
     console.error('createBestAttemptChallengeLink failed', err)
+    return fail('Failed to create link')
+  }
+}
+
+/**
+ * "Play as a challenge" (F3): a member who finished the exercise normally and
+ * has no challenge attempt yet gets a link of their own to play it as a
+ * challenge. The first cold attempt through it becomes their official, ranked
+ * one. The link carries no score (nothing to beat) and is reused afterwards.
+ * Only for members with access to the exercise's course.
+ */
+export async function createPlayChallengeLink(exerciseId: number): Promise<ChallengeActionResult<ShareLinkData>> {
+  try {
+    const ctx = await authenticateUser()
+    const admin = createAdminClient()
+    if (!Number.isInteger(exerciseId)) return fail('Invalid exercise')
+    const { data: exercise } = await admin
+      .from('exercises')
+      .select('course_id')
+      .eq('id', exerciseId)
+      .eq('tenant_id', ctx.tenantId)
+      .maybeSingle()
+    if (!exercise?.course_id || !(await hasCourseAccess(admin, ctx.userId, exercise.course_id))) return fail('Unauthorized')
+    const r = await createLinkCore(coreDeps(), ctx, { exerciseId, forPlay: true })
+    if (!r.ok) return fail(r.error)
+    revalidatePath('/dashboard/student/challenges')
+    return { success: true, data: { id: r.data.id, token: r.data.token, path: `/reto/${r.data.token}`, reused: r.data.reused, score: r.data.score } }
+  } catch (err) {
+    console.error('createPlayChallengeLink failed', err)
     return fail('Failed to create link')
   }
 }

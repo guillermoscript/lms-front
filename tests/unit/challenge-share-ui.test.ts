@@ -6,6 +6,7 @@ import en from '@/messages/en.json'
 
 vi.mock('@/app/actions/challenge-links', () => ({ createBestAttemptChallengeLink: vi.fn() }))
 vi.mock('@/app/actions/challenge-claim', () => ({ claimChallenge: vi.fn(() => new Promise(() => {})) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }))
 
 import { ChallengeClaimSlot } from '@/components/challenges/challenge-page-slots'

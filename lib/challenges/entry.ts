@@ -1,6 +1,7 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { CHALLENGEABLE_TYPES, loadChallengesEnabled } from './links'
 import { formatDisplayName } from './ranking'
+import { NEIGHBOURS, windowAround } from './leaderboard'
 
 /**
  * Read side of the challenge entry points inside the exercise flow (F2): the
@@ -12,8 +13,7 @@ import { formatDisplayName } from './ranking'
  */
 type Admin = ReturnType<typeof createAdminClient>
 
-/** How many neighbours on each side of the viewer the compact ranking shows. */
-export const NEIGHBOURS = 3
+export { NEIGHBOURS, windowAround }
 
 export interface EntryRankRow {
   rank: number
@@ -48,14 +48,6 @@ const order = (a: OfficialAttempt, b: OfficialAttempt) =>
 
 export const isChallengeable = (e: ExerciseLike) =>
   e.is_challengeable === true && CHALLENGEABLE_TYPES.includes(e.exercise_type as string)
-
-/** The viewer's row plus up to `n` neighbours each side (the window slides at the edges). */
-export function windowAround<T extends { isMe: boolean }>(rows: T[], n = NEIGHBOURS): T[] {
-  const size = 2 * n + 1
-  const i = rows.findIndex((r) => r.isMe)
-  const start = i === -1 ? 0 : Math.max(0, Math.min(i - n, rows.length - size))
-  return rows.slice(start, start + size)
-}
 
 /** Pure: the viewer's standing from the official attempts of ACTIVE members of one exercise. */
 export function buildExerciseEntry(userId: string, attempts: OfficialAttempt[], labels: Map<string, string>): ExerciseEntry | null {
@@ -145,4 +137,32 @@ export async function loadListBadges(
   // A challengeable exercise nobody has played still gets its badge.
   for (const id of ids) if (!badges.has(id)) badges.set(id, { myScore: null, myRank: null, total: 0 })
   return badges
+}
+
+/**
+ * Whether the result screen offers "Play as a challenge" (F3): the exercise is
+ * a challengeable essay/discussion, the school has challenges on and the plan
+ * can grade them, and the student has NO official attempt yet (otherwise the
+ * regular entry block already shows their standing).
+ */
+export async function canPlayAsChallenge(
+  admin: Admin,
+  tenantId: string,
+  userId: string,
+  exercise: ExerciseLike,
+  hasAiGrading: (tenantId: string) => Promise<boolean>,
+): Promise<boolean> {
+  if (!isChallengeable(exercise)) return false
+  if (!(await loadChallengesEnabled(admin, tenantId))) return false
+  if (!(await hasAiGrading(tenantId))) return false
+  const { data, error } = await admin
+    .from('challenge_attempts')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('exercise_id', exercise.id)
+    .eq('user_id', userId)
+    .eq('is_official', true)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  return (data ?? []).length === 0
 }

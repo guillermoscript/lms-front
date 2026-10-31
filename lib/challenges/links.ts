@@ -145,6 +145,13 @@ export interface CreateLinkInput {
   exerciseId?: number
   /** Use the caller's best official attempt on the exercise, else an open link. */
   useBestAttempt?: boolean
+  /**
+   * "Play as a challenge" (F3): the caller wants to PLAY the exercise as a
+   * challenge, not to share a result. With no official attempt yet, any role
+   * gets their own open link (a student included: it carries no score and only
+   * opens the cold attempt, which becomes their official one).
+   */
+  forPlay?: boolean
 }
 
 type LinkRow = { id: string; token: string }
@@ -199,6 +206,7 @@ export async function createLinkCore(
 
   let attempt: { id: string; exercise_id: number; score: number } | null = null
   let fellBackToOpen = false
+  let selfPlay = false
 
   if (input.attemptId !== undefined) {
     const { data } = await admin
@@ -213,7 +221,7 @@ export async function createLinkCore(
       return fail('Attempt does not belong to that exercise')
     }
     attempt = data
-  } else if (input.useBestAttempt || actor.role === 'student') {
+  } else if (input.useBestAttempt || input.forPlay || actor.role === 'student') {
     const { data } = await admin
       .from('challenge_attempts')
       .select('id, exercise_id, score')
@@ -226,6 +234,7 @@ export async function createLinkCore(
       .limit(1)
       .maybeSingle()
     if (data) attempt = data
+    else if (input.forPlay) selfPlay = true
     else if (actor.role === 'student') return fail('Play the challenge first: students can only share their own official result')
     else fellBackToOpen = true
   }
@@ -242,8 +251,9 @@ export async function createLinkCore(
     return fail('Only essay and discussion exercises can be challenges')
   }
   // An open link is an invitation the creator makes on the school's behalf:
-  // same ownership rule as marking the exercise.
-  if (!attempt && (exercise.course_id == null || !(await canManageCourse(admin, actor, exercise.course_id)))) {
+  // same ownership rule as marking the exercise. A `forPlay` link is the
+  // caller's own entry to the cold attempt, not an invitation they publish.
+  if (!attempt && !selfPlay && (exercise.course_id == null || !(await canManageCourse(admin, actor, exercise.course_id)))) {
     return fail('Unauthorized')
   }
 

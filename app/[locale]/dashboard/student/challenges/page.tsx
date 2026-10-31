@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { PageHeader, PageShell } from '@/components/dashboard/page-shell'
 import { ChallengeLinksList } from '@/components/challenges/challenge-links-list'
 import { RetoCard } from '@/components/challenges/shared/reto-card'
-import { RetoLeaderboard } from '@/components/challenges/shared/reto-leaderboard'
+import { ChallengeLeaderboard } from '@/components/challenges/challenge-leaderboard'
 import { loadStudentRetos } from '@/lib/challenges/student'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -44,7 +44,7 @@ export default async function StudentRetosPage() {
                   {r.joined.map((j) => j === null ? t('guest') : j || t('student')).join(', ')}
                 </p>
               )}
-              <RetoLeaderboard entries={r.leaderboard} testId="student-reto-leaderboard" />
+              <ChallengeLeaderboard rows={r.leaderboard} windowed testId="student-reto-leaderboard" />
             </RetoCard>
           ))}
         </div>

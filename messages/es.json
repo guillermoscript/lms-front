@@ -11075,13 +11075,14 @@
       "claimedBadge": "Se registró"
     },
     "shared": {
-      "leaderboardEmpty": "Aún no hay puntajes oficiales.",
       "guest": "Invitado",
       "student": "Estudiante",
       "you": "Tú",
       "ahead": "vas +{points} arriba",
       "behind": "vas {points} abajo",
-      "tied": "empate"
+      "tied": "empate",
+      "showAll": "Ver todos ({count})",
+      "showNearby": "Ver cercanos"
     },
     "student": {
       "title": "Mis retos",
@@ -11095,12 +11096,20 @@
       "joined": "Se unieron con tus enlaces",
       "guest": "Invitado",
       "student": "Estudiante",
-      "homeTitle": "Tus retos"
+      "homeTitle": "Tus retos",
+      "breadcrumbChallenge": "Reto"
     },
     "entry": {
       "title": "Reta a un amigo",
       "position": "Vas #{rank} de {total} con {score} puntos.",
       "seeAll": "Ver todo el ranking"
+    },
+    "play": {
+      "title": "Juégalo como reto",
+      "body": "Haz este ejercicio de nuevo como reto: un solo intento calificado, sin pistas. Tu puntaje entra al ranking y puedes retar a tus amigos.",
+      "cta": "Jugar como reto",
+      "opening": "Abriendo…",
+      "error": "No se pudo abrir el reto. Inténtalo de nuevo."
     }
   }
 }

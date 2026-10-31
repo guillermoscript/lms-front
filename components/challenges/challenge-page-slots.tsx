@@ -3,9 +3,10 @@
 import { useTranslations } from 'next-intl'
 import { DuelResult } from '@/components/challenges/duel-result'
 import { ClaimCta } from '@/components/challenges/claim-cta'
-import { Ranking } from '@/components/challenges/ranking'
+import { ChallengeLeaderboard } from '@/components/challenges/challenge-leaderboard'
 import { ChallengeFriendsShare } from '@/components/challenges/challenge-friends-share'
 import { ChallengeCourseCard } from '@/components/challenges/challenge-course-card'
+import { rankingToRows } from '@/lib/challenges/leaderboard'
 import type { RankingEntry } from '@/lib/challenges/ranking'
 import type { ChallengeCourse } from '@/lib/challenges/course-context'
 
@@ -38,7 +39,7 @@ export function ChallengeDuelSlot({ ctx }: { ctx: ChallengeResultContext }) {
           theirName={ctx.challengerName ?? t('guestName')}
         />
       ) : null}
-      {ctx.rankingEntries ? <Ranking entries={ctx.rankingEntries} currentUserId={ctx.viewerId ?? undefined} /> : null}
+      {ctx.rankingEntries ? <ChallengeLeaderboard heading windowed={Boolean(ctx.viewerId)} rows={rankingToRows(ctx.rankingEntries, ctx.viewerId)} testId="challenge-ranking" /> : null}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { PageHeader, PageShell } from '@/components/dashboard/page-shell'
 import { Badge } from '@/components/ui/badge'
-import { RetoLeaderboard } from '@/components/challenges/shared/reto-leaderboard'
+import { ChallengeLeaderboard } from '@/components/challenges/challenge-leaderboard'
 import { StaffAttemptList } from '@/components/challenges/staff-attempt-list'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -54,9 +54,9 @@ export default async function StaffChallengeDetailPage({ params }: PageProps) {
 
       <section aria-labelledby="ch-board" className="space-y-2">
         <h2 id="ch-board" className="text-base font-semibold">{t('leaderboard')}</h2>
-        <RetoLeaderboard
+        <ChallengeLeaderboard
           testId="challenge-leaderboard"
-          entries={board.map((a) => ({ key: a.id, label: a.playerName ?? (a.isGuest ? null : ''), score: a.score }))}
+          rows={board.map((a) => ({ key: a.id, label: a.playerName ?? (a.isGuest ? null : ''), score: a.score }))}
         />
       </section>
 

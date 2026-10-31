@@ -22,7 +22,9 @@ import CodeExercise from '@/components/exercises/code-exercise'
 import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import ExerciseChat from '@/components/exercises/exercise-chat'
 import { ExerciseChallengeBlock } from '@/components/challenges/exercise-challenge-block'
-import { loadExerciseEntry } from '@/lib/challenges/entry'
+import { PlayAsChallenge } from '@/components/challenges/play-as-challenge'
+import { canPlayAsChallenge, loadExerciseEntry } from '@/lib/challenges/entry'
+import { hasPlanFeature } from '@/lib/plans/server'
 
 const AudioExercise = dynamic(
   () => import('@/components/exercises/audio-exercise'),
@@ -301,8 +303,23 @@ export default async function ExercisePage({ params }: PageProps) {
         console.error('Error loading challenge entry:', err)
         return null
     })
+    // No challenge attempt yet but the exercise is done: offer to play it as a challenge (F3).
+    const canPlayChallenge = !challengeEntry && latestEvaluation
+        ? await canPlayAsChallenge(
+            supabase,
+            tenantId,
+            userId,
+            { id: exercise.id, exercise_type: exercise.exercise_type, is_challengeable: exercise.is_challengeable },
+            (id) => hasPlanFeature(id, 'ai_grading'),
+        ).catch((err) => {
+            console.error('Error checking play-as-challenge:', err)
+            return false
+        })
+        : false
     const challengeBlock = challengeEntry ? (
         <ExerciseChallengeBlock exerciseId={exercise.id} title={exercise.title} entry={challengeEntry} />
+    ) : canPlayChallenge ? (
+        <PlayAsChallenge exerciseId={exercise.id} />
     ) : null
 
     const relatedList = otherExercises && otherExercises.length > 0 ? (
