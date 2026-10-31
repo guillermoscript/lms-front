@@ -12,7 +12,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 export default async function StudentRetosPage() {
   const [role, userId, tenantId, t, tl] = await Promise.all([
     getUserRole(), getCurrentUserId(), getCurrentTenantId(),
-    getTranslations('challenges.student'), getTranslations('challenges.admin.links'),
+    getTranslations('challenges.student'), getTranslations('challenges.links'),
   ])
   if (role !== 'student') redirect('/dashboard')
   if (!userId) redirect('/auth/login')

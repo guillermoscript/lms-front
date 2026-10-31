@@ -10896,23 +10896,6 @@
         "error": "No se pudo actualizar el ejercicio",
         "unsupportedType": "Solo los ejercicios de ensayo y discusión pueden ser retos.",
         "disabledHint": "Los retos están desactivados en esta escuela. Un administrador puede activarlos en Configuración > Inscripción."
-      },
-      "links": {
-        "title": "Enlaces de reto",
-        "description": "Enlaces que creaste para tus intentos oficiales.",
-        "loading": "Cargando enlaces…",
-        "loadError": "No se pudieron cargar los enlaces de reto.",
-        "retry": "Reintentar",
-        "empty": "Aún no hay enlaces de reto.",
-        "untitled": "Ejercicio sin título",
-        "score": "Puntaje {score}",
-        "active": "Activo",
-        "inactive": "Desactivado",
-        "deactivate": "Desactivar",
-        "deactivated": "Enlace desactivado",
-        "error": "No se pudo desactivar el enlace",
-        "copy": "Copiar enlace",
-        "copied": "Enlace copiado"
       }
     },
     "claim": {
@@ -10940,10 +10923,7 @@
     },
     "ranking": {
       "title": "Ranking",
-      "loading": "Cargando ranking",
       "empty": "Aún no hay nadie en el ranking. ¡Sé el primero!",
-      "error": "No se pudo cargar el ranking.",
-      "retry": "Reintentar",
       "you": "(tú)",
       "duel": {
         "tie": "Empate técnico",
@@ -10957,8 +10937,7 @@
         "rank": "Posición",
         "name": "Nombre",
         "score": "Puntaje"
-      },
-      "anonymous": "Estudiante"
+      }
     },
     "page": {
       "eyebrow": "Reto",
@@ -10975,7 +10954,6 @@
       "submit": "Enviar respuesta",
       "grading": "Calificando…",
       "resultHeading": "Tu resultado",
-      "duelBasic": "{name}: {challenger} · Tú: {you}",
       "shareHeading": "Comparte tu reto",
       "shareBody": "Envía este enlace a un amigo. Juega sin crear cuenta.",
       "share": "Compartir",
@@ -10989,8 +10967,6 @@
       "errorRateLimited": "Demasiados intentos. Inténtalo más tarde.",
       "errorPaused": "Este reto está en pausa por ahora.",
       "errorAlreadyPlayed": "Ya jugaste este reto.",
-      "strengths": "Fortalezas",
-      "improvements": "Por mejorar",
       "openLine": "{name} te reta en {exercise}. ¿Cuánto sacas?",
       "openLineAnon": "Te retan en {exercise}. ¿Cuánto sacas?",
       "alreadyPlayedTitle": "Ya jugaste este reto",
@@ -11056,7 +11032,6 @@
       "detailTitle": "Reto: {title}",
       "back": "Retos",
       "leaderboard": "Clasificación",
-      "leaderboardEmpty": "Aún no hay intentos oficiales.",
       "linksTitle": "Enlaces",
       "linksEmpty": "No se han creado enlaces.",
       "linkActive": "Activo",
@@ -11076,8 +11051,7 @@
       "feedback": "Comentarios de la IA",
       "noFeedback": "Sin comentarios guardados.",
       "viewLink": "Abrir enlace",
-      "viewAll": "Ver detalle de retos",
-      "claimedBadge": "Se registró"
+      "viewAll": "Ver detalle de retos"
     },
     "shared": {
       "guest": "Invitado",
@@ -11088,6 +11062,23 @@
       "tied": "empate",
       "showAll": "Ver todos ({count})",
       "showNearby": "Ver cercanos"
+    },
+    "links": {
+      "title": "Enlaces de reto",
+      "description": "Enlaces que creaste para tus intentos oficiales.",
+      "loading": "Cargando enlaces…",
+      "loadError": "No se pudieron cargar los enlaces de reto.",
+      "retry": "Reintentar",
+      "empty": "Aún no hay enlaces de reto.",
+      "untitled": "Ejercicio sin título",
+      "score": "Puntaje {score}",
+      "active": "Activo",
+      "inactive": "Desactivado",
+      "deactivate": "Desactivar",
+      "deactivated": "Enlace desactivado",
+      "error": "No se pudo desactivar el enlace",
+      "copy": "Copiar enlace",
+      "copied": "Enlace copiado"
     },
     "student": {
       "title": "Mis retos",
