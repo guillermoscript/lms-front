@@ -88,7 +88,7 @@ describe("lms_set_exercise_challengeable", () => {
 
   it.each([
     ["Unauthorized", 403],
-    ["Only essay and discussion exercises can be challenges", 422],
+    ["Only essay, discussion and voice conversation exercises can be challenges", 422],
     ["Challenges are not enabled for this school", 422],
   ])("surfaces a refusal: %s", async (error, status) => {
     respond(status, { error });

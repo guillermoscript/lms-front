@@ -452,7 +452,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     isExerciseCompleted={isExerciseCompleted}
                     dailyAttemptsUsed={dailyAttemptsUsed}
                     maxDailyAttempts={conversationConfig.max_daily_attempts}
-                    isExerciseCompletedSection={otherExercisesSection}
+                    isExerciseCompletedSection={challengeBlock ? <div className="space-y-4">{challengeBlock}{relatedList}</div> : otherExercisesSection}
                     initialResult={
                         latestEvaluation
                             ? {

@@ -10894,7 +10894,7 @@
         "warning": "Ojo: las instrucciones del ejercicio serán públicas para cualquiera con el enlace. En cursos de pago, los invitados solo acceden a este ejercicio como muestra, sin acceso al curso.",
         "saved": "Configuración del reto actualizada",
         "error": "No se pudo actualizar el ejercicio",
-        "unsupportedType": "Solo los ejercicios de ensayo y discusión pueden ser retos.",
+        "unsupportedType": "Solo los ejercicios de ensayo, discusión y conversación por voz pueden ser retos.",
         "disabledHint": "Los retos están desactivados en esta escuela. Un administrador puede activarlos en Configuración > Inscripción."
       }
     },
@@ -10966,6 +10966,13 @@
       "errorGeneric": "No pudimos calificar tu respuesta. Inténtalo de nuevo en un momento.",
       "errorRateLimited": "Demasiados intentos. Inténtalo más tarde.",
       "errorPaused": "Este reto está en pausa por ahora.",
+      "voiceBeatIt": "Empieza la llamada abajo. Tienes una conversación calificada, sin pistas.",
+      "voiceColdNote": "Una conversación calificada de hasta {minutes} minutos. Sin pistas ni notas del tutor.",
+      "voiceGateTitle": "Regístrate para jugar este reto",
+      "voiceGateBody": "Este reto es una conversación de voz en vivo, así que necesitas una cuenta para jugarlo.",
+      "voiceGateBodySchool": "Este reto es una conversación de voz en vivo. Únete a {school} para jugarlo.",
+      "voiceGateSignUp": "Crear una cuenta",
+      "voiceGateLogin": "Ya tengo una cuenta",
       "errorAlreadyPlayed": "Ya jugaste este reto.",
       "openLine": "{name} te reta en {exercise}. ¿Cuánto sacas?",
       "openLineAnon": "Te retan en {exercise}. ¿Cuánto sacas?",

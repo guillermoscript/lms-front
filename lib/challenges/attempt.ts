@@ -4,8 +4,18 @@ import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/gradi
 import { isChallengeableType, resolveRubric, rubricVersion, type ChallengeGrade, type ChallengeGradingExercise } from '@/lib/challenges/grade'
 import { checkChallengeLimits } from '@/lib/challenges/limits'
 import { isChallengesEnabled } from '@/lib/challenges/settings'
+import { isVoiceChallengeType } from '@/lib/challenges/types'
+import type { ConversationTurn } from '@/lib/speech/conversation'
+import type { VoiceClaim } from '@/lib/challenges/voice-session'
 
 export const MAX_ANSWER_CHARS = 20_000
+
+/** `answer` is the text graded: typed by the player, or the transcript rendered from `voice.turns`. */
+export interface AttemptInput {
+  token: string
+  answer: string
+  voice?: VoiceSubmission
+}
 
 export type AttemptRefusal =
   | 'link_not_found'
@@ -17,6 +27,19 @@ export type AttemptRefusal =
   | 'rate_limited'
   | 'paused'
   | 'in_progress'
+  /** Voice retos are for signed-in members only (see `lib/challenges/types.ts`). */
+  | 'members_only'
+  /** Text sent to a voice reto, or a transcript sent to a text one. */
+  | 'invalid_submission'
+  | 'no_session'
+  | 'session_too_long'
+  | 'invalid_transcript'
+
+/** A voice attempt: the call's tab key and the transcript the browser reports. */
+export interface VoiceSubmission {
+  tab: string
+  turns: ConversationTurn[]
+}
 
 export interface AttemptIdentity {
   userId: string | null
@@ -59,6 +82,15 @@ export interface AttemptDeps {
    * beaten). Best-effort: a failure or rejection never fails the attempt.
    */
   onOfficialAttempt?: (input: { attemptId: string; tenantId: string }) => Promise<unknown>
+  /**
+   * Voice retos only. `claim` accepts the transcript against a session this
+   * member opened; `settle` closes it (`completed`) or re-opens it (`pending`)
+   * when the attempt did not produce a grade.
+   */
+  voice?: {
+    claim: (input: { tenantId: string; userId: string; exerciseId: number; tab: string; exerciseConfig: unknown; turns: ConversationTurn[] }) => Promise<VoiceClaim>
+    settle: (input: { tenantId: string; sessionId: string; status: 'pending' | 'completed' }) => Promise<unknown>
+  }
 }
 
 /** True when PostgREST/Postgres says `challenge_attempts.rubric_version` does not exist yet. */
@@ -115,7 +147,7 @@ const inFlight = new Set<string>()
 
 export async function submitChallengeAttempt(
   deps: AttemptDeps,
-  input: { token: string; answer: string },
+  input: AttemptInput,
   identity: AttemptIdentity
 ): Promise<AttemptOutcome> {
   const key = `${identity.userId ?? identity.guestTokenHash}:${input.token}`
@@ -130,7 +162,7 @@ export async function submitChallengeAttempt(
 
 async function runAttempt(
   deps: AttemptDeps,
-  input: { token: string; answer: string },
+  input: AttemptInput,
   identity: AttemptIdentity
 ): Promise<AttemptOutcome> {
   const { admin, hostTenantId } = deps
@@ -175,6 +207,65 @@ async function runAttempt(
 
   if (!(await deps.hasAiGrading(tenantId))) return refuse('plan_feature_required')
 
+  // A voice reto is a call, never typed text (anyone could type a perfect
+  // "conversation"), and a call costs the school realtime minutes, so only a
+  // signed-in member may play one.
+  const isVoice = isVoiceChallengeType(exercise.exercise_type as string)
+  if (isVoice !== Boolean(input.voice)) return refuse('invalid_submission')
+  let sessionId: string | null = null
+  if (isVoice) {
+    if (!identity.userId) return refuse('members_only')
+    if (!deps.voice || !input.voice) return refuse('invalid_submission')
+    const claim = await deps.voice.claim({
+      tenantId,
+      userId: identity.userId,
+      exerciseId: link.exercise_id as number,
+      tab: input.voice.tab,
+      exerciseConfig: exercise.exercise_config,
+      turns: input.voice.turns,
+    })
+    if (!claim.ok) return refuse(claim.reason)
+    sessionId = claim.sessionId
+  }
+
+  // Whatever happens next, the session is closed on success and re-opened otherwise
+  // (a grader hiccup or a rate limit must not cost the member the call they just had).
+  const settle = async (status: 'pending' | 'completed') => {
+    if (sessionId && deps.voice) {
+      try {
+        await deps.voice.settle({ tenantId, sessionId, status })
+      } catch (err) {
+        console.error('voice session settle failed:', err instanceof Error ? err.message : err)
+      }
+    }
+  }
+  try {
+    const outcome = await gradeAndPersist(deps, input, identity, { linkId: link.id as string, exerciseId: link.exercise_id as number, tenantId, exercise })
+    await settle(outcome.ok ? 'completed' : 'pending')
+    return outcome
+  } catch (err) {
+    await settle('pending')
+    throw err
+  }
+}
+
+interface AttemptContext {
+  linkId: string
+  exerciseId: number
+  tenantId: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- row shape from the loose admin client
+  exercise: any
+}
+
+async function gradeAndPersist(
+  deps: AttemptDeps,
+  input: AttemptInput,
+  identity: AttemptIdentity,
+  { linkId, exerciseId, tenantId, exercise }: AttemptContext
+): Promise<AttemptOutcome> {
+  const { admin } = deps
+  const refuse = (refusal: AttemptRefusal): AttemptOutcome => ({ ok: false, refusal })
+  const link = { id: linkId, exercise_id: exerciseId }
   // This person's earlier attempts at this exercise.
   let prior = admin
     .from('challenge_attempts')
@@ -231,7 +322,7 @@ async function runAttempt(
       criteria: graded.criteria,
     } as Json,
   }
-  const version = rubricVersion(resolveRubric(exercise.exercise_config))
+  const version = rubricVersion(resolveRubric(exercise.exercise_config, exercise.exercise_type as string))
 
   // Tolerant of a database that has not applied the rubric_version migration yet.
   const insert = async (official: boolean) => {

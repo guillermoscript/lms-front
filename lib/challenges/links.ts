@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { isChallengesEnabled } from './settings'
+import { CHALLENGEABLE_TYPES } from './types'
 
 /**
  * Challenge-link rules shared by the server actions (web) and
@@ -34,8 +35,7 @@ export type CoreResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error })
 
-/** Guests can only play free-text exercises; quiz-like types are out. */
-export const CHALLENGEABLE_TYPES = ['essay', 'discussion']
+export { CHALLENGEABLE_TYPES }
 
 /** Shown by tools/UI when an exercise becomes challengeable. */
 export const CHALLENGE_PUBLIC_WARNING =
@@ -119,7 +119,7 @@ export async function setChallengeableCore(
 
   if (value) {
     if (!CHALLENGEABLE_TYPES.includes(exercise.exercise_type as string)) {
-      return fail('Only essay and discussion exercises can be challenges')
+      return fail('Only essay, discussion and voice conversation exercises can be challenges')
     }
     if (!(await loadChallengesEnabled(admin, actor.tenantId))) {
       return fail('Challenges are not enabled for this school')
@@ -248,7 +248,7 @@ export async function createLinkCore(
     .maybeSingle()
   if (!exercise?.is_challengeable) return fail('Exercise is not challengeable')
   if (!CHALLENGEABLE_TYPES.includes(exercise.exercise_type as string)) {
-    return fail('Only essay and discussion exercises can be challenges')
+    return fail('Only essay, discussion and voice conversation exercises can be challenges')
   }
   // An open link is an invitation the creator makes on the school's behalf:
   // same ownership rule as marking the exercise. A `forPlay` link is the

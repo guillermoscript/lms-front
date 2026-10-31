@@ -4,10 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
 import { aiFailureResponse } from '@/lib/exercises/ai-failure'
 import { hasPlanFeature } from '@/lib/plans/server'
-import { gradeChallengeAnswer } from '@/lib/challenges/grade'
+import { gradeChallengeAnswer, transcriptToText } from '@/lib/challenges/grade'
+import { claimVoiceSession, isValidTab, settleVoiceSession } from '@/lib/challenges/voice-session'
+import { ConversationTranscriptSchema } from '@/lib/speech/conversation'
 import { materializeChallengeAttempt } from '@/lib/challenges/materialize'
 import { notifyChallengeBeaten } from '@/lib/challenges/beaten'
-import { MAX_ANSWER_CHARS, submitChallengeAttempt, type AttemptRefusal } from '@/lib/challenges/attempt'
+import { MAX_ANSWER_CHARS, submitChallengeAttempt, type AttemptRefusal, type VoiceSubmission } from '@/lib/challenges/attempt'
 import {
   GUEST_COOKIE,
   GUEST_COOKIE_MAX_AGE,
@@ -30,12 +32,19 @@ const REFUSAL_STATUS: Record<AttemptRefusal, number> = {
   rate_limited: 429,
   paused: 503,
   in_progress: 429,
+  members_only: 403,
+  invalid_submission: 400,
+  no_session: 409,
+  session_too_long: 410,
+  invalid_transcript: 422,
 }
 
 /**
  * Public, cold AI grading of one challenge answer (#1027). Guest or member.
  * Separate from `/api/exercises/evaluate`, which stays authenticated.
- * Body: `{ token, answer }`. The score is never taken from the request.
+ * Body: `{ token, answer }` for text retos, or `{ token, tab, transcript }` for a
+ * voice reto (members only; the transcript must come from a session the token
+ * route opened). The score is never taken from the request.
  */
 export async function POST(req: Request) {
   if (!isChallengeSecretConfigured()) return Response.json({ error: 'not_configured' }, { status: 503 })
@@ -45,14 +54,21 @@ export async function POST(req: Request) {
 
   let token: string
   let answer: string
+  let voice: VoiceSubmission | undefined
   try {
     const body = await req.json()
     token = body.token
-    answer = body.answer
     if (typeof token !== 'string' || !token || token.length > 200) throw new Error('token')
-    if (typeof answer !== 'string' || !answer.trim()) throw new Error('answer')
+    if (body.transcript !== undefined) {
+      if (!isValidTab(body.tab)) throw new Error('tab')
+      voice = { tab: body.tab, turns: ConversationTranscriptSchema.parse(body.transcript) }
+      answer = transcriptToText(voice.turns)
+    } else {
+      answer = body.answer
+      if (typeof answer !== 'string' || !answer.trim()) throw new Error('answer')
+    }
   } catch {
-    return Response.json({ error: 'token and answer are required' }, { status: 400 })
+    return Response.json({ error: 'token and answer (or tab and transcript) are required' }, { status: 400 })
   }
   if (answer.length > MAX_ANSWER_CHARS) return Response.json({ error: 'answer_too_long' }, { status: 413 })
 
@@ -116,12 +132,16 @@ export async function POST(req: Request) {
         hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading'),
         materialize: (input) => materializeChallengeAttempt(admin, input),
         onOfficialAttempt: (input) => notifyChallengeBeaten({ admin, ...input }),
+        voice: {
+          claim: ({ turns, exerciseConfig, ...key }) => claimVoiceSession(admin, key, exerciseConfig, turns),
+          settle: ({ tenantId, sessionId, status }) => settleVoiceSession(admin, tenantId, sessionId, status),
+        },
         grade: async (exercise, text) => {
           grader ??= await ai.getModelForFeature('exercise_grader')
           return gradeChallengeAnswer(exercise, text, grader.model)
         },
       },
-      { token, answer },
+      { token, answer, voice },
       identity
     )
   } catch (err) {

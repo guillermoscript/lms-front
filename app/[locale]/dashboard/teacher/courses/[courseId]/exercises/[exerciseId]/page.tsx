@@ -25,6 +25,7 @@ import { isGradedEvalExerciseType } from '@/lib/ai/evals/schema'
 import { IconUsers } from '@tabler/icons-react'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { getChallengesEnabled } from '@/app/actions/challenge-links'
+import { isChallengeableType } from '@/lib/challenges/types'
 import { ChallengeableToggle } from '@/components/challenges/challengeable-toggle'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
@@ -108,7 +109,7 @@ export default async function EditExercisePage({ params }: PageProps) {
         exerciseId={exercise.id}
         initialValue={exercise.is_challengeable === true}
         challengesEnabled={await getChallengesEnabled()}
-        supportedType={['essay', 'discussion'].includes(exercise.exercise_type)}
+        supportedType={isChallengeableType(exercise.exercise_type)}
       />
 
       <ExerciseBuilder
