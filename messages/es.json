@@ -2043,6 +2043,7 @@
         "createExercise": "Nuevo Ejercicio",
         "saveDraft": "Guardar Borrador",
         "publishExercise": "Publicar",
+        "publishedToast": "Ejercicio publicado",
         "readyForAI": "Siguiente: configura cómo la IA evaluará las entregas de los estudiantes.",
         "enterTitleFirst": "Añade un título para continuar.",
         "configureAI": "Configurar IA",

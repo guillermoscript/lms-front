@@ -2043,6 +2043,7 @@
         "createExercise": "New Exercise",
         "saveDraft": "Save Draft",
         "publishExercise": "Publish",
+        "publishedToast": "Exercise published",
         "readyForAI": "Next: set up how the AI will evaluate student submissions.",
         "enterTitleFirst": "Add a title to continue.",
         "configureAI": "Set Up AI",
