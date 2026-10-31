@@ -1557,6 +1557,10 @@
       },
       "lessonEditor": {
         "stepsNav": "Lesson steps",
+        "publishSuccess": "Lesson published",
+        "statusPublished": "Published",
+        "statusDraft": "Draft",
+        "statusArchived": "Archived",
         "generateQuestions": {
           "button": "Generate questions",
           "title": "Generate questions from this lesson",

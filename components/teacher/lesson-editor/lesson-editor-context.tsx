@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, createContext, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { createLesson, updateLesson } from '@/app/actions/teacher/lessons'
 import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
 import { getLessonStarterTemplate, stripStarterPlaceholders } from './starter-template'
@@ -229,6 +230,7 @@ export function LessonEditorProvider({
       })
 
       if (publish) {
+        toast.success(t('publishSuccess'))
         router.push(`/dashboard/teacher/courses/${courseId}`)
       } else if (!initialData) {
         // New lesson saved as draft — redirect to edit URL so subsequent saves
