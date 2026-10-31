@@ -5,6 +5,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { loadChallengePage } from '@/lib/challenges/public-page'
 import { challengeHeadline } from '@/lib/challenges/headline'
 import { buildPageMetadata } from '@/lib/seo'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { hasPuckPage } from '@/lib/public/has-puck-page'
 import { Navbar } from '@/components/public/navbar'
 import { Footer } from '@/components/public/footer'
@@ -53,10 +54,11 @@ export default async function ChallengePage({ params, searchParams }: Props) {
   }
 
   const isOwner = Boolean(userId && data.challenger?.userId && data.challenger.userId === userId)
-  const [view, ownShell] = await Promise.all([
+  const [view, ownShell, brand] = await Promise.all([
     loadChallengeView({ tenantId, exerciseId: data.exercise.id, userId, viewerIsMember }),
     // Schools with a published Puck landing skip the (public) shell, so the page brings its own.
     hasPuckPage(),
+    getSchoolBrand(tenantId),
   ])
 
   const page = (
@@ -74,6 +76,7 @@ export default async function ChallengePage({ params, searchParams }: Props) {
       course={view.course}
       viewerId={viewerIsMember ? userId : null}
       played={view.played}
+      schoolName={brand.name}
     />
   )
   if (!ownShell) return page

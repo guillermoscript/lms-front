@@ -25,31 +25,38 @@ export interface ChallengeResultContext {
   /** Course this exercise belongs to: powers the upsell card. */
   course?: ChallengeCourse | null
   viewerId?: string | null
+  /** School name for the claim CTA copy ("join <school>"). */
+  schoolName?: string | null
 }
 
-/** The duel result (guest vs challenger, with the tie band) and the per-exercise ranking. */
+/** "You vs <friend>": guest/viewer vs challenger, with the tie band. Nothing when the link is open (no challenger score). */
 export function ChallengeDuelSlot({ ctx }: { ctx: ChallengeResultContext }) {
   const t = useTranslations('challenges.page')
+  if (ctx.challengerScore === null) return null
   return (
-    <div className="space-y-5">
-      {ctx.challengerScore !== null ? (
-        <DuelResult
-          mine={ctx.guestScore}
-          theirs={ctx.challengerScore}
-          theirName={ctx.challengerName ?? t('guestName')}
-        />
-      ) : null}
-      {ctx.rankingEntries ? <ChallengeLeaderboard heading windowed={Boolean(ctx.viewerId)} rows={rankingToRows(ctx.rankingEntries, ctx.viewerId)} testId="challenge-ranking" /> : null}
-    </div>
+    <DuelResult
+      mine={ctx.guestScore}
+      theirs={ctx.challengerScore}
+      theirName={ctx.challengerName ?? t('guestName')}
+    />
   )
 }
 
-/** The claim CTA: "continue with Google" to save the result and join the ranking. */
+/** The per-exercise ranking. */
+export function ChallengeRankingSlot({ ctx }: { ctx: ChallengeResultContext }) {
+  if (!ctx.rankingEntries) return null
+  return <ChallengeLeaderboard heading windowed={Boolean(ctx.viewerId)} rows={rankingToRows(ctx.rankingEntries, ctx.viewerId)} testId="challenge-ranking" />
+}
+
+/** The course the exercise belongs to, as an upsell. Always last. */
+export function ChallengeUpsellSlot({ ctx }: { ctx: ChallengeResultContext }) {
+  return ctx.course ? <ChallengeCourseCard course={ctx.course} variant="upsell" /> : null
+}
+
+/**
+ * Conversion action: a guest or non-member saves the score (Google or email);
+ * an active member challenges friends instead (it would sign them out otherwise).
+ */
 export function ChallengeClaimSlot({ ctx }: { ctx: ChallengeResultContext }) {
-  return (
-    <div className="space-y-5">
-      {ctx.course ? <ChallengeCourseCard course={ctx.course} variant="upsell" /> : null}
-      {ctx.viewerIsMember ? <ChallengeFriendsShare exerciseId={ctx.exerciseId} title={ctx.title ?? ''} /> : <ClaimCta token={ctx.token} />}
-    </div>
-  )
+  return ctx.viewerIsMember ? <ChallengeFriendsShare exerciseId={ctx.exerciseId} title={ctx.title ?? ''} /> : <ClaimCta token={ctx.token} schoolName={ctx.schoolName} />
 }

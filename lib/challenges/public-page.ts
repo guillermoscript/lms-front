@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isChallengesEnabled } from '@/lib/challenges/settings'
+import { formatDisplayName } from '@/lib/challenges/ranking'
 
 export const CHALLENGES_ENABLED_KEY = 'challenges_enabled'
 
@@ -31,12 +32,8 @@ export interface ChallengePageData {
  * caller renders the localized "Invitado".
  */
 export function displayName(fullName: string | null | undefined): string | null {
-  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return null
-  const first = parts[0]
-  if (parts.length === 1) return first
-  const initial = Array.from(parts[parts.length - 1])[0]?.toUpperCase()
-  return initial ? `${first} ${initial}.` : first
+  // One rule for every surface (page, OG card, ranking): see formatDisplayName.
+  return formatDisplayName(fullName) || null
 }
 
 /**
