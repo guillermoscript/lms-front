@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { loadChallengePage } from '@/lib/challenges/public-page'
@@ -12,6 +13,8 @@ import { trimLeaderboard } from '@/lib/challenges/leaderboard'
 import { hasPuckPage } from '@/lib/public/has-puck-page'
 import { Navbar } from '@/components/public/navbar'
 import { Footer } from '@/components/public/footer'
+import { loadViewerAttempt } from '@/lib/challenges/viewer-attempt'
+import { GUEST_COOKIE, hashWithSecret, isChallengeSecretConfigured, verifyGuestToken } from '@/lib/challenges/identity'
 import { ChallengePageClient } from '@/components/challenges/challenge-page-client'
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +62,17 @@ export default async function ChallengePage({ params }: Props) {
     // Schools with a published Puck landing skip the (public) shell, so the page brings its own.
     hasPuckPage(),
   ])
+  // Same identity rule as the attempt route: an ACTIVE member plays as themself, anyone else by guest cookie.
+  let guestTokenHash: string | null = null
+  if (!viewerIsMember && isChallengeSecretConfigured()) {
+    const presented = (await cookies()).get(GUEST_COOKIE)?.value
+    if (verifyGuestToken(presented)) guestTokenHash = hashWithSecret('guest', presented)
+  }
+  const played = await loadViewerAttempt(createAdminClient(), tenantId, data.exercise.id, {
+    userId: viewerIsMember ? userId : null,
+    guestTokenHash,
+  }).catch(() => null)
+  const rank = played && viewerIsMember ? (rankingAll?.find((e) => e.userId === userId)?.rank ?? null) : null
   const rankingEntries = rankingAll ? trimLeaderboard(rankingAll, userId) : undefined
 
   const page = (
@@ -74,7 +88,8 @@ export default async function ChallengePage({ params }: Props) {
       viewerIsMember={viewerIsMember}
       rankingEntries={rankingEntries}
       course={course}
-      viewerId={userId}
+      viewerId={viewerIsMember ? userId : null}
+      played={played ? { score: played.score, passed: played.passed, answer: played.answer, feedback: played.feedback, rank } : null}
     />
   )
   if (!ownShell) return page

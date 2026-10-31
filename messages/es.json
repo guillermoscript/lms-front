@@ -10978,7 +10978,11 @@
       "strengths": "Fortalezas",
       "improvements": "Por mejorar",
       "openLine": "{name} te reta en {exercise}. ¿Cuánto sacas?",
-      "openLineAnon": "Te retan en {exercise}. ¿Cuánto sacas?"
+      "openLineAnon": "Te retan en {exercise}. ¿Cuánto sacas?",
+      "alreadyPlayedTitle": "Ya jugaste este reto",
+      "alreadyPlayedBody": "Este es tu intento calificado. Tienes uno por reto.",
+      "alreadyPlayedRank": "Este es tu intento calificado. Vas en el puesto #{rank} del ranking.",
+      "yourAnswerPlayed": "Tu respuesta"
     },
     "share": {
       "copyLink": "Copiar link de reto",
