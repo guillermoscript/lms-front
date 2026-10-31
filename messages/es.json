@@ -8111,6 +8111,16 @@
       "faq": "Preguntas frecuentes",
       "terms": "Términos",
       "events": "Eventos"
+    },
+    "siteParts": {
+      "title": "Header y footer del sitio",
+      "description": "Un solo header y footer compartido por todas las páginas públicas de tu escuela: landings, cursos y checkout. Cada página puede usar los suyos en sus ajustes.",
+      "header": "Header",
+      "footer": "Footer",
+      "notCreated": "Sin configurar",
+      "edit": "Editar",
+      "create": "Configurar",
+      "failed": "No se pudo abrir. Inténtalo de nuevo."
     }
   },
   "exercises": {
@@ -8756,7 +8766,10 @@
       "Minimum Rating": "Valoración mínima",
       "Max Reviews": "Máximo de reseñas",
       "Pinned Plans": "Planes fijados",
-      "Only the picked courses": "Solo los cursos elegidos"
+      "Only the picked courses": "Solo los cursos elegidos",
+      "Site header and footer": "Header y footer del sitio",
+      "Use the site header and footer": "Usar el header y footer del sitio",
+      "Use this page own header and footer": "Usar el header y footer propios de esta página"
     },
     "render": {
       "logIn": "Iniciar sesión",

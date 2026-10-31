@@ -16,6 +16,8 @@ export type RootMetaProps = {
   metaDescription: string
   /** og:image URL (https or a site path). Empty → the generated OG card. */
   ogImage: string
+  /** 'hide' keeps this page's own Header/Footer blocks instead of the school-wide ones. */
+  globalParts: 'show' | 'hide'
 }
 
 export const ROOT_META_LIMITS = { metaTitle: 70, metaDescription: 160 } as const
@@ -24,12 +26,21 @@ export const rootMetaFields: Fields<RootMetaProps> = {
   metaTitle: { type: 'text', label: 'SEO Title' },
   metaDescription: { type: 'textarea', label: 'SEO Description' },
   ogImage: { type: 'text', label: 'Share Image URL' },
+  globalParts: {
+    type: 'radio',
+    label: 'Site header and footer',
+    options: [
+      { label: 'Use the site header and footer', value: 'show' },
+      { label: 'Use this page own header and footer', value: 'hide' },
+    ],
+  },
 }
 
 export const rootMetaDefaults: RootMetaProps = {
   metaTitle: '',
   metaDescription: '',
   ogImage: '',
+  globalParts: 'show',
 }
 
 function text(value: unknown, max: number): string | undefined {
