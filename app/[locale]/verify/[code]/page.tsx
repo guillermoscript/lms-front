@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations, getLocale } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
@@ -303,7 +304,7 @@ export default async function VerificationPage({ params }: PageProps) {
                     </a>
                     {courseStillExists && (
                         <Link
-                            href={`/dashboard/student/courses/${certificate.courses!.course_id}`}
+                            href={`/dashboard/student/courses/${withSlug(certificate.courses!.course_id, certificate.courses!.title)}`}
                             className="flex-1"
                         >
                             <Button variant="outline" className="w-full h-11 font-medium gap-2">

@@ -1,5 +1,6 @@
 'use client'
 
+import { withSlug } from '@/lib/slug'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +26,7 @@ export function CourseCard({ course, progress }: CourseCardProps) {
       : 0
 
   return (
-    <Link href={`/dashboard/student/courses/${course.course_id}`}>
+    <Link href={`/dashboard/student/courses/${withSlug(course.course_id, course.title)}`}>
       <Card className="h-full overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 group">
         {/* Thumbnail */}
         <div className="aspect-video w-full overflow-hidden bg-muted">

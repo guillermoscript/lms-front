@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
@@ -94,7 +95,7 @@ export default async function CheckoutSuccessPage({ searchParams }: CheckoutSucc
   const primaryHref = isPlan
     ? '/dashboard/student/browse?checkout=success'
     : courses.length === 1
-      ? `/dashboard/student/courses/${courses[0].courseId}`
+      ? `/dashboard/student/courses/${withSlug(courses[0].courseId, courses[0].title)}`
       : '/dashboard/student/courses'
   const currentLocale = await getLocale()
   const paymentProvider = (transaction.payment_provider ?? transaction.payment_method ?? '').toLowerCase()
@@ -143,7 +144,7 @@ export default async function CheckoutSuccessPage({ searchParams }: CheckoutSucc
               <div className="flex w-full flex-col gap-2 pt-1">
                 <p className="text-sm text-muted-foreground">{t('multipleCourses')}</p>
                 {courses.map((course) => (
-                  <Link key={course.courseId} href={`/dashboard/student/courses/${course.courseId}`}>
+                  <Link key={course.courseId} href={`/dashboard/student/courses/${withSlug(course.courseId, course.title)}`}>
                     <Button variant="outline" className="w-full">{course.title ?? t('courseFallback')}</Button>
                   </Link>
                 ))}

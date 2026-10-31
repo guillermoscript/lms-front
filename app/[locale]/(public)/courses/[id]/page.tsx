@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
+import { parseSlugId, withSlug } from '@/lib/slug';
 import {
     PlayCircle,
     BookOpen,
@@ -45,8 +46,8 @@ export async function generateMetadata(props: { params: Promise<{ id: string; lo
     const [supabase, tenantId] = await Promise.all([createClient(), getCurrentTenantId()]);
     const { data: course } = await supabase
         .from("courses")
-        .select("title, description")
-        .eq("course_id", parseInt(id))
+        .select("course_id, title, description")
+        .eq("course_id", parseSlugId(id) ?? -1)
         .eq("tenant_id", tenantId)
         .eq("status", "published")
         .single();
@@ -63,9 +64,9 @@ export async function generateMetadata(props: { params: Promise<{ id: string; lo
     return buildPageMetadata({
         title: course.title,
         description,
-        path: `/courses/${id}`,
+        path: `/courses/${withSlug(course.course_id, course.title)}`,
         locale,
-        ogParams: { type: 'course', courseId: id },
+        ogParams: { type: 'course', courseId: course.course_id },
         ogBadge: t('courses.badge'),
     });
 }
@@ -105,7 +106,8 @@ export default async function CourseDetailsPage(props: {
         getCurrentUserId(),
         getCurrentTenantId(),
     ]);
-    const courseId = Number(params.id);
+    const courseId = parseSlugId(params.id);
+    if (courseId === null) notFound();
     // Fetch course with lessons and category
     const { data: course, error } = await supabase
         .from("courses")
@@ -123,6 +125,13 @@ export default async function CourseDetailsPage(props: {
 
     if (error || !course) {
         notFound();
+    }
+
+    // One canonical URL per course: `/courses/8` and a stale slug (the course
+    // was renamed) both land on `/courses/8-current-title`.
+    const courseSlug = withSlug(course.course_id, course.title);
+    if (params.id !== courseSlug) {
+        permanentRedirect(`/courses/${courseSlug}${searchParams.enroll === '1' ? '?enroll=1' : ''}`);
     }
 
     // Curriculum via admin client: the anon role can only read preview lessons
@@ -267,7 +276,7 @@ export default async function CourseDetailsPage(props: {
     // with `enroll=1` so `AutoFreeEnrollButton` finishes the job, the paid one
     // goes straight to checkout.
     const anonymousNext = isFree
-        ? `/courses/${params.id}?enroll=1`
+        ? `/courses/${courseSlug}?enroll=1`
         : `/checkout?courseId=${course.course_id}`;
 
     // Real data only (#730): an author without a full name falls back to the
@@ -291,7 +300,7 @@ export default async function CourseDetailsPage(props: {
 
     // schema.org Course rich-result markup. Offer mirrors the deterministic
     // product pick above so the structured price always matches the page.
-    const courseUrl = `${seo.baseUrl}/${params.locale}/courses/${course.course_id}`;
+    const courseUrl = `${seo.baseUrl}/${params.locale}/courses/${courseSlug}`;
     const structuredData = courseJsonLd({
         name: course.title,
         description: course.description,
@@ -451,7 +460,7 @@ export default async function CourseDetailsPage(props: {
                                             />
                                         </div>
                                     ) : hasAccess ? (
-                                        <Link href={`/dashboard/student/courses/${course.course_id}`}>
+                                        <Link href={`/dashboard/student/courses/${courseSlug}`}>
                                             <Button data-testid="course-go-to-course" className="w-full h-11 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm">
                                                 {t('pricing.goToCourse')}
                                             </Button>
@@ -642,7 +651,7 @@ export default async function CourseDetailsPage(props: {
                                         <li key={lesson.id}>
                                             {isPreview ? (
                                                 <Link
-                                                    href={`/courses/${params.id}/lessons/${lesson.id}`}
+                                                    href={`/courses/${courseSlug}/lessons/${withSlug(lesson.id, lesson.title)}`}
                                                     className="group flex items-start gap-4 px-4 py-3.5 hover:bg-muted/50 transition-colors duration-150"
                                                 >
                                                     {row}

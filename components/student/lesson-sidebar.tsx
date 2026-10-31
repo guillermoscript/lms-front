@@ -1,5 +1,6 @@
 'use client'
 
+import { withSlug } from '@/lib/slug'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { IconCheck, IconPlayerPlay, IconArrowLeft, IconLock, IconMessages } from '@tabler/icons-react'
@@ -133,7 +134,7 @@ export function LessonSidebar({
                   </div>
                 ) : (
                   <Link
-                    href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
+                    href={`/dashboard/student/courses/${courseId}/lessons/${withSlug(lesson.id, lesson.title)}`}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
                       'flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition-all group',

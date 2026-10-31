@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -216,7 +217,7 @@ function PurchasedCourseCard({ course: ec, labels }: { course: EnrolledCourse; l
 
     return (
         <Link
-            href={`/dashboard/student/courses/${ec.course.course_id}`}
+            href={`/dashboard/student/courses/${withSlug(ec.course.course_id, ec.course.title)}`}
             className="group block"
         >
             <div className="flex gap-4 p-4 rounded-xl border border-border bg-card hover:bg-muted/40 hover:border-primary/30 transition-all duration-200">

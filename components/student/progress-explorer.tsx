@@ -1,5 +1,6 @@
 'use client'
 
+import { withSlug } from '@/lib/slug'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
@@ -150,7 +151,7 @@ export function ProgressExplorer({ courses }: { courses: ProgressCourse[] }) {
                         ? t('inProgress')
                         : t('notStarted')}
                   </Badge>
-                  <Link href={`/dashboard/student/courses/${course.courseId}`}>
+                  <Link href={`/dashboard/student/courses/${withSlug(course.courseId, course.courseTitle)}`}>
                     <Button variant="ghost" size="sm">
                       {t('viewCourse')}
                     </Button>

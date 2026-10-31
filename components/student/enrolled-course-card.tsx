@@ -1,5 +1,6 @@
 'use client'
 
+import { withSlug } from '@/lib/slug'
 import { useTranslations, useLocale } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -90,7 +91,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
 
   return (
     <Link
-      href={`/dashboard/student/courses/${course.course_id}`}
+      href={`/dashboard/student/courses/${withSlug(course.course_id, course.title)}`}
       className="block group"
       data-testid={`course-link-${course.course_id}`}
     >

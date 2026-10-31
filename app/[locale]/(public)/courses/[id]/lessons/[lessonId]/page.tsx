@@ -3,7 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isFreePreviewEnabled } from '@/lib/settings/free-preview'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
+import { parseSlugId, withSlug } from '@/lib/slug'
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -86,7 +87,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     const { id, lessonId, locale } = await props.params
     const tenantId = await getCurrentTenantId()
     const [data, t] = await Promise.all([
-        getPreviewLesson(Number(id), Number(lessonId), tenantId),
+        getPreviewLesson(parseSlugId(id) ?? NaN, parseSlugId(lessonId) ?? NaN, tenantId),
         getTranslations('coursePublicDetails'),
     ])
     if (!data) notFound()
@@ -97,9 +98,9 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     return buildPageMetadata({
         title: `${data.lesson.title} — ${data.course.title}`,
         description: data.lesson.description?.replace(/\s+/g, ' ').trim().slice(0, 160) || data.course.title,
-        path: `/courses/${id}/lessons/${lessonId}`,
+        path: `/courses/${withSlug(data.course.course_id, data.course.title)}/lessons/${withSlug(data.lesson.id, data.lesson.title)}`,
         locale,
-        ogParams: { type: 'course', courseId: id },
+        ogParams: { type: 'course', courseId: data.course.course_id },
         ogBadge: t('preview.badge'),
     })
 }
@@ -112,16 +113,22 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
         getCurrentUserId(),
     ])
 
-    const data = await getPreviewLesson(Number(id), Number(lessonId), tenantId)
+    const data = await getPreviewLesson(parseSlugId(id) ?? NaN, parseSlugId(lessonId) ?? NaN, tenantId)
     if (!data) notFound()
     const { course, lesson, nextPreview, isFree } = data
+
+    const courseSlug = withSlug(course.course_id, course.title)
+    const lessonSlug = withSlug(lesson.id, lesson.title)
+    if (id !== courseSlug || lessonId !== lessonSlug) {
+        permanentRedirect(`/courses/${courseSlug}/lessons/${lessonSlug}`)
+    }
 
     // Where the CTA sends someone who just finished reading. A visitor with no
     // account goes to sign-up carrying the course as `next` — and `enroll=1`
     // when the course is free, which is the hop that turns signing up into
     // being enrolled without a second decision (#684). Someone already logged
     // in has no sign-up step to take, so they go to the course page itself.
-    const courseNext = isFree ? `/courses/${id}?enroll=1` : `/courses/${id}`
+    const courseNext = isFree ? `/courses/${courseSlug}?enroll=1` : `/courses/${courseSlug}`
     const ctaHref = userId ? courseNext : `/auth/sign-up?next=${encodeURIComponent(courseNext)}`
 
     return (
@@ -135,7 +142,7 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
                         <span className="font-semibold text-primary flex-shrink-0">{t('preview.badge')}</span>
                         <span className="text-muted-foreground truncate">{t('preview.notice')}</span>
                     </div>
-                    <Link href={`/courses/${id}`} className="flex-shrink-0">
+                    <Link href={`/courses/${courseSlug}`} className="flex-shrink-0">
                         <Button variant="outline" size="sm" className="gap-1.5">
                             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                             {t('preview.backToCourse')}
@@ -175,7 +182,7 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
                     cheapest next step there is (#791). */}
                 {nextPreview && (
                     <Link
-                        href={`/courses/${id}/lessons/${nextPreview.id}`}
+                        href={`/courses/${courseSlug}/lessons/${withSlug(nextPreview.id, nextPreview.title)}`}
                         className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/40"
                     >
                         <div className="min-w-0">

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSlug } from '@/lib/slug'
 import Link from "next/link"
 import { IconBook } from "@tabler/icons-react"
 import { useTranslations } from "next-intl"
@@ -20,7 +21,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
   const t = useTranslations('components.courseProgress')
 
   return (
-    <Link href={`/dashboard/student/courses/${course.course_id}`}>
+    <Link href={`/dashboard/student/courses/${withSlug(course.course_id, course.title)}`}>
       <div className="group bg-card border border-border hover:border-primary/30 active:border-primary/30 rounded-2xl overflow-hidden transition-all hover:shadow-lg active:shadow-lg">
         <div className="flex flex-col sm:flex-row">
           {/* Thumbnail */}

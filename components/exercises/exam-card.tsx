@@ -1,5 +1,6 @@
 "use client";
 
+import { withSlug } from '@/lib/slug'
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,8 +36,8 @@ export default function ExamCard({ exam, courseId }: ExamCardProps) {
             : "bg-brand-tint text-brand-text group-hover:bg-primary group-hover:text-primary-foreground";
 
     const linkHref = (isCompleted || isSubmitted)
-        ? `/dashboard/student/courses/${courseId}/exams/${exam.exam_id}/result`
-        : `/dashboard/student/courses/${courseId}/exams/${exam.exam_id}`;
+        ? `/dashboard/student/courses/${courseId}/exams/${withSlug(exam.exam_id, exam.title)}/result`
+        : `/dashboard/student/courses/${courseId}/exams/${withSlug(exam.exam_id, exam.title)}`;
 
     return (
         <Card className="hover:shadow-md transition-all duration-300 border-muted-foreground/10 group overflow-hidden">

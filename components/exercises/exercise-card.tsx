@@ -1,5 +1,6 @@
 "use client";
 
+import { withSlug } from '@/lib/slug'
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +40,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
     }[exercise.difficulty_level as string] || "bg-muted text-muted-foreground border-border";
 
     return (
-        <Link href={`/dashboard/student/courses/${courseId}/exercises/${exercise.id}`} className="block group">
+        <Link href={`/dashboard/student/courses/${courseId}/exercises/${withSlug(exercise.id, exercise.title)}`} className="block group">
             <Card className="h-full hover:shadow-lg hover:border-primary/20 active:scale-[0.98] transition-all duration-200 overflow-hidden">
                 <CardContent className="p-4 sm:p-5">
                     {/* The kind of exercise reads before the title: a student

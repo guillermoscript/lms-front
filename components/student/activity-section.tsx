@@ -1,5 +1,6 @@
 "use client";
 
+import { withSlug } from '@/lib/slug'
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconClock, IconPlayerPlay, IconChevronRight } from "@tabler/icons-react";
@@ -31,7 +32,7 @@ export function ActivitySection({ lessons }: ActivitySectionProps) {
                 {lessons.map((lesson) => (
                     <Link
                         key={lesson.view_id}
-                        href={`/dashboard/student/courses/${lesson.lesson_course_id}/lessons/${lesson.lesson_id}`}
+                        href={`/dashboard/student/courses/${lesson.lesson_course_id}/lessons/${withSlug(lesson.lesson_id, lesson.lesson_title)}`}
                         className="group"
                     >
                         <Card className="border-none shadow-soft hover:shadow-xl transition-all duration-300 overflow-hidden bg-card">

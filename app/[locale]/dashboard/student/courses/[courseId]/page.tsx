@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -58,6 +59,10 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
   // Verify access (entitlements model) before reading anything else about the course
   await requireCourseAccess(supabase, userId, numericCourseId)
+
+  // One canonical URL per course: a bare id or a stale slug lands on the current one.
+  const courseSlug = withSlug(course.course_id, course.title)
+  if (courseId !== courseSlug) redirect(`/dashboard/student/courses/${courseSlug}`)
 
   // Fetch all remaining data in parallel
   const [

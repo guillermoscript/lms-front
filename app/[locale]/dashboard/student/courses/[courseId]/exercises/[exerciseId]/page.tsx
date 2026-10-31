@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { signStoredAttachments } from '@/lib/ai/attachments'
 import { notFound, redirect } from 'next/navigation'
@@ -99,6 +100,13 @@ export default async function ExercisePage({ params }: PageProps) {
     // The exercise is looked up by id alone, so the gate above is only as good
     // as the URL's courseId actually owning it (#509).
     requireRowInCourse(exercise.course_id, numericCourseId)
+
+    const exerciseCourse = exercise.courses as unknown as { title: string } | null
+    const courseSlug = withSlug(numericCourseId, exerciseCourse?.title)
+    const exerciseSlug = withSlug(exercise.id, exercise.title)
+    if (courseId !== courseSlug || exerciseId !== exerciseSlug) {
+        redirect(`/dashboard/student/courses/${courseSlug}/exercises/${exerciseSlug}`)
+    }
 
     // Non-external checkpoint exercises are answered inside the lesson flow —
     // block direct access and send the student to the lesson instead. External

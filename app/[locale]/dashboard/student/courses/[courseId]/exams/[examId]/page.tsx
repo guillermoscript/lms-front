@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { ExamTaker } from './exam-taker'
@@ -73,6 +74,13 @@ export default async function TakeExamPage({ params }: PageProps) {
   }
   if (examError || !exam) {
     notFound()
+  }
+
+  const examCourse = exam.courses as unknown as { title: string } | null
+  const courseSlug = withSlug(parseInt(courseId), examCourse?.title)
+  const examSlug = withSlug(exam.exam_id, exam.title)
+  if (courseId !== courseSlug || examId !== examSlug) {
+    redirect(`/dashboard/student/courses/${courseSlug}/exams/${examSlug}`)
   }
 
   // Format questions for the client component

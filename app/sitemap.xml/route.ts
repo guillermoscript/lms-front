@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isFreePreviewEnabled } from '@/lib/settings/free-preview'
+import { withSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient()
   const { data: courses } = await admin
     .from('courses')
-    .select('course_id')
+    .select('course_id, title')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .limit(5000)
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     for (let from = 0; ; from += PREVIEW_LESSON_PAGE_SIZE) {
       const { data: page } = await admin
         .from('lessons')
-        .select('id, course_id, courses!inner(status)')
+        .select('id, title, course_id, courses!inner(status, title)')
         .eq('tenant_id', tenantId)
         .eq('status', 'published')
         .eq('is_preview', true)
@@ -69,14 +70,17 @@ export async function GET(request: NextRequest) {
         .order('id', { ascending: true })
         .range(from, from + PREVIEW_LESSON_PAGE_SIZE - 1)
       if (!page || page.length === 0) break
-      previewLessonPaths.push(...page.map((l) => `/courses/${l.course_id}/lessons/${l.id}`))
+      previewLessonPaths.push(...page.map((l) => {
+        const joined = l.courses as unknown as { title: string } | null
+        return `/courses/${withSlug(l.course_id, joined?.title)}/lessons/${withSlug(l.id, l.title)}`
+      }))
       if (page.length < PREVIEW_LESSON_PAGE_SIZE) break
     }
   }
 
   const paths = [
     ...STATIC_PATHS,
-    ...(courses ?? []).map((c) => `/courses/${c.course_id}`),
+    ...(courses ?? []).map((c) => `/courses/${withSlug(c.course_id, c.title)}`),
     ...previewLessonPaths,
   ]
 

@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { signStoredAttachments } from '@/lib/ai/attachments'
 import { redirect, notFound } from 'next/navigation'
@@ -118,6 +119,13 @@ export default async function LessonPage({ params }: PageProps) {
 
   const lesson = lessonData;
   const course = lessonData.courses as unknown as { title: string; require_sequential_completion: boolean | null };
+
+  // Canonical slug URL for the course and the lesson (bare ids and renamed titles redirect).
+  const courseSlug = withSlug(numericCourseId, course.title)
+  const lessonSlug = withSlug(lesson.id, lesson.title)
+  if (courseId !== courseSlug || lessonId !== lessonSlug) {
+    redirect(`/dashboard/student/courses/${courseSlug}/lessons/${lessonSlug}`)
+  }
   const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
     ? lessonData.lessons_ai_tasks?.[0]
     : lessonData.lessons_ai_tasks;
@@ -412,7 +420,7 @@ export default async function LessonPage({ params }: PageProps) {
               mdx={lessonMdx}
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
-              lessonId={Number(lessonId)}
+              lessonId={parseInt(lessonId)}
               courseId={numericCourseId}
             />
 

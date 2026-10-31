@@ -1,5 +1,6 @@
 'use client'
 
+import { withSlug } from '@/lib/slug'
 import { useId, useState } from 'react'
 import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
@@ -159,7 +160,7 @@ export function LessonExplorer({
           {visible.map((lesson) => (
             <li key={lesson.id}>
               <Link
-                href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
+                href={`/dashboard/student/courses/${courseId}/lessons/${withSlug(lesson.id, lesson.title)}`}
                 className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:p-4"
               >
                 <span

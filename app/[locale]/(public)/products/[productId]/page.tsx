@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { permanentRedirect, redirect } from 'next/navigation'
+import { parseSlugId, withSlug } from '@/lib/slug'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ManualPaymentButton } from '@/components/student/manual-payment-button'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -21,8 +22,8 @@ export async function generateMetadata({
   const supabase = await createClient()
   const { data: product } = await supabase
     .from('products')
-    .select('name, description')
-    .eq('product_id', parseInt(productId))
+    .select('product_id, name, description')
+    .eq('product_id', parseSlugId(productId) ?? -1)
     .eq('tenant_id', await getCurrentTenantId())
     .eq('status', 'active')
     .single()
@@ -35,7 +36,7 @@ export async function generateMetadata({
   return buildPageMetadata({
     title: product.name,
     description: product.description?.replace(/\s+/g, ' ').trim().slice(0, 160) || undefined,
-    path: `/products/${productId}`,
+    path: `/products/${withSlug(product.product_id, product.name)}`,
     locale,
     ogBadge: t('products.badge'),
   })
@@ -51,7 +52,7 @@ export default async function ProductDetailPage({
   const locale = await getLocale()
   const tenantId = await getCurrentTenantId()
   const { productId: productIdStr } = await params
-  const productId = parseInt(productIdStr)
+  const productId = parseSlugId(productIdStr) ?? -1
 
   // Get product details. Scoped to this school: RLS on `products` is permissive
   // for `anon`, and the page is now served to anonymous visitors (#719), so the
@@ -69,11 +70,16 @@ export default async function ProductDetailPage({
     redirect('/products')
   }
 
+  const productSlug = withSlug(product.product_id, product.name)
+  if (productIdStr !== productSlug) {
+    permanentRedirect(`/products/${productSlug}`)
+  }
+
   // Check if user is authenticated
   const userId = await getCurrentUserId()
   // Where an anonymous visitor lands once they have an account: back here, so
   // the payment request they came for is one click away.
-  const anonymousNext = `/products/${product.product_id}`
+  const anonymousNext = `/products/${productSlug}`
 
   // Price 0 is the free sentinel. The wizard's free mode still stores provider
   // `manual` (the column is NOT NULL), so the provider must not decide what a

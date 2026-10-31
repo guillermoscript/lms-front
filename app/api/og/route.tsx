@@ -8,6 +8,7 @@ import { getTranslations } from 'next-intl/server'
 import { loadPublicChallenge } from '@/lib/challenges/public-page'
 import { challengeHeadline } from '@/lib/challenges/headline'
 import { fetchImageAsDataUrl } from '@/lib/og/fetch-image'
+import { fitTitle } from '@/lib/og/fit-title'
 import { ogCardPalette, type OgCardPalette } from '@/lib/og/palette'
 import type { KitHeadingFont } from '@/lib/themes/brand-outputs'
 
@@ -112,6 +113,9 @@ function renderGenericCard({
   palette: OgCardPalette
   headingFontFamily?: string
 }) {
+  // 1056px of text width (1200 − 2×72 padding); the badge and subtitle take
+  // their share of the height before the title gets what is left.
+  const fitted = fitTitle(title, { width: 1056, height: subtitle ? 200 : 290, maxFont: 76, minFont: 38, lineHeight: 1.08 })
   return (
     <div
       style={{
@@ -149,7 +153,8 @@ function renderGenericCard({
         <div
           style={{
             display: 'flex',
-            fontSize: title.length > 60 ? 56 : 72,
+            fontSize: fitted.fontSize,
+            lineClamp: fitted.maxLines,
             fontWeight: 700,
             lineHeight: 1.08,
             color: palette.primaryText,
@@ -159,7 +164,7 @@ function renderGenericCard({
           {title}
         </div>
         {subtitle ? (
-          <div style={{ display: 'flex', fontSize: 32, color: palette.secondaryText, lineHeight: 1.35 }}>
+          <div style={{ display: 'flex', fontSize: 32, lineClamp: 2, color: palette.secondaryText, lineHeight: 1.35 }}>
             {subtitle}
           </div>
         ) : null}
@@ -189,6 +194,8 @@ function renderCertificateCard({
   palette: OgCardPalette
   headingFontFamily?: string
 }) {
+  const studentFit = fitTitle(student, { width: 1056, height: 170, maxFont: 76, minFont: 44, lineHeight: 1.05 })
+  const courseFit = fitTitle(course, { width: 1056, height: 100, maxFont: 36, minFont: 26, lineHeight: 1.3 })
   return (
     <div
       style={{
@@ -224,7 +231,8 @@ function renderCertificateCard({
         <div
           style={{
             display: 'flex',
-            fontSize: 76,
+            fontSize: studentFit.fontSize,
+            lineClamp: studentFit.maxLines,
             fontWeight: 700,
             lineHeight: 1.05,
             color: palette.primaryText,
@@ -233,7 +241,7 @@ function renderCertificateCard({
         >
           {student}
         </div>
-        <div style={{ display: 'flex', fontSize: 36, color: palette.secondaryText, lineHeight: 1.3 }}>
+        <div style={{ display: 'flex', fontSize: courseFit.fontSize, lineClamp: courseFit.maxLines, color: palette.secondaryText, lineHeight: 1.3 }}>
           {course}
         </div>
       </div>
@@ -382,8 +390,12 @@ function renderCourseCard({
   // The thumbnail sits uncropped-ish in a roomy 10:7 frame (it usually carries its
   // own lettering, which a half-width cover crop used to cut off) beside the
   // brand column, instead of splitting the card into two cramped halves.
-  const IMG_W = 600
-  const IMG_H = 420
+  const IMG_W = 520
+  const IMG_H = 364
+  // Text column = 1200 − 2×64 padding − IMG_W − 48 gap. A long word wider than
+  // this used to be clipped ("Hispanohablantes"), so the size is fitted to it.
+  const TEXT_W = 1200 - 128 - IMG_W - 48
+  const fitted = fitTitle(title, { width: TEXT_W, height: badge ? 240 : 290, maxFont: 60, minFont: 30, lineHeight: 1.1 })
   return (
     <div
       style={{
@@ -405,6 +417,7 @@ function renderCourseCard({
           flexDirection: 'column',
           justifyContent: 'space-between',
           flex: 1,
+          minWidth: 0,
           height: 500,
         }}
       >
@@ -430,7 +443,8 @@ function renderCourseCard({
           <div
             style={{
               display: 'flex',
-              fontSize: title.length > 60 ? 42 : title.length > 36 ? 50 : 60,
+              fontSize: fitted.fontSize,
+              lineClamp: fitted.maxLines,
               fontWeight: 700,
               lineHeight: 1.1,
               color: palette.primaryText,

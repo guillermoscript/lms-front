@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { BookOpen, PlayCircle, User } from "lucide-react";
 import { useTranslations } from 'next-intl';
+import { withSlug } from '@/lib/slug';
 
 interface CourseCardProps {
     course: {
@@ -29,7 +30,7 @@ export function CourseCard({ course }: CourseCardProps) {
     const priceDisplay = isFree ? t('free') : `$${course.price}`;
 
     return (
-        <Link href={`/courses/${course.course_id}`} className="block group">
+        <Link href={`/courses/${withSlug(course.course_id, course.title)}`} className="block group">
             <Card className="flex flex-col overflow-hidden hover:ring-foreground/20 transition-all duration-200 shadow-lg hover:shadow-xl h-full">
                 {/* Image */}
                 <div className="relative aspect-video w-full overflow-hidden bg-muted">

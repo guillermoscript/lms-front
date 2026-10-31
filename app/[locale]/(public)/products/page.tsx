@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { withSlug } from '@/lib/slug'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -54,7 +55,7 @@ export default async function ProductsPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Link href={`/products/${product.product_id}`} className="w-full">
+              <Link href={`/products/${withSlug(product.product_id, product.name)}`} className="w-full">
                 <Button className="w-full">
                   {product.payment_provider === 'manual' ? t('requestPaymentInfo') : t('buyNow')}
                 </Button>

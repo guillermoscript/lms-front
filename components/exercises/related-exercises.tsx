@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { IconCheck, IconChevronRight } from '@tabler/icons-react'
@@ -64,7 +65,7 @@ export default async function RelatedExercises({
           return (
             <li key={ex.id}>
               <Link
-                href={`/dashboard/student/courses/${courseId}/exercises/${ex.id}`}
+                href={`/dashboard/student/courses/${courseId}/exercises/${withSlug(ex.id, ex.title)}`}
                 className="group -mx-2 flex min-h-11 items-center gap-3 rounded-md px-2 py-3 hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span className="min-w-0 flex-1">

@@ -9,6 +9,7 @@ import type { Metadata } from 'next';
 import { buildPageMetadata, getSeoContext } from '@/lib/seo';
 import { pickCourseProduct, type LinkedProduct } from '@/lib/course-pricing';
 import { JsonLd, itemListJsonLd } from '@/lib/structured-data';
+import { withSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic';
 
@@ -158,7 +159,7 @@ export default async function CoursesPage({
     const catalogStructuredData = !hasActiveFilters && enrichedCourses.length > 0
         ? itemListJsonLd(enrichedCourses.map((course) => ({
             name: course.title,
-            url: `${baseUrl}/${locale}/courses/${course.course_id}`,
+            url: `${baseUrl}/${locale}/courses/${withSlug(course.course_id, course.title)}`,
         })))
         : null;
 

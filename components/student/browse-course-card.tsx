@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { IconCheck, IconLock, IconTrophy } from '@tabler/icons-react'
 import { useEnrollment } from '@/lib/hooks/use-enrollment'
+import { withSlug } from '@/lib/slug'
 
 export type EnrollmentStatus =
   | { variant: 'enrolled' }
@@ -45,8 +46,8 @@ export function BrowseCourseCard({
     : []
 
   const courseLink = isEnrolled
-    ? `/dashboard/student/courses/${course.course_id}`
-    : `/courses/${course.course_id}`
+    ? `/dashboard/student/courses/${withSlug(course.course_id, course.title)}`
+    : `/courses/${withSlug(course.course_id, course.title)}`
 
   return (
     <Card className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">

@@ -1,5 +1,6 @@
 "use client"
 
+import { withSlug } from '@/lib/slug'
 import { Button } from "@/components/ui/button"
 import { IconArrowRight, IconPlayerPlay } from "@tabler/icons-react"
 import Link from "next/link"
@@ -36,7 +37,7 @@ export function WelcomeHero({ userName, coursesInProgress, lessonsCompleted, nex
 
       <div className="flex flex-wrap gap-2 shrink-0">
         {nextCourse ? (
-          <Link href={`/dashboard/student/courses/${nextCourse.course_id}`}>
+          <Link href={`/dashboard/student/courses/${withSlug(nextCourse.course_id, nextCourse.title)}`}>
             <Button className="gap-2 h-9 px-4 font-semibold">
               <IconPlayerPlay size={15} />
               {t('continueLearning')}

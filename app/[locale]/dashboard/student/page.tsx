@@ -1,3 +1,4 @@
+import { withSlug } from '@/lib/slug'
 import type { ComponentProps } from 'react'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -206,7 +207,7 @@ export default async function StudentDashboard() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {coursesCompleted.slice(0, 4).map((course) => (
-                    <Link key={course.course_id} href={`/dashboard/student/courses/${course.course_id}`}>
+                    <Link key={course.course_id} href={`/dashboard/student/courses/${withSlug(course.course_id, course.title)}`}>
                       <div className="bg-card border border-border rounded-xl p-3.5 sm:p-4 hover:border-success/30 active:border-success/30 transition-colors group">
                         <h3 className="text-sm font-bold truncate group-hover:text-brand-text transition-colors">{course.title}</h3>
                         <p className="text-xs text-success font-medium mt-1">
@@ -282,14 +283,14 @@ export default async function StudentDashboard() {
               id: 'complete-lesson',
               label: t('onboarding.completeLesson'),
               description: t('onboarding.completeLessonDesc'),
-              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              href: data.courses[0] ? `/dashboard/student/courses/${withSlug(data.courses[0].course_id, data.courses[0].title)}` : '/dashboard/student/browse',
               completed: totalLessonsCompleted > 0,
             },
             {
               id: 'finish-course',
               label: t('onboarding.finishCourse'),
               description: t('onboarding.finishCourseDesc'),
-              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              href: data.courses[0] ? `/dashboard/student/courses/${withSlug(data.courses[0].course_id, data.courses[0].title)}` : '/dashboard/student/browse',
               completed: coursesCompleted.length > 0,
             },
           ]}
