@@ -43,7 +43,8 @@ export async function fetchChallengeRanking(
   return (data ?? []).map((r) => ({
     rank: Number(r.rank),
     userId: r.user_id,
-    displayName: r.display_name,
+    // The RPC returns null when there is no name; the UI localizes the label.
+    displayName: r.display_name ?? '',
     score: r.score,
     passed: r.passed,
     createdAt: r.created_at,

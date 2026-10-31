@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Json } from '@/lib/database.types'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
-import { isChallengeableType, type ChallengeGrade, type ChallengeGradingExercise } from '@/lib/challenges/grade'
+import { isChallengeableType, resolveRubric, rubricVersion, type ChallengeGrade, type ChallengeGradingExercise } from '@/lib/challenges/grade'
 import { checkChallengeLimits } from '@/lib/challenges/limits'
 import { isChallengesEnabled } from '@/lib/challenges/settings'
 
@@ -48,6 +48,20 @@ export interface AttemptDeps {
   hasAiGrading: (tenantId: string) => Promise<boolean>
   /** Resolves the school's grader and grades. Called only when a fresh grade is needed. */
   grade: (exercise: ChallengeGradingExercise, answer: string) => Promise<ChallengeGrade>
+  /**
+   * Called for a MEMBER's official attempt (and a repeat of it) to mirror it into
+   * the normal exercise tables. Idempotent and best-effort: a failure here never
+   * fails the attempt. Guests are materialized later, at claim time.
+   */
+  materialize?: (input: { attemptId: string; tenantId: string; userId: string }) => Promise<unknown>
+}
+
+/** True when PostgREST/Postgres says `challenge_attempts.rubric_version` does not exist yet. */
+function isMissingRubricColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return (
+    (error.code === '42703' || error.code === 'PGRST204') && /rubric_version/.test(error.message ?? '')
+  )
 }
 
 interface StoredFeedback {
@@ -81,8 +95,10 @@ function fromRow(
 }
 
 /**
- * One challenge attempt: validate, grade once, persist. Never writes
- * `exercise_completions` / `exercise_evaluations`, never returns answer keys.
+ * One challenge attempt: validate, grade once, persist to `challenge_attempts`,
+ * never return answer keys. A MEMBER's first official attempt is additionally
+ * mirrored into `exercise_evaluations` / `exercise_completions` (XP once) via
+ * `deps.materialize`; guests are mirrored when they claim (see materialize.ts).
  */
 /**
  * In-flight submissions per identity+exercise. Per server instance only: it
@@ -171,7 +187,11 @@ async function runAttempt(
 
   // Same answer again: the stored grade, no AI call, no new row. Never regraded.
   const repeat = (attempts ?? []).find((a) => (a.answer as { text?: string } | null)?.text === input.answer)
-  if (repeat) return { ok: true, result: fromRow(repeat, passingScoreOf(exercise), true, (attempts ?? []).some((a) => a.is_official)) }
+  if (repeat) {
+    // Retry a mirror that may have failed the first time (idempotent).
+    if (repeat.is_official && identity.userId) await safeMaterialize(deps, repeat.id as string, tenantId, identity.userId)
+    return { ok: true, result: fromRow(repeat, passingScoreOf(exercise), true, (attempts ?? []).some((a) => a.is_official)) }
+  }
 
   const limits = await checkChallengeLimits({
     tenantId,
@@ -206,23 +226,39 @@ async function runAttempt(
       criteria: graded.criteria,
     } as Json,
   }
+  const version = rubricVersion(resolveRubric(exercise.exercise_config))
+
+  // Tolerant of a database that has not applied the rubric_version migration yet.
+  const insert = async (official: boolean) => {
+    const cols = 'id, score, passed, feedback, is_official'
+    const res = await admin
+      .from('challenge_attempts')
+      .insert({ ...base, rubric_version: version, is_official: official })
+      .select(cols)
+      .single()
+    if (!isMissingRubricColumn(res.error)) return res
+    return admin.from('challenge_attempts').insert({ ...base, is_official: official }).select(cols).single()
+  }
 
   let isOfficial = !hasOfficial
-  let { data: row, error } = await admin
-    .from('challenge_attempts')
-    .insert({ ...base, is_official: isOfficial })
-    .select('id, score, passed, feedback, is_official')
-    .single()
+  let { data: row, error } = await insert(isOfficial)
   if (isOfficial && error?.code === '23505' && /challenge_attempts_official_/.test(`${error.message ?? ''} ${error.details ?? ''}`)) {
     // A concurrent request took the official slot first: this one is practice.
     isOfficial = false
-    ;({ data: row, error } = await admin
-      .from('challenge_attempts')
-      .insert({ ...base, is_official: false })
-      .select('id, score, passed, feedback, is_official')
-      .single())
+    ;({ data: row, error } = await insert(false))
   }
   if (error || !row) throw new Error('challenge_attempt_persist_failed')
 
+  if (isOfficial && identity.userId) await safeMaterialize(deps, row.id as string, tenantId, identity.userId)
+
   return { ok: true, result: fromRow(row, graded.passingScore, false, officialAlreadyTaken) }
+}
+
+async function safeMaterialize(deps: AttemptDeps, attemptId: string, tenantId: string, userId: string) {
+  if (!deps.materialize) return
+  try {
+    await deps.materialize({ attemptId, tenantId, userId })
+  } catch (err) {
+    console.error('challenge attempt materialization failed:', err instanceof Error ? err.message : err)
+  }
 }

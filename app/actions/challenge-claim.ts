@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { GUEST_COOKIE } from '@/lib/challenges/identity'
 import { BANNED_MESSAGE } from '@/lib/tenant/join-school'
+import { materializeChallengeAttempt } from '@/lib/challenges/materialize'
 import {
   claimChallengeAttempt,
   findNextExercise,
@@ -93,6 +94,16 @@ export async function claimChallenge(linkToken: string): Promise<ClaimChallengeO
     // Revoked access, fee gate, unpublished course...: no access, no leak.
     console.error('grant_free_entitlement failed for challenge claim:', error.message)
     return { ...base, accessGranted: false, nextExerciseId: null, requiresPurchase: false }
+  }
+
+  // Mirror the claimed official attempt into the normal exercise tables (XP once,
+  // idempotent). Needs the access granted just above; best-effort.
+  if (claim.attempt.isOfficial) {
+    try {
+      await materializeChallengeAttempt(admin, { attemptId: claim.attempt.id, tenantId, userId: user.id })
+    } catch (err) {
+      console.error('challenge claim materialization failed:', err instanceof Error ? err.message : err)
+    }
   }
 
   const nextExerciseId = await findNextExercise(admin, tenantId, claim.courseId, claim.exerciseId)
