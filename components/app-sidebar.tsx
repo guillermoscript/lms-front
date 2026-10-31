@@ -15,6 +15,7 @@ import {
     IconLayout,
     IconLogout,
     IconMessages,
+    IconTrophy,
     IconReceipt,
     IconSearch,
     IconSettings,
@@ -214,6 +215,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('myCourses'), href: "/dashboard/teacher/courses", tourId: 'sidebar-courses' },
                         { title: t('enrollments'), href: "/dashboard/admin/enrollments" },
                         { title: t('categories'), href: "/dashboard/admin/categories" },
+                        { title: t('challenges'), href: "/dashboard/teacher/challenges" },
                     ],
                 },
                 {
@@ -258,6 +260,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             teacher: [
                 { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
                 { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
+                { title: t('challenges'), href: "/dashboard/teacher/challenges", icon: IconTrophy },
                 { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages, badgeKey: 'community' },
                 { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
                 { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
@@ -280,6 +283,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     ],
                 },
                 { title: t('community'), href: "/dashboard/student/community", icon: IconMessages, badgeKey: 'community' },
+                { title: t('challenges'), href: "/dashboard/student/challenges", icon: IconTrophy },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
                 {
                     title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,
