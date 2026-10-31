@@ -5,6 +5,7 @@ import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
 import { aiFailureResponse } from '@/lib/exercises/ai-failure'
 import { hasPlanFeature } from '@/lib/plans/server'
 import { gradeChallengeAnswer } from '@/lib/challenges/grade'
+import { materializeChallengeAttempt } from '@/lib/challenges/materialize'
 import { MAX_ANSWER_CHARS, submitChallengeAttempt, type AttemptRefusal } from '@/lib/challenges/attempt'
 import {
   GUEST_COOKIE,
@@ -112,6 +113,7 @@ export async function POST(req: Request) {
         admin,
         hostTenantId,
         hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading'),
+        materialize: (input) => materializeChallengeAttempt(admin, input),
         grade: async (exercise, text) => {
           grader ??= await ai.getModelForFeature('exercise_grader')
           return gradeChallengeAnswer(exercise, text, grader.model)

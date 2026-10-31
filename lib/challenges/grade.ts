@@ -1,4 +1,5 @@
 import { generateText, Output, type LanguageModel } from 'ai'
+import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 
@@ -13,6 +14,15 @@ import { DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
  * change the score, and is filtered for leaked grading material.
  *
  * Rubric format: `docs/claude/exercise-ai-eval-standard.md`.
+ *
+ * Why this is NOT replaced by `lib/exercises/grade-written-submission.ts` (F1):
+ * the shared grader asks one holistic call for a 0-100 number, which drifts
+ * between runs. A ranking needs a reproducible score, so ranked attempts keep
+ * this per-criterion path. The rubric SOURCE is shared: `resolveRubric` reads
+ * the same `exercise_config` (`rubric` / `evaluation_criteria`) the normal
+ * grader uses, and the result is persisted through the normal exercise tables
+ * (`lib/challenges/materialize.ts`). `rubricVersion` pins which rubric a score
+ * was computed against.
  */
 
 export interface RubricCriterion {
@@ -87,6 +97,16 @@ export function resolveRubric(exerciseConfig: unknown): RubricCriterion[] {
     seen.add(id)
     return { id, description: item.description, weight: item.weight }
   })
+}
+
+/**
+ * Short stable fingerprint of a resolved rubric (ids, descriptions, weights),
+ * stored in `challenge_attempts.rubric_version` so scores graded against an
+ * older rubric stay explainable after the teacher edits it.
+ */
+export function rubricVersion(rubric: RubricCriterion[]): string {
+  const canonical = JSON.stringify(rubric.map((c) => [c.id, c.description, c.weight]))
+  return createHash('sha256').update(canonical).digest('hex').slice(0, 12)
 }
 
 /**
