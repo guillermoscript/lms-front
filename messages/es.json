@@ -11001,6 +11001,18 @@
       "editorHint": "Cualquiera con el link puede jugar este ejercicio como invitado.",
       "openFallback": "Aún no tienes un resultado oficial, así que este link no tiene puntaje que superar."
     },
+    "course": {
+      "contextEyebrow": "Este ejercicio es parte del curso",
+      "upsellEyebrow": "Sigue mejorando",
+      "upsellTitle": "Mejora tu puntaje con {course}",
+      "free": "Gratis",
+      "lessons": "{count, plural, one {# lección} other {# lecciones}}",
+      "duration": "{minutes} min",
+      "ctaFree": "Ver el curso gratis",
+      "ctaPaid": "Ver el curso",
+      "ctaUpsellFree": "Empezar el curso gratis",
+      "ctaUpsellPaid": "Ver el curso completo"
+    },
     "staff": {
       "title": "Retos",
       "description": "Enlaces públicos de reto de tus ejercicios y cómo los está jugando la gente.",
