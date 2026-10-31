@@ -17,7 +17,7 @@ import {
 } from "@/app/actions/challenge-links";
 
 export function ChallengeLinksList() {
-  const t = useTranslations("challenges.admin.links");
+  const t = useTranslations("challenges.links");
   const [rows, setRows] = useState<ChallengeLinkRow[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -228,7 +228,7 @@ function UnsharedRow({
   attempt: OfficialAttemptRow;
   onCreated: () => void;
 }) {
-  const t = useTranslations("challenges.admin.links");
+  const t = useTranslations("challenges.links");
   const tShare = useTranslations("challenges.share");
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 p-4">

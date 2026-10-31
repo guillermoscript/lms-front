@@ -10896,23 +10896,6 @@
         "error": "Could not update the exercise",
         "unsupportedType": "Only essay and discussion exercises can be challenges.",
         "disabledHint": "Challenges are switched off for this school. An admin can enable them in Settings > Enrollment."
-      },
-      "links": {
-        "title": "Challenge links",
-        "description": "Links you created for your own official attempts.",
-        "loading": "Loading links…",
-        "loadError": "Could not load challenge links.",
-        "retry": "Try again",
-        "empty": "No challenge links yet.",
-        "untitled": "Untitled exercise",
-        "score": "Score {score}",
-        "active": "Active",
-        "inactive": "Deactivated",
-        "deactivate": "Deactivate",
-        "deactivated": "Link deactivated",
-        "error": "Could not deactivate the link",
-        "copy": "Copy link",
-        "copied": "Link copied"
       }
     },
     "claim": {
@@ -10940,10 +10923,7 @@
     },
     "ranking": {
       "title": "Ranking",
-      "loading": "Loading ranking",
       "empty": "No one is ranked yet. Be the first!",
-      "error": "Couldn't load the ranking.",
-      "retry": "Retry",
       "you": "(you)",
       "duel": {
         "tie": "Technical tie",
@@ -10957,8 +10937,7 @@
         "rank": "Rank",
         "name": "Name",
         "score": "Score"
-      },
-      "anonymous": "Student"
+      }
     },
     "page": {
       "eyebrow": "Challenge",
@@ -10975,7 +10954,6 @@
       "submit": "Submit answer",
       "grading": "Grading…",
       "resultHeading": "Your result",
-      "duelBasic": "{name}: {challenger} · You: {you}",
       "shareHeading": "Share your challenge",
       "shareBody": "Send this link to a friend. They play without an account.",
       "share": "Share",
@@ -10989,8 +10967,6 @@
       "errorRateLimited": "Too many attempts. Try again later.",
       "errorPaused": "This challenge is paused for now.",
       "errorAlreadyPlayed": "You already played this challenge.",
-      "strengths": "Strengths",
-      "improvements": "To improve",
       "openLine": "{name} challenges you on {exercise}. How much can you score?",
       "openLineAnon": "You are challenged on {exercise}. How much can you score?",
       "alreadyPlayedTitle": "You already played this challenge",
@@ -11056,7 +11032,6 @@
       "detailTitle": "Challenge: {title}",
       "back": "Challenges",
       "leaderboard": "Leaderboard",
-      "leaderboardEmpty": "No official attempts yet.",
       "linksTitle": "Links",
       "linksEmpty": "No links created.",
       "linkActive": "Active",
@@ -11076,8 +11051,7 @@
       "feedback": "AI feedback",
       "noFeedback": "No feedback stored.",
       "viewLink": "Open link",
-      "viewAll": "See all challenge details",
-      "claimedBadge": "Signed up"
+      "viewAll": "See all challenge details"
     },
     "shared": {
       "guest": "Guest",
@@ -11088,6 +11062,23 @@
       "tied": "tied",
       "showAll": "Show all ({count})",
       "showNearby": "Show nearby"
+    },
+    "links": {
+      "title": "Challenge links",
+      "description": "Links you created for your own official attempts.",
+      "loading": "Loading links…",
+      "loadError": "Could not load challenge links.",
+      "retry": "Try again",
+      "empty": "No challenge links yet.",
+      "untitled": "Untitled exercise",
+      "score": "Score {score}",
+      "active": "Active",
+      "inactive": "Deactivated",
+      "deactivate": "Deactivate",
+      "deactivated": "Link deactivated",
+      "error": "Could not deactivate the link",
+      "copy": "Copy link",
+      "copied": "Link copied"
     },
     "student": {
       "title": "My challenges",
