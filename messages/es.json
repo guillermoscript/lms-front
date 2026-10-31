@@ -8400,6 +8400,9 @@
     "difficulty": {
       "easy": "Fácil",
       "medium": "Medio",
+      "retryGrading": "Reintentar evaluación",
+      "partner": "Compañero",
+      "you": "Tú",
       "hard": "Difícil"
     }
   },
