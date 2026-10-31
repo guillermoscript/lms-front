@@ -10999,6 +10999,18 @@
       "pendingLoadError": "Could not load your results.",
       "editorHint": "Anyone with the link can play this exercise as a guest.",
       "openFallback": "You have no official result yet, so this link has no score to beat."
+    },
+    "course": {
+      "contextEyebrow": "This exercise is part of the course",
+      "upsellEyebrow": "Keep improving",
+      "upsellTitle": "Improve your score with {course}",
+      "free": "Free",
+      "lessons": "{count, plural, one {# lesson} other {# lessons}}",
+      "duration": "{minutes} min",
+      "ctaFree": "See the free course",
+      "ctaPaid": "See the course",
+      "ctaUpsellFree": "Start the free course",
+      "ctaUpsellPaid": "See the full course"
     }
   }
 }

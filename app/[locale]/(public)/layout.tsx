@@ -1,30 +1,7 @@
 import { Navbar } from "@/components/public/navbar";
 import { Footer } from "@/components/public/footer";
 import { PoweredByBanner } from "@/components/public/powered-by-banner";
-import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
-
-async function hasPuckPage(): Promise<boolean> {
-    try {
-        const tenantId = await getCurrentTenantId()
-        if (tenantId === DEFAULT_TENANT_ID) return false
-        const tenant = await getCurrentTenant()
-        if (!tenant) return false
-        const adminClient = createAdminClient()
-        const { data } = await adminClient
-            .from('landing_pages')
-            .select('page_id')
-            .eq('tenant_id', tenantId)
-            .eq('is_published', true)
-            .limit(1)
-            .maybeSingle()
-        return !!data
-    } catch {
-        return false
-    }
-}
+import { hasPuckPage } from "@/lib/public/has-puck-page";
 
 export default async function PublicLayout({
     children,

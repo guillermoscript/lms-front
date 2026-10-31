@@ -8,6 +8,10 @@ import { IconAlertCircle, IconCircleCheck, IconCircleX, IconLoader2 } from '@tab
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
+import { Ranking } from './ranking'
+import { ChallengeCourseCard } from './challenge-course-card'
+import type { ChallengeCourse } from '@/lib/challenges/course-context'
 import { ClaimResult } from './claim-result'
 import { ChallengeShareButton } from './challenge-share-button'
 import { ChallengeClaimSlot, ChallengeDuelSlot, type ChallengeResultContext } from './challenge-page-slots'
@@ -35,6 +39,9 @@ export interface ChallengePageClientProps {
   viewerIsMember?: boolean
   /** Per-exercise ranking, supplied by the page once WS6's server helper is wired in. */
   rankingEntries?: ChallengeResultContext['rankingEntries']
+  /** Published course the exercise belongs to (context block + upsell). */
+  course?: ChallengeCourse | null
+  viewerId?: string | null
 }
 
 interface ParsedFeedback {
@@ -78,7 +85,7 @@ function PassedBadge({ passed }: { passed: boolean }) {
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries } = props
+  const { token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId } = props
   const claiming = useSearchParams().get('claim') === '1'
   const t = useTranslations('challenges.page')
   const [answer, setAnswer] = useState('')
@@ -133,6 +140,8 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         title,
         // On ?claim=1 `ClaimResult` already offers the share action.
         viewerIsMember: viewerIsMember && !claiming,
+        course,
+        viewerId,
       }
     : null
 
@@ -141,7 +150,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
     : title
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 pb-10 pt-16 md:pb-14 md:pt-24">
+    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 pb-10 pt-24 md:pb-14 md:pt-28">
       <header className="space-y-3">
         {challenger ? (
           <section aria-labelledby="challenger-heading" className="space-y-2" data-testid="challenger-card">
@@ -177,6 +186,8 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         </section>
       ) : null}
 
+      {course ? <ChallengeCourseCard course={course} variant="context" /> : null}
+
       <section aria-labelledby="instructions-heading" className="space-y-2">
         <h2 id="instructions-heading" className="text-sm font-semibold">{t('instructions')}</h2>
         <div className="prose prose-neutral max-w-[68ch] dark:prose-invert prose-p:leading-relaxed prose-p:text-foreground/85 prose-headings:text-base">
@@ -211,32 +222,23 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         </form>
       ) : null}
 
+      {!result && !claiming && rankingEntries ? (
+        <Ranking entries={rankingEntries} currentUserId={viewerId ?? undefined} />
+      ) : null}
+
       {result && ctx ? (
         <section aria-labelledby="result-heading" className="space-y-5" data-testid="challenge-result" aria-live="polite">
-          <h2 id="result-heading" className="text-lg font-semibold">{t('resultHeading')}</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-5xl font-semibold tabular-nums" data-testid="challenge-score">{result.score}</span>
-            <PassedBadge passed={result.passed} />
-          </div>
-          {fb.feedback ? (
-            <p className="max-w-[68ch] text-base leading-relaxed text-foreground/85">{fb.feedback}</p>
-          ) : null}
-          {fb.strengths.length > 0 ? (
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold">{t('strengths')}</h3>
-              <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/85">
-                {fb.strengths.map((x) => <li key={x}>{x}</li>)}
-              </ul>
-            </div>
-          ) : null}
-          {fb.improvements.length > 0 ? (
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold">{t('improvements')}</h3>
-              <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/85">
-                {fb.improvements.map((x) => <li key={x}>{x}</li>)}
-              </ul>
-            </div>
-          ) : null}
+          <h2 id="result-heading" className="sr-only">{t('resultHeading')}</h2>
+          {/* Same result surface the dashboard exercise page uses. */}
+          <div data-testid="challenge-score" className="sr-only">{result.score}</div>
+          <ExerciseResultSummary
+            score={result.score}
+            passed={result.passed}
+            feedback={fb.feedback}
+            strengths={fb.strengths}
+            improvements={fb.improvements}
+            passingScore={passingScore}
+          />
           {/* WS6 slot */}
           <ChallengeDuelSlot ctx={ctx} />
           {/* WS4 slot */}
