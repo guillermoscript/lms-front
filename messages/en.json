@@ -10894,7 +10894,7 @@
         "warning": "Heads up: the exercise instructions become public to anyone with a link. For paid courses, guests only get this one exercise as a sample and no access to the course.",
         "saved": "Challenge setting updated",
         "error": "Could not update the exercise",
-        "unsupportedType": "Only essay and discussion exercises can be challenges.",
+        "unsupportedType": "Only essay, discussion and voice conversation exercises can be challenges.",
         "disabledHint": "Challenges are switched off for this school. An admin can enable them in Settings > Enrollment."
       }
     },
@@ -10966,6 +10966,13 @@
       "errorGeneric": "We could not grade your answer. Try again in a moment.",
       "errorRateLimited": "Too many attempts. Try again later.",
       "errorPaused": "This challenge is paused for now.",
+      "voiceBeatIt": "Start the call below. You get one graded conversation, with no hints.",
+      "voiceColdNote": "One graded conversation of up to {minutes} minutes. No hints, no tutor notes.",
+      "voiceGateTitle": "Sign up to play this challenge",
+      "voiceGateBody": "This challenge is a live voice conversation, so you need an account to play it.",
+      "voiceGateBodySchool": "This challenge is a live voice conversation. Join {school} to play it.",
+      "voiceGateSignUp": "Create an account",
+      "voiceGateLogin": "I already have an account",
       "errorAlreadyPlayed": "You already played this challenge.",
       "openLine": "{name} challenges you on {exercise}. How much can you score?",
       "openLineAnon": "You are challenged on {exercise}. How much can you score?",

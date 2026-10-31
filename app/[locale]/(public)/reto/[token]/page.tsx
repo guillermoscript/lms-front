@@ -68,6 +68,8 @@ export default async function ChallengePage({ params, searchParams }: Props) {
       title={data.exercise.title}
       instructions={data.exercise.instructions}
       passingScore={data.exercise.passingScore}
+      exerciseType={data.exercise.exerciseType}
+      maxMinutes={data.exercise.maxMinutes}
       creatorName={data.creatorName}
       challenger={data.challenger ? { score: data.challenger.score, passed: data.challenger.passed, name: data.challenger.name } : null}
       isOwner={isOwner}

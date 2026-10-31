@@ -15,6 +15,9 @@ import { rankingToRows } from '@/lib/challenges/leaderboard'
 import { ClaimResult } from './claim-result'
 import { ChallengeShareButton } from './challenge-share-button'
 import { ChallengePlayer, type AttemptResult } from './challenge-player'
+import { ChallengeVoicePlayer } from './challenge-voice-player'
+import { ChallengeVoiceGate } from './challenge-voice-gate'
+import { isVoiceChallengeType } from '@/lib/challenges/types'
 import { ChallengeResult } from './challenge-result'
 import type { ChallengeResultContext } from './challenge-page-slots'
 import { cn } from '@/lib/utils'
@@ -31,6 +34,10 @@ export interface ChallengePageClientProps {
   title: string
   instructions: string
   passingScore: number
+  /** `exercises.exercise_type`; a voice reto swaps the text form for a live call. */
+  exerciseType?: string
+  /** Voice retos: the call's time budget. */
+  maxMinutes?: number | null
   challenger: { score: number; passed: boolean; name: string | null } | null
   /** Creator of an OPEN link (no challenger score); `null` when unknown. */
   creatorName?: string | null
@@ -76,7 +83,7 @@ function ClaimedNotice({ score, next }: { score: number | null; next: ChallengeP
 }
 
 export function ChallengePageClient(props: ChallengePageClientProps) {
-  const { variant = 'public', claimed, claimedNext, token, exerciseId, title, instructions, passingScore, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId, played, schoolName } = props
+  const { variant = 'public', claimed, claimedNext, token, exerciseId, title, instructions, passingScore, exerciseType, maxMinutes, challenger, creatorName, isOwner, viewerIsMember, rankingEntries, course, viewerId, played, schoolName } = props
   const member = variant === 'member'
   // The claim only runs on the public landing; the member route is where it ends up.
   const claiming = useSearchParams().get('claim') === '1' && !member
@@ -86,6 +93,12 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
   // Opening the link again shows the stored official attempt, not an empty form.
   const alreadyPlayed = !fresh && !claiming && played ? played : null
   const result: AttemptResult | null = fresh ?? (alreadyPlayed ? { score: alreadyPlayed.score, passed: alreadyPlayed.passed, feedback: alreadyPlayed.feedback } : null)
+
+  const onPlayed = (r: AttemptResult) => {
+    setFresh(r)
+    // Inside the shell the ranking and the stored attempt are server data: refetch them.
+    if (member) router.refresh()
+  }
 
   const challengerName = challenger?.name ?? t('guestName')
 
@@ -125,7 +138,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
               <PassedBadge passed={challenger.passed} />
               <span className="text-sm text-muted-foreground">{t('passingScore', { score: passingScore })}</span>
             </div>
-            {!isOwner ? <p className="text-base">{t('beatIt')}</p> : null}
+            {!isOwner ? <p className="text-base">{t(isVoiceChallengeType(exerciseType) ? 'voiceBeatIt' : 'beatIt')}</p> : null}
           </section>
         ) : (
           <>
@@ -133,7 +146,7 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
             <h1 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl" data-testid="open-challenge-heading">
               {creatorName ? t('openLine', { name: creatorName, exercise: title }) : t('openLineAnon', { exercise: title })}
             </h1>
-            <p className="text-base">{t('beatIt')}</p>
+            <p className="text-base">{t(isVoiceChallengeType(exerciseType) ? 'voiceBeatIt' : 'beatIt')}</p>
           </>
         )}
       </header>
@@ -158,11 +171,18 @@ export function ChallengePageClient(props: ChallengePageClientProps) {
         </div>
       </section>
 
-      {!isOwner && !result && !claiming ? <ChallengePlayer token={token} onResult={(r) => {
-        setFresh(r)
-        // Inside the shell the ranking and the stored attempt are server data: refetch them.
-        if (member) router.refresh()
-      }} /> : null}
+      {!isOwner && !result && !claiming ? (
+        isVoiceChallengeType(exerciseType) ? (
+          // Voice retos are members-only (they bill realtime minutes to the school): guests sign up first.
+          viewerIsMember ? (
+            <ChallengeVoicePlayer token={token} maxMinutes={maxMinutes ?? 5} onResult={onPlayed} />
+          ) : (
+            <ChallengeVoiceGate token={token} schoolName={schoolName} />
+          )
+        ) : (
+          <ChallengePlayer token={token} onResult={onPlayed} />
+        )
+      ) : null}
 
       {!result && !claiming && rankingEntries ? (
         <ChallengeLeaderboard heading windowed={Boolean(viewerId)} rows={rankingToRows(rankingEntries, viewerId)} testId="challenge-ranking" />

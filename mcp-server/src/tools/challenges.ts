@@ -74,7 +74,7 @@ export function registerChallengeTools(server: LmsServer) {
       name: "lms_set_exercise_challengeable",
       description:
         "Turn an exercise into (or stop it being) a public challenge that people can play from a link. " +
-        "Use this BEFORE lms_create_challenge_link. Only essay and discussion exercises qualify, the school must have " +
+        "Use this BEFORE lms_create_challenge_link. Only essay, discussion and voice conversation (real_time_conversation) exercises qualify, the school must have " +
         "challenges enabled by an admin, and teachers can only change exercises in their own courses (admins: any). " +
         "Returns the new state plus a warning: the exercise title and instructions become public to anyone with a link; " +
         "on a paid course guests get only this one exercise as a sample, never course access.",

@@ -2,11 +2,11 @@ import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isChallengesEnabled } from '@/lib/challenges/settings'
 import { formatDisplayName } from '@/lib/challenges/ranking'
+import { isChallengeableType, isVoiceChallengeType } from '@/lib/challenges/types'
+import { parseConversationConfig } from '@/lib/speech/conversation'
 
 export const CHALLENGES_ENABLED_KEY = 'challenges_enabled'
 
-/** Free-text types only: closed-question options are never shown to guests (#1025). */
-const TEXT_TYPES = new Set(['essay', 'discussion'])
 
 export interface ChallengePageData {
   link: { id: string; token: string; ownerAttemptId: string | null }
@@ -16,6 +16,8 @@ export interface ChallengePageData {
     instructions: string
     exerciseType: string
     passingScore: number
+    /** Voice retos only: the call's time budget in minutes. */
+    maxMinutes: number | null
   }
   /** The challenger's official score, when the link carries one. */
   challenger: { score: number; passed: boolean; name: string | null; userId: string | null } | null
@@ -84,7 +86,7 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
       : Promise.resolve({ data: null }),
   ])
   if (!exercise || !exercise.is_challengeable || exercise.status !== 'published') return null
-  if (!TEXT_TYPES.has(exercise.exercise_type)) return null
+  if (!isChallengeableType(exercise.exercise_type)) return null
 
   const config = (exercise.exercise_config ?? {}) as { passing_score?: unknown }
   const passingScore = typeof config.passing_score === 'number' ? config.passing_score : 70
@@ -109,6 +111,9 @@ export const loadChallengePage = cache(async (token: string, tenantId: string): 
       instructions: exercise.instructions,
       exerciseType: exercise.exercise_type,
       passingScore,
+      maxMinutes: isVoiceChallengeType(exercise.exercise_type)
+        ? parseConversationConfig(exercise.exercise_config).max_minutes
+        : null,
     },
     challenger,
     creatorName,

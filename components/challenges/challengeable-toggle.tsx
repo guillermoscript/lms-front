@@ -13,7 +13,7 @@ interface Props {
   initialValue: boolean
   /** The school's `challenges_enabled` switch. */
   challengesEnabled: boolean
-  /** Only essay/discussion exercises can be played by guests. */
+  /** Essay, discussion and voice conversation exercises can be challenges (voice: members only). */
   supportedType: boolean
 }
 
