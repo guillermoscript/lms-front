@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { loadListBadges } from '@/lib/challenges/entry'
 
 interface PageProps {
     params: Promise<{ courseId: string }>
@@ -44,6 +45,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
         exercise_type,
         difficulty_level,
         time_limit,
+        is_challengeable,
         courses(title),
         exercise_completions(id),
         exercise_messages(id)
@@ -69,6 +71,17 @@ export default async function ExercisesListPage({ params }: PageProps) {
         (exercise) => !checkpointExerciseIds.has(exercise.id)
     )
 
+    // "Reto" badge + the student's best score/rank (F2); empty when the school
+    // has challenges off. Best-effort: the list must render without it.
+    const challengeBadges = await loadListBadges(supabase, tenantId, userId, standaloneExercises).catch((err) => {
+        console.error('Error loading challenge badges:', err)
+        return new Map()
+    })
+    const exercisesWithChallenge = standaloneExercises.map((e) => {
+        const badge = challengeBadges.get(e.id)
+        return badge ? { ...e, challenge: badge } : e
+    })
+
     const courseTitle = courseData.title
 
     return (
@@ -88,7 +101,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
                     </p>
                 </div>
             ) : (
-                <ExercisesExplorer exercises={standaloneExercises} courseId={courseId} />
+                <ExercisesExplorer exercises={exercisesWithChallenge} courseId={courseId} />
             )}
         </PageShell>
     )

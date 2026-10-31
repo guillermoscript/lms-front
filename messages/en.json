@@ -8303,7 +8303,9 @@
       },
       "cardFallbackDescription": "Interactive practice to reinforce this course.",
       "minutes": "{minutes} min",
-      "completed": "Completed"
+      "completed": "Completed",
+      "reto": "Challenge",
+      "retoStanding": "Challenge · {score} pts · #{rank}"
     },
     "workspace": {
       "brief": "Instructions",
@@ -11092,7 +11094,13 @@
       "friendPlays": "Plays from my links",
       "joined": "Joined through your links",
       "guest": "Guest",
-      "student": "Student"
+      "student": "Student",
+      "homeTitle": "Your challenges"
+    },
+    "entry": {
+      "title": "Challenge a friend",
+      "position": "You are #{rank} of {total} with {score} points.",
+      "seeAll": "See full ranking"
     }
   }
 }

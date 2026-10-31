@@ -21,6 +21,8 @@ import EssayExercise from '@/components/exercises/essay-exercise'
 import CodeExercise from '@/components/exercises/code-exercise'
 import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import ExerciseChat from '@/components/exercises/exercise-chat'
+import { ExerciseChallengeBlock } from '@/components/challenges/exercise-challenge-block'
+import { loadExerciseEntry } from '@/lib/challenges/entry'
 
 const AudioExercise = dynamic(
   () => import('@/components/exercises/audio-exercise'),
@@ -288,9 +290,25 @@ export default async function ExercisePage({ params }: PageProps) {
         { href: '#', label: exercise.title },
     ]
 
-    const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
+    // "Challenge a friend" + compact ranking (F2). Null (hidden) unless the
+    // exercise is challengeable, the school has challenges on and the student
+    // has an official attempt. A failure here must not break the exercise page.
+    const challengeEntry = await loadExerciseEntry(supabase, tenantId, userId, {
+        id: exercise.id,
+        exercise_type: exercise.exercise_type,
+        is_challengeable: exercise.is_challengeable,
+    }).catch((err) => {
+        console.error('Error loading challenge entry:', err)
+        return null
+    })
+    const challengeBlock = challengeEntry ? (
+        <ExerciseChallengeBlock exerciseId={exercise.id} title={exercise.title} entry={challengeEntry} />
+    ) : null
+
+    const relatedList = otherExercises && otherExercises.length > 0 ? (
         <RelatedExercises exercises={otherExercises} courseId={courseId} />
     ) : null
+    const otherExercisesSection = relatedList
 
     // Code challenges are graded by their own test runner and never write an
     // exercise_evaluations row, so their reviewable record is the completion.
@@ -298,7 +316,7 @@ export default async function ExercisePage({ params }: PageProps) {
         | { score?: number | null; completed_at?: string | null }
         | undefined
 
-    const resultSummary = latestEvaluation ? (
+    const evaluationSummary = latestEvaluation ? (
         <ExerciseResultSummary
             score={latestEvaluation.score}
             passed={latestEvaluation.passed}
@@ -311,6 +329,14 @@ export default async function ExercisePage({ params }: PageProps) {
             teacherReview={latestEvaluation.teacherReview}
         />
     ) : null
+
+    // The block rides with the result when there is one, else with the related list.
+    const resultSummary = evaluationSummary && challengeBlock ? (
+        <div className="space-y-4">{evaluationSummary}{challengeBlock}</div>
+    ) : evaluationSummary
+    const essayRelated = !evaluationSummary && challengeBlock ? (
+        <div className="space-y-4">{challengeBlock}{relatedList}</div>
+    ) : relatedList
 
     const codeResultSummary = codeCompletion ? (
         <ExerciseResultSummary
@@ -447,7 +473,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     isExerciseCompleted={isExerciseCompleted}
                     profile={profile}
                     studentId={userId}
-                    isExerciseCompletedSection={otherExercisesSection}
+                    isExerciseCompletedSection={essayRelated}
                     resultSummary={resultSummary}
                     resultPassed={latestEvaluation?.passed}
                 >
