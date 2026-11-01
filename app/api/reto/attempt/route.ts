@@ -1,3 +1,4 @@
+import { groupGuestCapReached } from '@/lib/challenges/groups'
 import { cookies, headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -132,6 +133,7 @@ export async function POST(req: Request) {
         hasAiGrading: (tenantId) => hasPlanFeature(tenantId, 'ai_grading'),
         materialize: (input) => materializeChallengeAttempt(admin, input),
         onOfficialAttempt: (input) => notifyChallengeBeaten({ admin, ...input }),
+        groupGuestCapReached: (input) => groupGuestCapReached(admin, input),
         voice: {
           claim: ({ turns, exerciseConfig, ...key }) => claimVoiceSession(admin, key, exerciseConfig, turns),
           settle: ({ tenantId, sessionId, status }) => settleVoiceSession(admin, tenantId, sessionId, status),

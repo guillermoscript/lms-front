@@ -3,7 +3,7 @@ interface NavLike<S extends { href: string }> {
   items?: S[]
 }
 
-const CHALLENGES_HREF = /^\/dashboard\/(student|teacher)\/challenges(\/|$)/
+const CHALLENGES_HREF = /^\/dashboard\/(student|teacher)\/(challenges|groups)(\/|$)/
 
 /** Drops the Retos entries (top level or nested) when the school has challenges off. */
 export function withoutChallenges<S extends { href: string }, T extends NavLike<S>>(items: T[], enabled: boolean): T[] {

@@ -293,6 +293,8 @@ export async function updateSettings(
 export async function updateChallengeSettings(input: {
   enabled: boolean
   guestMonthlyCap: number | null
+  /** Friend groups (#1050). Omitted = leave the stored value alone. */
+  groupsEnabled?: boolean
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const role = await getUserRole()
@@ -312,6 +314,9 @@ export async function updateChallengeSettings(input: {
     ]
     if (cap !== null) {
       rows.push({ tenant_id: tenantId, setting_key: 'challenges_guest_monthly_cap', setting_value: cap })
+    }
+    if (typeof input.groupsEnabled === 'boolean') {
+      rows.push({ tenant_id: tenantId, setting_key: 'challenges_groups_enabled', setting_value: { enabled: input.groupsEnabled } })
     }
     const { error } = await supabase
       .from('tenant_settings')
@@ -1020,7 +1025,7 @@ export async function getAllSettingsByCategory(): Promise<CategorySettingsRespon
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
       manual_payment_instructions: 'payment', manual_payment_accounts: 'payment',
       free_preview_enabled: 'enrollment',
-      challenges_enabled: 'challenges', challenges_guest_monthly_cap: 'challenges',
+      challenges_enabled: 'challenges', challenges_guest_monthly_cap: 'challenges', challenges_groups_enabled: 'challenges',
     }
 
     const grouped = (data || []).reduce((acc: Record<string, SettingsGroup>, s: SettingRow) => {

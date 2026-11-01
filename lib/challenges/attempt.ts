@@ -83,6 +83,11 @@ export interface AttemptDeps {
    */
   onOfficialAttempt?: (input: { attemptId: string; tenantId: string }) => Promise<unknown>
   /**
+   * Friend groups (#1050): true when the group behind this link spent its monthly
+   * guest-grading cap. Only asked for GUEST attempts that need a fresh grade.
+   */
+  groupGuestCapReached?: (input: { tenantId: string; linkId: string }) => Promise<boolean>
+  /**
    * Voice retos only. `claim` accepts the transcript against a session this
    * member opened; `settle` closes it (`completed`) or re-opens it (`pending`)
    * when the attempt did not produce a grade.
@@ -289,6 +294,9 @@ async function gradeAndPersist(
     return { ok: true, result: fromRow(repeat, passingScoreOf(exercise), true, (attempts ?? []).some((a) => a.is_official)) }
   }
 
+  if (!identity.userId && deps.groupGuestCapReached && (await deps.groupGuestCapReached({ tenantId, linkId: link.id as string }))) {
+    return refuse('paused')
+  }
   const limits = await checkChallengeLimits({
     tenantId,
     exerciseId: link.exercise_id as number,
