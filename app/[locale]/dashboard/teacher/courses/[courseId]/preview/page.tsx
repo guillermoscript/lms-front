@@ -1,13 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import { LessonExplorer } from '@/components/student/lesson-explorer'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   IconBarbell,
-  IconBook,
-  IconClock,
   IconPlayerPlay,
   IconFileText,
 } from '@tabler/icons-react'
@@ -177,65 +175,17 @@ export default async function CoursePreviewPage({ params }: PageProps) {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {lessons?.map((lesson) => (
-            <Link
-              key={lesson.id}
-              href={`/dashboard/teacher/courses/${courseId}/preview/lessons/${lesson.id}`}
-              className="group"
-            >
-              <Card className="transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-1 rounded-2xl overflow-hidden border-2 border-transparent bg-muted/30">
-                <CardContent className="flex items-center gap-4 p-5 md:p-6">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground group-hover:bg-brand-tint group-hover:text-brand-text shadow-sm border transition-colors">
-                    <span className="text-lg font-black">
-                      {lesson.sequence}
-                    </span>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-lg group-hover:text-brand-text transition-colors truncate">
-                      {lesson.title}
-                    </h3>
-                    {lesson.description ? (
-                      <p className="mt-1 text-sm text-muted-foreground line-clamp-1">
-                        {lesson.description}
-                      </p>
-                    ) : (
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          <IconClock size={12} />
-                          {t('mins', { count: 15 })}
-                        </span>
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          <IconBook size={12} />
-                          {t('videoText')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="hidden sm:block">
-                    <Button variant="ghost" size="sm" className="font-bold text-brand-text group-hover:bg-primary group-hover:text-primary-foreground">
-                      {t('study')}
-                    </Button>
-                  </div>
-                  <div className="sm:hidden">
-                    <IconPlayerPlay className="h-5 w-5 text-brand-text transition-transform group-hover:scale-110" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-
-          {(!lessons || lessons.length === 0) && (
-            <div className="rounded-lg border bg-card p-8 text-center">
-              <IconBook className="mx-auto h-10 w-10 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">
-                {t('noLessons')}
-              </p>
-            </div>
-          )}
-        </div>
+        <LessonExplorer
+          courseId={courseId}
+          previewBase={`/dashboard/teacher/courses/${courseId}/preview/lessons`}
+          lessons={(lessons ?? []).map((l) => ({
+            id: l.id,
+            title: l.title,
+            description: l.description,
+            sequence: l.sequence ?? 0,
+            completed: false,
+          }))}
+        />
       </PageShell>
     </div>
   )
