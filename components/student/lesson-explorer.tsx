@@ -33,9 +33,12 @@ type Sort = 'order' | 'title'
 export function LessonExplorer({
   lessons,
   courseId,
+  previewBase,
 }: {
   lessons: StudentLesson[]
   courseId: string
+  /** Teacher preview: link here (`<base>/<lessonId>`) and drop the completion filter. */
+  previewBase?: string
 }) {
   const t = useTranslations('courseDetails')
   const locale = useLocale()
@@ -87,6 +90,7 @@ export function LessonExplorer({
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            {!previewBase && (
             <div className="flex flex-1 basis-36 flex-col gap-1.5 sm:flex-none">
               <Label htmlFor={`${id}-status`}>{t('list.status')}</Label>
               <Select
@@ -108,6 +112,7 @@ export function LessonExplorer({
                 </SelectContent>
               </Select>
             </div>
+            )}
             <div className="flex flex-1 basis-36 flex-col gap-1.5 sm:flex-none">
               <Label htmlFor={`${id}-sort`}>{t('list.sort')}</Label>
               <Select
@@ -160,7 +165,11 @@ export function LessonExplorer({
           {visible.map((lesson) => (
             <li key={lesson.id}>
               <Link
-                href={`/dashboard/student/courses/${courseId}/lessons/${withSlug(lesson.id, lesson.title)}`}
+                href={
+                  previewBase
+                    ? `${previewBase}/${lesson.id}`
+                    : `/dashboard/student/courses/${courseId}/lessons/${withSlug(lesson.id, lesson.title)}`
+                }
                 className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:p-4"
               >
                 <span
