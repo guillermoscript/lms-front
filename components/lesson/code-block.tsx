@@ -89,7 +89,7 @@ export function CodeBlock({
   const lines = code.split('\n')
 
   return (
-    <div className={cn('my-4 overflow-hidden rounded-lg border bg-[#0d1117]', className)}>
+    <div className={cn('not-prose my-4 overflow-hidden rounded-lg border bg-[#0d1117]', className)}>
       {/* Header con filename y botón copiar */}
       <div className="flex items-center justify-between border-b border-gray-700 bg-[#161b22] px-4 py-2">
         <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -193,7 +193,8 @@ export function Pre({ children }: { children: React.ReactNode }) {
     'props' in children
   ) {
     const element = children as React.ReactElement<React.ComponentProps<'code'>>
-    if (element.type === 'code') {
+    // MDX hands us the mapped <Code> component, not the raw 'code' tag.
+    if (element.type === 'code' || element.type === Code) {
       const { className, children: codeChildren, ...rest } = element.props
       return <Code className={className} {...rest}>{codeChildren}</Code>
     }
