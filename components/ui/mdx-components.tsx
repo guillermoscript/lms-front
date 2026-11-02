@@ -56,10 +56,10 @@ export const mdxComponents = {
     <tr className="m-0 border-t p-0 even:bg-muted" {...props} />
   ),
   th: ({ className, ...props }: React.ComponentProps<"th">) => (
-    <th className="border px-2.5 py-1.5 text-left align-bottom font-bold sm:px-4 sm:py-2 [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />
+    <th className="border px-2.5 py-1.5 text-left align-bottom font-bold min-w-[4.5rem] hyphens-auto [overflow-wrap:anywhere] sm:min-w-0 sm:px-4 sm:py-2 sm:hyphens-manual sm:[overflow-wrap:normal] [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />
   ),
   td: ({ className, ...props }: React.ComponentProps<"td">) => (
-    <td className="border px-2.5 py-1.5 text-left align-top sm:px-4 sm:py-2 [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />
+    <td className="border px-2.5 py-1.5 text-left align-top min-w-[4.5rem] hyphens-auto [overflow-wrap:anywhere] sm:min-w-0 sm:px-4 sm:py-2 sm:hyphens-manual sm:[overflow-wrap:normal] [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />
   ),
   pre: ({ className, ...props }: React.ComponentProps<"pre">) => (
     <pre className="mb-4 mt-6 overflow-x-auto rounded-lg border bg-black py-4 px-4 text-white" {...props} />
