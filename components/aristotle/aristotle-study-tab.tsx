@@ -205,7 +205,7 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     placeholder={t('placeholder')}
-                                    className="min-h-[48px] text-sm"
+                                    className="min-h-[48px] text-base sm:text-sm"
                                 />
                             </PromptInputBody>
                             <PromptInputFooter>

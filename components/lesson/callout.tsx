@@ -64,7 +64,7 @@ export function Callout({ type = 'info', title, children, className }: CalloutPr
       role="note"
     >
       <Icon className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-      <div className="flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1">
         {displayTitle && (
           <p className="font-semibold text-sm">{displayTitle}</p>
         )}

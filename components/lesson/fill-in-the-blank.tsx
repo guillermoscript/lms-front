@@ -61,7 +61,7 @@ export function FillInTheBlank({ segments, explanation, className }: FillInTheBl
               disabled={checked}
               placeholder="..."
               className={cn(
-                'inline-block w-28 border-b-2 bg-transparent px-1 py-0.5 text-center text-sm outline-none transition-colors',
+                'inline-block w-28 border-b-2 bg-transparent px-1 py-0.5 text-center text-base sm:text-sm outline-none transition-colors',
                 !checked && 'border-muted-foreground/30 focus:border-primary',
                 checked && isCorrect && 'border-success text-success',
                 checked && isCorrect === false && 'border-destructive text-destructive'

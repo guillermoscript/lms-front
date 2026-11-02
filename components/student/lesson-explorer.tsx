@@ -161,7 +161,7 @@ export function LessonExplorer({
           </Button>
         </div>
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-1 gap-2">
           {visible.map((lesson) => (
             <li key={lesson.id}>
               <Link

@@ -263,7 +263,7 @@
 .prose ol > li {
   list-style-type: decimal;
 }
-.prose pre {
+.prose pre:where(:not(.not-prose *)) {
   background: var(--muted);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -272,13 +272,13 @@
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
-.prose code {
+.prose code:where(:not(.not-prose *)) {
   background: var(--muted);
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
 }
-.prose pre code {
+.prose pre code:where(:not(.not-prose *)) {
   background: transparent;
   padding: 0;
   border-radius: 0;

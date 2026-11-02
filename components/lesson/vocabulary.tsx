@@ -69,9 +69,9 @@ export function Vocabulary({
         </div>
       )}
 
-      <div className="flex-1 space-y-2">
+      <div className="min-w-0 flex-1 space-y-2">
         <div className="flex items-center gap-3">
-          <span className="text-lg font-bold">{word}</span>
+          <span className="min-w-0 break-words text-lg font-bold">{word}</span>
           
           {audio && (
             <>

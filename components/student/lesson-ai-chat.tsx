@@ -71,19 +71,24 @@ import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
 import { ChatKickoff, useLessonKickoff } from '@/components/ai/chat-kickoff'
 
 /**
- * Tracks the visual viewport height while the mobile chat overlay is open so
- * the input stays pinned above the on-screen keyboard on iOS Safari, which
+ * Tracks the visual viewport while the mobile chat overlay is open so the
+ * input stays pinned above the on-screen keyboard on iOS Safari, which
  * overlays the keyboard without resizing the layout viewport (dvh included).
+ *
+ * Height alone is not enough: on focus Safari also scrolls the layout
+ * viewport to reveal the input, so a `top: 0` fixed overlay slides up behind
+ * the address bar. `offsetTop` is that scroll — the overlay follows it.
  */
-function useVisualViewportHeight(enabled: boolean) {
-    const [height, setHeight] = useState<number | null>(null);
+function useVisualViewport(enabled: boolean) {
+    const [box, setBox] = useState<{ height: number; offsetTop: number } | null>(null);
 
     useEffect(() => {
         if (!enabled) return;
         const vv = window.visualViewport;
         if (!vv) return;
 
-        const update = () => setHeight(Math.round(vv.height));
+        const update = () =>
+            setBox({ height: Math.round(vv.height), offsetTop: Math.max(0, Math.round(vv.offsetTop)) });
         update();
         vv.addEventListener("resize", update);
         vv.addEventListener("scroll", update);
@@ -93,7 +98,21 @@ function useVisualViewportHeight(enabled: boolean) {
         };
     }, [enabled]);
 
-    return enabled ? height : null;
+    // The page under the overlay must not scroll: on iOS a scrollable body is
+    // what the keyboard drags along (and what the overlay's scroll chains to).
+    useEffect(() => {
+        if (!enabled) return;
+        const { documentElement: html, body } = document;
+        const prev = [html.style.overflow, body.style.overflow];
+        html.style.overflow = "hidden";
+        body.style.overflow = "hidden";
+        return () => {
+            html.style.overflow = prev[0];
+            body.style.overflow = prev[1];
+        };
+    }, [enabled]);
+
+    return enabled ? box : null;
 }
 
 interface LessonAIChatProps {
@@ -164,7 +183,7 @@ function InnerLessonAIChat({
     // Mobile-only: the chat lives behind a launcher and opens as a
     // full-screen overlay so it never fights the lesson page for scroll.
     const [mobileOpen, setMobileOpen] = useState(false);
-    const viewportHeight = useVisualViewportHeight(mobileOpen);
+    const viewport = useVisualViewport(mobileOpen);
     const shellRef = useRef<HTMLDivElement>(null);
     const { textInput } = usePromptInputController();
     const kickoff = useLessonKickoff({ task: taskDescription, requirementsCount: requirements?.length });
@@ -337,12 +356,15 @@ function InnerLessonAIChat({
                 role={mobileOpen ? "dialog" : undefined}
                 aria-modal={mobileOpen || undefined}
                 aria-label={mobileOpen ? t('mobile.title') : undefined}
-                style={viewportHeight ? { ['--chat-vvh' as string]: `${viewportHeight}px` } : undefined}
+                style={viewport ? {
+                    ['--chat-vvh' as string]: `${viewport.height}px`,
+                    ['--chat-vvt' as string]: `${viewport.offsetTop}px`,
+                } : undefined}
                 className={cn(
                     "relative flex flex-col divide-y overflow-hidden bg-background",
                     "sm:h-[600px] sm:rounded-xl sm:border sm:shadow-sm",
                     mobileOpen
-                        ? "max-sm:fixed max-sm:inset-0 max-sm:z-50 max-sm:h-[var(--chat-vvh,100dvh)] max-sm:animate-in max-sm:slide-in-from-bottom-8 max-sm:fade-in max-sm:duration-300"
+                        ? "max-sm:fixed max-sm:inset-x-0 max-sm:top-[var(--chat-vvt,0px)] max-sm:z-50 max-sm:h-[var(--chat-vvh,100dvh)] max-sm:overscroll-none max-sm:animate-in max-sm:slide-in-from-bottom-8 max-sm:fade-in max-sm:duration-300"
                         : "max-sm:hidden"
                 )}
             >
