@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
   // cross-origin access to /_next/* dev resources (HMR + client chunks) by
   // default, which prevents the client bundle from hydrating on those hosts.
   // Allow the local tenant domains so the app is interactive under automation.
-  allowedDevOrigins: ['lvh.me', '*.lvh.me', 'localhost'],
+  allowedDevOrigins: ['lvh.me', '*.lvh.me', 'localhost', '*.localhost'],
   transpilePackages: ['@lms/core'],
   // next/image refuses any remote host that is not listed here, so course
   // thumbnails (Supabase public storage) rendered as broken images. Local

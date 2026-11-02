@@ -316,7 +316,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
         <div className="mx-auto w-full container px-6 py-4 lg:px-8">
           <PageHeader
             back={{ href: '/dashboard/teacher/courses', label: t('backToCourses') }}
-            title={<span className="block truncate">{course.title}</span>}
+            title={<span className="line-clamp-3" title={course.title}>{course.title}</span>}
             badges={
               <Badge variant={course.status === 'published' ? 'default' : 'secondary'} className={course.status === 'published' ? 'bg-success/10 text-success border-success/30' : ''}>
                 {t(`status.${course.status}`)}

@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lms-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "url": "http://default.lvh.me:3000"
+    },
+    {
+      "name": "lms-dev-pane",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["NEXT_PUBLIC_PLATFORM_DOMAIN=localhost:3000", "npm", "run", "dev"],
+      "port": 3000,
+      "url": "http://default.localhost:3000"
+    }
+  ]
+}
