@@ -17,6 +17,7 @@
  * sends every provider to `<override>/<providerId>` (a stub server), for E2E
  * specs that assert which Authorization header reached which provider.
  */
+import { LIVE_MODEL_ID } from '@/lib/ai/live-model'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createGoogle } from '@ai-sdk/google'
@@ -58,6 +59,10 @@ export interface ProviderInstance {
   imageModel(modelId: string): ImageModel
   /** Only OpenAI, xAI and Google. Mints a short-lived token; the real key never leaves the server. */
   readonly realtime?: { getToken(options: RealtimeTokenOptions): Promise<RealtimeToken> }
+  /** OpenAI only. GPT-Live over WebRTC: the browser's SDP offer is exchanged server-side with the school's key. */
+  readonly live?: {
+    createWebRTCSession(options: { sdp: string; instructions: string; voice?: string }): Promise<{ sessionId: string; sdp: string }>
+  }
 }
 
 export interface ValidateResult {
@@ -365,6 +370,13 @@ interface SdkLike {
   transcriptionModel?(modelId: string): TranscriptionModel
   imageModel?(modelId: string): ImageModel
   experimental_realtime?: { getToken(options: RealtimeTokenOptions): Promise<RealtimeToken> }
+  /** Set for OpenAI only (see `instance`). */
+  liveModel?: (modelId: string) => {
+    doCreateWebRTCSession(options: {
+      sdp: string
+      sessionConfig?: Record<string, unknown>
+    }): Promise<{ sessionId: string; sdp: string }>
+  }
 }
 
 function unsupported(id: ProviderId, what: string): never {
@@ -381,7 +393,7 @@ function guarded<T>(id: ProviderId, what: string, build: () => T): T {
   }
 }
 
-function instance(id: ProviderId, sdk: SdkLike): ProviderInstance {
+function instance(id: ProviderId, sdk: SdkLike, liveModel?: SdkLike['liveModel']): ProviderInstance {
   const realtime = sdk.experimental_realtime
   return {
     id,
@@ -391,8 +403,49 @@ function instance(id: ProviderId, sdk: SdkLike): ProviderInstance {
     imageModel: (modelId) =>
       guarded(id, 'image', () => (sdk.imageModel ? sdk.imageModel(modelId) : unsupported(id, 'image'))),
     ...(realtime ? { realtime: { getToken: (options: RealtimeTokenOptions) => realtime.getToken(options) } } : {}),
+    ...(liveModel
+      ? {
+          live: {
+            // Client delegation: the tutor needs no backend model, our app owns grading.
+            createWebRTCSession: ({ sdp, instructions, voice }) =>
+              liveModel(LIVE_MODEL_ID).doCreateWebRTCSession({
+                sdp,
+                sessionConfig: {
+                  instructions,
+                  ...(voice ? { voice } : {}),
+                  providerOptions: {
+                    openai: {
+                      delegation: { type: 'client' },
+                      // Seeds the opening line; spoken once the session starts (see the client).
+                      input: [
+                        { type: 'message', role: 'developer', content: [{ type: 'input_text', text: LIVE_GREETING_PROMPT }] },
+                      ],
+                      // Only what the transcript needs ever reaches the browser.
+                      client: {
+                        dataChannel: {
+                          allowedClientEvents: ['session.close', 'session.commentary.append'],
+                          allowedServerEvents: [
+                            { type: 'session.started' },
+                            { type: 'session.closed' },
+                            { type: 'session.usage.updated' },
+                            { type: 'session.input_transcript.delta' },
+                            { type: 'session.output_transcript.delta' },
+                            { type: 'session.commentary.appended' },
+                            { type: 'error' },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+          },
+        }
+      : {}),
   }
 }
+
+const LIVE_GREETING_PROMPT = 'Greet the student now and start the scenario in one or two short sentences.'
 
 /** AssemblyAI has no AI SDK model; its transcriber calls the REST API with `apiKey` (lib/speech). */
 function speechOnly(id: ProviderId): ProviderInstance {
@@ -432,7 +485,11 @@ function def(
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
   openai: def('openai', 'api.openai.com', {
-    create: (apiKey) => instance('openai', createOpenAI({ apiKey, ...sdkBaseUrl('openai') })),
+    create: (apiKey) => {
+      const sdk = createOpenAI({ apiKey, ...sdkBaseUrl('openai') })
+      const liveModel: SdkLike['liveModel'] = (modelId) => sdk.experimental_realtime(modelId, { api: 'live' }) as never
+      return instance('openai', sdk as unknown as SdkLike, liveModel)
+    },
     validate: validateWith('openai'),
     listModels: listWith('openai'),
     voices: OPENAI_VOICES,

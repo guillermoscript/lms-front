@@ -8400,6 +8400,13 @@
     "difficulty": {
       "easy": "Fácil",
       "medium": "Medio",
+      "retryGrading": "Reintentar evaluación",
+      "finishToGrade": "Cuando termines, pulsa «Terminar y recibir comentarios» para colgar. Tu calificación solo se calcula después de terminar la llamada.",
+      "partner": "Compañero",
+      "you": "Tú",
+      "retryGrading": "Reintentar evaluación",
+      "partner": "Compañero",
+      "you": "Tú",
       "hard": "Difícil"
     }
   },
