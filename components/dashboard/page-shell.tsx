@@ -113,18 +113,26 @@ export function PageHeader({
       {back && <BackLink href={back.href}>{back.label}</BackLink>}
       <div
         className={cn(
-          'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+          'flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between',
           HEADER_MIN
         )}
       >
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {/* Long titles wrap (balanced) instead of overflowing into the actions. */}
+            <h1 className="min-w-0 max-w-full text-xl font-bold tracking-tight text-balance break-words text-foreground sm:text-2xl">
+              {title}
+            </h1>
             {badges}
           </div>
           <p className="mt-0.5 min-h-5 text-sm text-muted-foreground">{description}</p>
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {/* Capped so many actions wrap into rows rather than squeezing the title. */}
+        {actions && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2 lg:max-w-[55%] lg:justify-end">
+            {actions}
+          </div>
+        )}
       </div>
     </header>
   )
@@ -148,7 +156,7 @@ export function PageHeaderSkeleton({
       {back && <Skeleton className="h-6 w-28" />}
       <div
         className={cn(
-          'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+          'flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between',
           HEADER_MIN
         )}
       >

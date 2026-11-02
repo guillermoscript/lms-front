@@ -183,7 +183,7 @@ export function LessonExplorer({
                   {lesson.completed ? <IconCheck className="size-4" aria-hidden="true" /> : lesson.sequence}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium group-hover:text-brand-text">
+                  <span className="line-clamp-2 text-sm font-medium group-hover:text-brand-text">
                     {lesson.title}
                   </span>
                   {lesson.description && (

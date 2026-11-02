@@ -259,7 +259,7 @@ export default async function proxy(request: NextRequest) {
           },
         }
       )
-      const { data } = await supabaseLookup
+      const { data, error } = await supabaseLookup
         .from('tenants')
         .select('id, status')
         .eq(customDomain ? 'domain' : 'slug', customDomain ?? tenantSlug!)
@@ -267,7 +267,9 @@ export default async function proxy(request: NextRequest) {
         .maybeSingle()
 
       tenant = data ?? null
-      setCachedTenantLookup(lookupKey, tenant)
+      // Only cache a real answer: a failed lookup (DB down, network) must not
+      // pin "unknown tenant" for the whole TTL once the DB is back.
+      if (!error) setCachedTenantLookup(lookupKey, tenant)
     }
 
     if (!tenant) {
