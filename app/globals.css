@@ -208,8 +208,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* html carries the background too: iOS Safari tints the status bar and the
+     overscroll area from it, which stayed white in dark mode. */
   html {
-    @apply font-sans;
+    @apply bg-background font-sans;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   /* A theme kit may pair a heading face (#762); otherwise this is --font-sans. */
   h1,
