@@ -16,12 +16,14 @@ import { getSafeNextPath } from '@/lib/auth/safe-next-path'
  * `/join-school` and then back to `/reto/<token>?claim=1`, where
  * `ClaimResult` runs the claim.
  */
-export function ClaimCta({ token, schoolName }: { token: string; schoolName?: string | null }) {
+export function ClaimCta({ token, schoolName, nextPath }: { token: string; schoolName?: string | null; nextPath?: string }) {
+  // `nextPath` overrides where sign-in lands (the group invite page returns to `/grupo/<token>`).
+  const landing = nextPath ?? `/reto/${encodeURIComponent(token)}?claim=1`
   const t = useTranslations('challenges.claim')
   const tg = useTranslations('challenges.guest')
   // Email/password reuse the existing auth pages; both come back to the same
   // claim URL, so the guest cookie claim is untouched (see claimChallenge).
-  const returnTo = encodeURIComponent(getSafeNextPath(`/reto/${encodeURIComponent(token)}?claim=1`, '/'))
+  const returnTo = encodeURIComponent(getSafeNextPath(landing, '/'))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,7 +31,7 @@ export function ClaimCta({ token, schoolName }: { token: string; schoolName?: st
     setLoading(true)
     setError(null)
     try {
-      const next = getSafeNextPath(`/reto/${encodeURIComponent(token)}?claim=1`, '/')
+      const next = getSafeNextPath(landing, '/')
       const supabase = createClient()
       await supabase.auth.signOut({ scope: 'local' })
       const { error } = await supabase.auth.signInWithOAuth({

@@ -17,6 +17,7 @@ import {
     IconLogout,
     IconMessages,
     IconTrophy,
+    IconUsersGroup,
     IconReceipt,
     IconSearch,
     IconSettings,
@@ -287,6 +288,7 @@ export function AppSidebar({ userRole, challengesEnabled = false, ...props }: Ap
                 },
                 { title: t('community'), href: "/dashboard/student/community", icon: IconMessages, badgeKey: 'community' },
                 { title: t('challenges'), href: "/dashboard/student/challenges", icon: IconTrophy },
+                { title: t('groups'), href: "/dashboard/student/groups", icon: IconUsersGroup },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
                 {
                     title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,

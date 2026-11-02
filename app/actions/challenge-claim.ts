@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { GUEST_COOKIE } from '@/lib/challenges/identity'
 import { BANNED_MESSAGE } from '@/lib/tenant/join-school'
+import { joinGroupsOfLink } from '@/lib/challenges/groups'
 import { materializeChallengeAttempt } from '@/lib/challenges/materialize'
 import { notifyChallengeBeaten } from '@/lib/challenges/beaten'
 import {
@@ -77,6 +78,16 @@ export async function claimChallenge(linkToken: string): Promise<ClaimChallengeO
       await notifyChallengeBeaten({ admin, tenantId, attemptId: claim.attempt.id })
     } catch (err) {
       console.error('challenge claim beaten-notify failed:', err instanceof Error ? err.message : err)
+    }
+  }
+
+  // The attempt was played on a friend-group challenge: the claimed person joins that group
+  // (their guest score is merged into their own row). Best-effort, grants nothing.
+  if (claim.status === 'claimed' || claim.status === 'already_claimed') {
+    try {
+      await joinGroupsOfLink(admin, { tenantId, userId: user.id }, typeof linkToken === 'string' ? linkToken : '')
+    } catch (err) {
+      console.error('challenge claim group join failed:', err instanceof Error ? err.message : err)
     }
   }
 

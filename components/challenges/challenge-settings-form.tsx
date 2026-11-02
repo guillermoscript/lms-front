@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { DEFAULT_GUEST_MONTHLY_CAP, isChallengesEnabled } from '@/lib/challenges/settings'
+import { DEFAULT_GUEST_MONTHLY_CAP, isChallengesEnabled, isGroupsEnabled } from '@/lib/challenges/settings'
 import { updateChallengeSettings } from '@/app/actions/admin/settings'
 import type { SettingsGroup } from '@/app/actions/admin/settings'
 
@@ -27,6 +27,7 @@ export function ChallengeSettingsForm({ settings }: Props) {
   const t = useTranslations('challenges.admin.settings')
   const [saving, setSaving] = useState(false)
   const enabled = isChallengesEnabled(settings.challenges_enabled?.value)
+  const groupsOn = isGroupsEnabled(settings.challenges_groups_enabled?.value)
   const cap = readCap(settings.challenges_guest_monthly_cap)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -39,6 +40,7 @@ export function ChallengeSettingsForm({ settings }: Props) {
       const result = await updateChallengeSettings({
         enabled: form.get('enabled') === 'on',
         guestMonthlyCap: rawCap === '' ? null : Number(rawCap),
+        groupsEnabled: form.get('groupsEnabled') === 'on',
       })
       if (result.success) toast.success(t('saved'))
       else toast.error(result.error === 'invalid_cap' ? t('invalidCap') : t('error'))
@@ -57,6 +59,13 @@ export function ChallengeSettingsForm({ settings }: Props) {
           <p className="text-sm text-muted-foreground">{t('enabledHint')}</p>
         </div>
         <Switch id="challenges_enabled" name="enabled" defaultChecked={enabled} />
+      </div>
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="challenges_groups_enabled">{t('groupsEnabled')}</Label>
+          <p className="text-sm text-muted-foreground">{t('groupsEnabledHint')}</p>
+        </div>
+        <Switch id="challenges_groups_enabled" name="groupsEnabled" defaultChecked={groupsOn} />
       </div>
       <div className="space-y-2 rounded-lg border p-4">
         <Label htmlFor="challenges_guest_monthly_cap">{t('cap')}</Label>
