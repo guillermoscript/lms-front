@@ -6,11 +6,15 @@ import { createTenantAi, type TenantRealtime } from '@/lib/ai/tenant-ai'
 import { voicesFor } from '@/lib/ai/providers'
 import { CONVERSATION_VOICES, CONVERSATION_LANGUAGES, CONVERSATION_TOOLS } from '@/lib/speech/conversation'
 
-const schema = z.object({ sessionConfig: z.object({
-  instructions: z.string().trim().min(1).max(80_000),
-  voice: z.enum(CONVERSATION_VOICES),
-  inputAudioTranscription: z.object({ language: z.enum(CONVERSATION_LANGUAGES) }),
-}) })
+const schema = z.object({
+  // Present when the browser opened GPT-Live over WebRTC (`api.session`).
+  sdp: z.string().trim().min(1).max(64_000).optional(),
+  sessionConfig: z.object({
+    instructions: z.string().trim().min(1).max(80_000),
+    voice: z.enum(CONVERSATION_VOICES),
+    inputAudioTranscription: z.object({ language: z.enum(CONVERSATION_LANGUAGES) }).optional(),
+  }),
+})
 
 /**
  * Teacher-authored session instructions are accepted only after staff/course
@@ -45,9 +49,19 @@ export async function POST(req: Request) {
   // The builder offers OpenAI voice names; another provider falls back to the school's voice.
   const { voice, ...sessionConfig } = parsed.data.sessionConfig
   try {
+    if (parsed.data.sdp) {
+      if (!realtime.supportsLive) return Response.json({ error: 'Live voice is not available for this school’s provider' }, { status: 409 })
+      const answer = await realtime.createLiveSession({
+        sdp: parsed.data.sdp,
+        instructions: sessionConfig.instructions,
+        ...(voice === 'marin' || voice === 'cedar' ? { voice } : {}),
+      })
+      return Response.json(answer, { status: 201, headers: { 'Cache-Control': 'no-store' } })
+    }
     const minted = await realtime.getToken(
       {
-        ...sessionConfig,
+        instructions: sessionConfig.instructions,
+        inputAudioTranscription: sessionConfig.inputAudioTranscription ?? {},
         ...(voicesFor(realtime.providerId).includes(voice) ? { voice } : {}),
         outputModalities: ['audio'],
         turnDetection: { type: 'semantic-vad' },

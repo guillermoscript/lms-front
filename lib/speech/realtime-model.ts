@@ -94,6 +94,11 @@ export function createLateBoundRealtimeModel(): LateBoundRealtimeModel {
       const fn = inner?.getHealthCheckResponse
       return fn ? fn.bind(inner) : undefined
     },
+    // GPT-Live over WebRTC: the hook reads the data-channel label from the model.
+    get getWebRTCConfig() {
+      const fn = inner?.getWebRTCConfig
+      return fn ? fn.bind(inner) : undefined
+    },
     // Present up front: the session checks for it before the setup fetch.
     getWebSocketConfig: (options) => {
       const real = bound()
@@ -114,8 +119,8 @@ export function createLateBoundRealtimeModel(): LateBoundRealtimeModel {
 }
 
 export interface RealtimeSetupObserver {
-  /** Called with a valid descriptor BEFORE the hook sees the response. */
-  onDescriptor(descriptor: RealtimeDescriptor): Promise<void>
+  /** Called with a valid descriptor BEFORE the hook sees the response. Omit for an SDP answer, which carries none. */
+  onDescriptor?(descriptor: RealtimeDescriptor): Promise<void>
   /** A non-2xx setup response, with its raw body text (for typed AI errors). */
   onFailure(status: number, bodyText: string): void
 }
@@ -143,11 +148,11 @@ export function observeRealtimeSetup(tokenUrl: string, observer: RealtimeSetupOb
     if (!active || url !== tokenUrl) return original.call(window, input, init)
     restore() // one request only
     const response = await original.call(window, input, init)
-    if (response.ok) {
+    if (response.ok && observer.onDescriptor) {
       const descriptor = parseRealtimeDescriptor(await response.clone().json().catch(() => null))
       if (!descriptor) throw new Error('Invalid realtime setup: missing provider or model')
       await observer.onDescriptor(descriptor)
-    } else {
+    } else if (!response.ok) {
       observer.onFailure(response.status, await response.clone().text().catch(() => ''))
     }
     return response

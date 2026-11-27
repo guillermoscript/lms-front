@@ -98,6 +98,10 @@ export interface TenantRealtime {
     sessionConfig?: RealtimeTokenOptions['sessionConfig'],
     options?: { expiresAfterSeconds?: number },
   ): Promise<RealtimeSession>
+  /** True when the school's provider can run GPT-Live over WebRTC (OpenAI). */
+  supportsLive: boolean
+  /** Exchange the browser's SDP offer for GPT-Live's answer; throws unless `supportsLive`. */
+  createLiveSession(options: { sdp: string; instructions: string; voice?: string }): Promise<{ sessionId: string; sdp: string }>
 }
 
 export interface TenantImage {
@@ -542,6 +546,12 @@ export function createTenantAi(tenantId: string, opts: TenantAiOptions = {}): Te
         providerId,
         modelId,
         voice,
+        supportsLive: Boolean(cred.instance.live),
+        createLiveSession: (options) =>
+          guarded(providerId, feature, async () => {
+            if (!cred.instance.live) throw new AiModelUnsupportedError({ providerId, feature, missing: ['live'] })
+            return cred.instance.live.createWebRTCSession(options)
+          }),
         getToken: (sessionConfig, options) =>
           guarded(providerId, feature, async () => {
             const minted = await realtime.getToken({

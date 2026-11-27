@@ -13,22 +13,24 @@ import {
   IconPhoneOff,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
-import { Persona, type PersonaState } from '@/components/ai-elements/persona'
+import { SafePersona } from './safe-persona'
+import type { PersonaState } from '@/components/ai-elements/persona'
 import {
   Conversation,
   ConversationContent,
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
-import { Message, MessageContent } from '@/components/ai-elements/message'
 import {
   FINISH_CONVERSATION_TOOL,
   GIVE_HINT_TOOL,
+  LIVE_GREETING_PROMPT,
   NOTE_CORRECTION_TOOL,
   type ConversationEvaluation,
   type ConversationNote,
   type ConversationTurn,
 } from '@/lib/speech/conversation'
+import { ConversationTranscript } from './conversation-transcript'
 import ExerciseBrief from './exercise-brief'
 import Markdown from 'react-markdown'
 import ExerciseHeader from './exercise-header'
@@ -40,6 +42,8 @@ import { AiErrorNotice } from '@/components/ai/ai-error-notice'
 import { parseAiChatError, isAiSetupErrorKind } from '@/lib/ai/chat-error'
 import type { AiErrorCode } from '@/lib/ai/error-codes'
 import { createLateBoundRealtimeModel, observeRealtimeSetup } from '@/lib/speech/realtime-model'
+import { LIVE_MODEL_ID } from '@/lib/ai/live-model'
+import { liveTurns } from '@/lib/speech/live-turns'
 
 type Phase = 'idle' | 'live' | 'grading' | 'error'
 
@@ -75,6 +79,8 @@ interface ConversationExerciseProps {
   /** Staff dry run: separate authorized token/evaluator endpoints, no student records. */
   preview?: {
     tokenEndpoint: string
+    /** Tutor instructions without function-tool lines, for GPT-Live. */
+    liveInstructions?: string
     sessionConfig: Parameters<typeof useRealtime>[0]['sessionConfig']
     evaluate: (transcript: ConversationTurn[], notes: ConversationNote[]) => Promise<Response>
   }
@@ -147,13 +153,50 @@ export default function ConversationExercise({
   const notesRef = useRef<ConversationNote[]>([])
 
   const tokenEndpoint = preview?.tokenEndpoint ?? `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}`
+  // GPT-Live (WebRTC): the audio is media, so the browser cancels the tutor's
+  // voice from the mic and the model handles barge-in itself. `null` = still
+  // asking the server which connection the school's provider supports.
+  const liveModel = useMemo(() => createLateBoundRealtimeModel(), [])
+  const [transport, setTransport] = useState<'webrtc' | 'websocket' | null>(null)
+  const live = transport === 'webrtc'
+  const sessionEndpoint = preview?.tokenEndpoint ?? `/api/exercises/realtime/session?exerciseId=${exercise.id}&tab=${tab}`
+  const transportRef = useRef(transport)
+  useEffect(() => {
+    transportRef.current = transport
+  }, [transport])
+  useEffect(() => {
+    let cancelled = false
+    const resolve = async () => {
+      try {
+        const res = await fetch('/api/exercises/realtime/transport', { cache: 'no-store' })
+        const body = res.ok ? ((await res.json()) as { transport?: string }) : null
+        if (body?.transport === 'webrtc') {
+          await liveModel.bind({ provider: 'openai', model: LIVE_MODEL_ID })
+          if (!cancelled) setTransport('webrtc')
+          return
+        }
+      } catch {
+        /* fall through to the WebSocket path */
+      }
+      if (!cancelled) setTransport('websocket')
+    }
+    void resolve()
+    return () => {
+      cancelled = true
+    }
+  }, [liveModel])
 
   // No `sessionConfig` on purpose: instructions, voice and turn detection are
   // embedded in the token by the server, where the student can't edit them.
   const realtime = useRealtime({
-    model: lateModel.model,
-    api: { token: tokenEndpoint },
-    sessionConfig: preview?.sessionConfig,
+    model: live ? liveModel.model : lateModel.model,
+    api: live ? { session: sessionEndpoint } : { token: tokenEndpoint },
+    // Live ignores everything but the preview's draft (the server rebuilds the rest).
+    sessionConfig: live
+      ? preview?.liveInstructions
+        ? { instructions: preview.liveInstructions, voice: preview.sessionConfig?.voice }
+        : undefined
+      : preview?.sessionConfig,
     // No tool carries a verdict — grading stays on the server. Returning a
     // value sends a tool output, which makes the tutor speak again: wanted
     // after a hint (it was asked to call that one BEFORE speaking), not after
@@ -180,6 +223,9 @@ export default function ConversationExercise({
       // and a dropped one is handled by the status watcher below.
       if (statusRef.current === 'connected') return
       releaseRef.current()
+      // GPT-Live refused to start (no access to the model, say): the provider
+      // WebSocket still works, so the next try uses it.
+      if (transportRef.current === 'webrtc') setTransport('websocket')
       const failure = setupFailureRef.current
       setupFailureRef.current = null
       const typed = failure ? parseSetupError(failure.body) : null
@@ -199,14 +245,16 @@ export default function ConversationExercise({
       setPhase('error')
     },
   })
-  const { status, messages, isPlaying, isCapturing } = realtime
+  const { status, messages, isPlaying, isCapturing, session } = realtime
   useEffect(() => {
     statusRef.current = status
   }, [status])
 
   const turns: ConversationTurn[] = useMemo(
     () =>
-      messages
+      live
+        ? liveTurns(session?.transcripts ?? [])
+        : messages
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({
           role: m.role as 'user' | 'assistant',
@@ -216,7 +264,7 @@ export default function ConversationExercise({
             .trim(),
         }))
         .filter((turn) => turn.text.length > 0),
-    [messages]
+    [live, messages, session?.transcripts]
   )
   useEffect(() => {
     turnsRef.current = turns
@@ -233,6 +281,17 @@ export default function ConversationExercise({
     setAiError(null)
     setupFailureRef.current = null
     setMuted(false)
+    // iOS/Android only let audio play if an AudioContext was resumed inside the
+    // tap itself; the hook creates its own later, outside the gesture.
+    try {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (Ctx) {
+        const unlock = new Ctx()
+        void unlock.resume().finally(() => void unlock.close().catch(() => {}))
+      }
+    } catch {
+      /* the hook's own context still gets a chance */
+    }
     setEndRequested(false)
     setHint(null)
     notesRef.current = []
@@ -249,7 +308,7 @@ export default function ConversationExercise({
       // Ask for the mic BEFORE minting a session: a denied prompt must not
       // burn one of the student's daily attempts.
       streamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       })
     } catch {
       setErrorMsg(t('micDenied'))
@@ -259,14 +318,18 @@ export default function ConversationExercise({
     setPhase('live')
     // The hook fetches the setup endpoint itself; watch that one response so
     // the model stand-in learns the provider/model BEFORE the socket opens.
-    const stopObserving = observeRealtimeSetup(tokenEndpoint, {
-      onDescriptor: (descriptor) => lateModel.bind(descriptor),
+    const stopObserving = observeRealtimeSetup(live ? sessionEndpoint : tokenEndpoint, {
+      // The WebRTC answer carries no model descriptor; only the WebSocket setup does.
+      ...(live ? {} : { onDescriptor: (descriptor) => lateModel.bind(descriptor) }),
       onFailure: (status, body) => {
         setupFailureRef.current = { status, body }
       },
     })
     try {
-      await realtime.connect()
+      // Live: hand over the mic we already opened (with echo cancellation) so
+      // the WebRTC sender uses it and a denied prompt never costs an attempt.
+      if (live) await realtime.connect({ stream: streamRef.current ?? undefined })
+      else await realtime.connect()
     } finally {
       stopObserving()
     }
@@ -278,77 +341,119 @@ export default function ConversationExercise({
     greetedRef.current = true
     // Counted here, not on click: a refused token (plan, daily cap) opens no session.
     setAttemptsUsed((n) => n + 1)
-    if (streamRef.current) realtime.startAudioCapture(streamRef.current)
-    realtime.requestResponse()
-  }, [phase, status, realtime])
-
-  const finishingRef = useRef(false)
-  const finish = useCallback(async () => {
-    if (finishingRef.current) return
-    finishingRef.current = true
-    releaseMic()
-    realtime.stopPlayback()
-    setPhase('grading')
-    // The transcript of the student's last words arrives AFTER their audio.
-    // Hanging up at once graded conversations with the final turn missing.
-    if (statusRef.current === 'connected') await new Promise((r) => setTimeout(r, 1500))
-    realtime.disconnect()
-    const finalTurns = turnsRef.current
-
-    if (!finalTurns.some((turn) => turn.role === 'user')) {
-      finishingRef.current = false
-      setErrorMsg(t('nothingSaid'))
-      setPhase('error')
+    if (live) {
+      // Capture started with connect(); the tutor opens the conversation.
+      void realtime
+        .sendEvent({
+          type: 'context-append',
+          content: LIVE_GREETING_PROMPT,
+          delegationId: null,
+          providerOptions: { openai: { channel: 'commentary' } },
+        })
+        .catch(() => {})
       return
     }
+    if (streamRef.current) realtime.startAudioCapture(streamRef.current)
+    realtime.requestResponse()
+  }, [phase, status, realtime, live])
 
-    try {
-      const grade = () => preview
-        ? preview.evaluate(finalTurns, notesRef.current)
-        : fetch('/api/exercises/realtime/evaluate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exerciseId: exercise.id, tab, transcript: finalTurns, notes: notesRef.current }),
-        })
-      let res = await grade()
-      // A grader hiccup must not cost the student the conversation they just
-      // had: the route re-opens the session on failure, so one retry is safe.
-      if (res.status >= 500) res = await grade()
-      if (res.status === 410) {
-        setErrorMsg(t('sessionTooLong', { minutes: maxMinutes }))
-        setPhase('error')
-        return
-      }
-      if (!res.ok) {
-        // A school with no usable AI key can't grade; the session stays open.
-        const typed = parseSetupError(await res.text().catch(() => ''))
-        if (typed) {
-          setAiError(typed)
+  const finishingRef = useRef(false)
+  // The transcript of a call that ended but could not be graded, kept so a
+  // network or grader hiccup is retried instead of costing the student the call.
+  const ungradedRef = useRef<ConversationTurn[] | null>(null)
+  const [hasUngraded, setHasUngraded] = useState(false)
+
+  const grade = useCallback(
+    async (finalTurns: ConversationTurn[]) => {
+      setErrorMsg(null)
+      setAiError(null)
+      setPhase('grading')
+      try {
+        const send = () =>
+          preview
+            ? preview.evaluate(finalTurns, notesRef.current)
+            : fetch('/api/exercises/realtime/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ exerciseId: exercise.id, tab, transcript: finalTurns, notes: notesRef.current }),
+              })
+        let res = await send()
+        // A grader hiccup must not cost the student the conversation they just
+        // had: the route re-opens the session on failure, so retries are safe.
+        for (let i = 0; i < 2 && res.status >= 500; i++) {
+          await new Promise((r) => setTimeout(r, 1500))
+          res = await send()
+        }
+        if (res.status === 410) {
+          ungradedRef.current = null
+          setHasUngraded(false)
+          setErrorMsg(t('sessionTooLong', { minutes: maxMinutes }))
           setPhase('error')
           return
         }
-        throw new Error(String(res.status))
+        if (!res.ok) {
+          // A school with no usable AI key can't grade; the session stays open.
+          const typed = parseSetupError(await res.text().catch(() => ''))
+          if (typed) {
+            setAiError(typed)
+            setPhase('error')
+            return
+          }
+          throw new Error(String(res.status))
+        }
+        const data = await res.json()
+        ungradedRef.current = null
+          setHasUngraded(false)
+        setResult({
+          score: data.score,
+          passed: data.passed,
+          feedback: data.feedback,
+          strengths: data.strengths ?? [],
+          improvements: data.improvements ?? [],
+          corrections: data.corrections ?? [],
+          transcript: finalTurns,
+          createdAt: new Date().toISOString(),
+        })
+        setGradedNonce((n) => n + 1)
+        setPhase('idle')
+      } catch {
+        // Keep the transcript: the grade button below retries without a new call.
+        ungradedRef.current = finalTurns
+        setHasUngraded(true)
+        setErrorMsg(t('gradingError'))
+        setPhase('error')
       }
-      const data = await res.json()
-      setResult({
-        score: data.score,
-        passed: data.passed,
-        feedback: data.feedback,
-        strengths: data.strengths ?? [],
-        improvements: data.improvements ?? [],
-        corrections: data.corrections ?? [],
-        transcript: finalTurns,
-        createdAt: new Date().toISOString(),
-      })
-      setGradedNonce((n) => n + 1)
-      setPhase('idle')
-    } catch {
-      setErrorMsg(t('gradingError'))
-      setPhase('error')
+    },
+    [exercise.id, maxMinutes, t, tab, preview]
+  )
+
+  const finish = useCallback(async () => {
+    if (finishingRef.current) return
+    finishingRef.current = true
+    try {
+      releaseMic()
+      realtime.stopPlayback()
+      setPhase('grading')
+      // The transcript of the student's last words arrives AFTER their audio.
+      // Hanging up at once graded conversations with the final turn missing.
+      if (statusRef.current === 'connected') {
+        // Live confirms the close once the last transcript has flushed.
+        if (transportRef.current === 'webrtc') await realtime.close().catch(() => {})
+        else await new Promise((r) => setTimeout(r, 1500))
+      }
+      realtime.disconnect()
+      const finalTurns = turnsRef.current
+
+      if (!finalTurns.some((turn) => turn.role === 'user')) {
+        setErrorMsg(t('nothingSaid'))
+        setPhase('error')
+        return
+      }
+      await grade(finalTurns)
     } finally {
       finishingRef.current = false
     }
-  }, [exercise.id, maxMinutes, realtime, releaseMic, t, tab, preview])
+  }, [grade, realtime, releaseMic, t])
 
   // Countdown — the hard stop that keeps a session inside the teacher's budget.
   const finishRef = useRef(finish)
@@ -401,20 +506,40 @@ export default function ConversationExercise({
     []
   )
 
-  const toggleMute = () => {
-    const next = !muted
+  // Provider-WebSocket path only (GPT-Live cancels echo in the browser and
+  // handles interruptions itself, so there the mic stays open).
+  // Half-duplex: the phone speaker (and many laptop speakers) leaks into the
+  // mic past the browser's echo canceller, the server's VAD hears the tutor as
+  // the student and interrupts/answers itself in a loop. So the mic is closed
+  // while the tutor talks, and for a short tail after, when the room still rings.
+  // Cost: the student can't barge in mid-sentence.
+  const [tail, setTail] = useState(false)
+  const tailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!isPlaying) return
+    if (tailTimerRef.current) clearTimeout(tailTimerRef.current)
+    return () => {
+      setTail(true)
+      tailTimerRef.current = setTimeout(() => setTail(false), 700)
+    }
+  }, [isPlaying])
+  const tutorTalking = isPlaying || tail
+
+  useEffect(() => {
+    const open = !muted && !(phase === 'live' && !live && tutorTalking)
     streamRef.current?.getAudioTracks().forEach((track) => {
-      track.enabled = !next
+      track.enabled = open
     })
-    setMuted(next)
-  }
+  }, [muted, tutorTalking, phase, status, live])
+
+  const toggleMute = () => setMuted((m) => !m)
 
   const personaState: PersonaState =
     phase === 'grading' || (phase === 'live' && status === 'connecting')
       ? 'thinking'
       : phase === 'live' && isPlaying
         ? 'speaking'
-        : phase === 'live' && isCapturing && !muted
+        : phase === 'live' && isCapturing && !muted && !tutorTalking
           ? 'listening'
           : phase === 'live'
             ? 'idle'
@@ -476,7 +601,7 @@ export default function ConversationExercise({
     <div className="space-y-4">
       <div className={EXERCISE_SURFACE}>
         <div className="flex flex-col items-center gap-3">
-          <Persona state={personaState} variant="halo" className="size-40" />
+          <SafePersona state={personaState} variant="halo" className="size-40" />
           <p className="text-sm font-medium" role="status" aria-live="polite">
             {statusLabel}
           </p>
@@ -486,6 +611,11 @@ export default function ConversationExercise({
             </p>
           )}
         </div>
+
+        {/* GPT-Live can't hang up by itself: say how the grade is reached. */}
+        {phase === 'live' && live && status === 'connected' && (
+          <p className="mt-4 text-center text-sm text-muted-foreground">{t('finishToGrade')}</p>
+        )}
 
         {/* On a phone the alert rides with the result tab's retry button. */}
         {hasError && <div className={cn('mt-4', retryInResult && 'hidden lg:block')}>{errorAlert}</div>}
@@ -512,15 +642,23 @@ export default function ConversationExercise({
               {t('grading')}
             </Button>
           ) : (
+            <>
+            {phase === 'error' && hasUngraded && (
+              <Button size="lg" className="h-11 text-sm" onClick={() => void grade(ungradedRef.current ?? [])}>
+                {t('retryGrading')}
+              </Button>
+            )}
             <Button
               size="lg"
+              variant={phase === 'error' && hasUngraded ? 'outline' : 'default'}
               className="h-11 text-sm"
               onClick={() => void start()}
-              disabled={limitReached}
+              disabled={limitReached || transport === null}
             >
               <IconMicrophone size={16} aria-hidden="true" />
               {result || phase === 'error' ? t('startAgain') : t('start')}
             </Button>
+            </>
           )}
         </div>
 
@@ -556,11 +694,7 @@ export default function ConversationExercise({
               {turns.length === 0 ? (
                 <ConversationEmptyState title={t('transcriptEmptyTitle')} description={t('transcriptEmpty')} />
               ) : (
-                turns.map((turn, i) => (
-                  <Message key={i} from={turn.role}>
-                    <MessageContent>{turn.text}</MessageContent>
-                  </Message>
-                ))
+                <ConversationTranscript turns={turns} partnerLabel={t('partner')} studentLabel={t('you')} />
               )}
             </ConversationContent>
             <ConversationScrollButton />
@@ -615,12 +749,8 @@ export default function ConversationExercise({
           <ResultSection>
             <details>
               <summary className="cursor-pointer text-sm font-semibold">{t('fullTranscript')}</summary>
-              <div className="mt-4 space-y-3">
-                {result.transcript.map((turn, i) => (
-                  <Message key={i} from={turn.role}>
-                    <MessageContent>{turn.text}</MessageContent>
-                  </Message>
-                ))}
+              <div className="mt-4">
+                <ConversationTranscript turns={result.transcript} partnerLabel={t('partner')} studentLabel={t('you')} />
               </div>
             </details>
           </ResultSection>
